@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width">
+<title>Clients</title>
+</head>
+<body>
+
+<h3>Clients</h3>
+<button onclick="create()">➕ Create Client</button>
+<pre id="out"></pre>
+
+<script>
+fetch("/api/clients")
+.then(r=>r.json())
+.then(d=>out.innerText=JSON.stringify(d,null,2));
+
+function create(){
+  fetch("/api/client/create",{method:"POST"})
+  .then(r=>r.json())
+  .then(d=>{
+    alert("CLIENT ID: "+d.client_id+"\nPIN: "+d.pin);
+    location.reload();
+  });
+}
+</script>
+
+</body>
+</html>
