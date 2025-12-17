@@ -1,178 +1,52 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cloudflare Access – AndroPrint</title>
-
+<meta name="viewport" content="width=device-width">
+<title>Cloudflare</title>
 <style>
-body {
-  margin: 0;
-  font-family: system-ui, Arial, sans-serif;
-  background: #f1f5f9;
-  color: #0f172a;
-}
-
-.header {
-  background: #2563eb;
-  color: white;
-  padding: 16px;
-  text-align: center;
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.card {
-  background: white;
-  margin: 12px;
-  padding: 16px;
-  border-radius: 14px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-}
-
-h3 {
-  margin-top: 0;
-  color: #2563eb;
-}
-
-code, pre {
-  display: block;
-  background: #eef2ff;
-  padding: 10px;
-  border-radius: 8px;
-  overflow-x: auto;
-  font-size: 13px;
-}
-
-.status {
-  font-weight: bold;
-}
-
-.ok {
-  color: #16a34a;
-}
-
-.bad {
-  color: #dc2626;
-}
-
-.endpoint {
-  margin-bottom: 12px;
-}
-
-footer {
-  text-align: center;
-  font-size: 12px;
-  color: #64748b;
-  margin: 20px;
-}
+body{font-family:system-ui;background:#f8fafc}
+.card{background:#fff;margin:10px;padding:14px;border-radius:12px}
+code,pre{background:#eef;padding:8px;border-radius:6px;display:block}
 </style>
 </head>
-
 <body>
 
-<div class="header">
-☁ Cloudflare Tunnel – AndroPrint
-</div>
+<h2 style="margin:10px">☁ Cloudflare Tunnel</h2>
 
-<div class="card" id="status">
-Loading Cloudflare status...
-</div>
+<div class="card" id="info">Loading...</div>
 
 <div class="card">
-<h3>📡 Available API Endpoints</h3>
-
-<div class="endpoint">
-<b>Text Print</b>
-<code>POST /print</code>
-</div>
-
-<div class="endpoint">
-<b>Image Print</b>
-<code>POST /img</code>
-</div>
-
-<div class="endpoint">
-<b>PDF Direct Print</b>
-<code>POST /pdfdirect</code>
-</div>
-
-<div class="endpoint">
-<b>PDF → Image Print</b>
-<code>POST /pdftoimg</code>
-</div>
-
-<div class="endpoint">
-<b>HTML Print</b>
-<code>POST /html</code>
-</div>
-</div>
-
-<div class="card">
-<h3>🧪 Example cURL – Text Print</h3>
-
+<h3>Print API</h3>
 <pre>
-curl -X POST {URL}/print \
- -H "Content-Type: application/json" \
- -H "x-printer-id: Cashier1" \
- -d '{"text":"Hello from AndroPrint"}'
+POST /print
+POST /pdftoimg
+POST /pdfdirect
+POST /img
+POST /html
 </pre>
 </div>
 
 <div class="card">
-<h3>🔐 Authentication (Optional)</h3>
-<p>
-If <b>ENABLE_CLIENT_AUTH=true</b>, add headers:
-</p>
-
-<pre>
--H "x-client-id: clt-XXXXXX"
--H "x-print-key: 123456"
-</pre>
-
-<p>
-If disabled, headers are not required.
-</p>
+<h3>Example Curl</h3>
+<pre id="curl"></pre>
 </div>
-
-<div class="card">
-<h3>ℹ Notes</h3>
-<ul>
-  <li>Temporary Cloudflare URLs change on restart</li>
-  <li>HTTPS is always enabled</li>
-  <li>No port forwarding needed</li>
-  <li>For permanent URL, use Cloudflare named tunnel + domain</li>
-</ul>
-</div>
-
-<footer>
-AndroPrint • Developed by MSAMODS
-</footer>
 
 <script>
 fetch("/api/cloudflare")
-.then(res => res.json())
-.then(data => {
-  const box = document.getElementById("status");
-
-  if (data.url) {
-    box.innerHTML = `
-      <span class="status ok">🟢 Tunnel Active</span><br><br>
-      <b>Public URL:</b>
-      <code>${data.url}</code>
-      <b>Admin Pages:</b>
-      <code>${data.url}/dashboard.html</code>
-      <code>${data.url}/printer.html</code>
-      <code>${data.url}/clients.html</code>
-      <code>${data.url}/cloudflare.html</code>
+.then(r=>r.json())
+.then(d=>{
+  if(d.url){
+    info.innerHTML=`
+    <b>Status:</b> Active<br>
+    <b>Public URL:</b><br>
+    <code>${d.url}</code>
     `;
-
-    document.querySelectorAll("pre").forEach(p => {
-      p.innerText = p.innerText.replace("{URL}", data.url);
-    });
-
+    curl.textContent=
+`curl -X POST ${d.url}/print \\
+ -H "x-printer-id: Cashier1" \\
+ -d '{"text":"Hello Cloudflare"}'`;
   } else {
-    box.innerHTML = `<span class="status bad">🔴 Tunnel not running</span>`;
+    info.innerHTML="<b>Cloudflare disabled</b>";
   }
 });
 </script>

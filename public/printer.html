@@ -1,118 +1,326 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Printer Manager</title>
+<meta charset="UTF-8" />
+<title>AndroPrint – Printer Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body{margin:0;font-family:system-ui;background:#f1f5f9}
-.header{background:#2563eb;color:#fff;padding:16px;text-align:center}
-.card{background:#fff;margin:14px;padding:16px;border-radius:14px}
-label{font-size:12px;color:#334155}
-input,select{width:100%;padding:12px;margin-top:4px;border-radius:10px;border:1px solid #cbd5e1}
-.toggle{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
-.actions{display:flex;gap:10px;margin-top:14px}
-button{flex:1;padding:12px;border:none;border-radius:10px;color:#fff}
-.save{background:#16a34a}
-.test{background:#0f766e}
-.add{background:#2563eb;margin:10px}
+:root {
+  --blue:#2563eb;
+  --bg:#f5f7fb;
+  --card:#ffffff;
+  --border:#d1d5db;
+  --green:#16a34a;
+  --red:#dc2626;
+}
+
+body {
+  margin:0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background:var(--bg);
+}
+
+header {
+  background:var(--blue);
+  color:#fff;
+  padding:16px;
+  font-size:20px;
+  font-weight:600;
+}
+
+.container {
+  padding:16px;
+  max-width:1200px;
+  margin:auto;
+}
+
+button {
+  background:var(--blue);
+  color:#fff;
+  border:none;
+  padding:8px 14px;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+button.danger { background:var(--red); }
+button.secondary { background:#475569; }
+
+.grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill,minmax(300px,1fr));
+  gap:16px;
+}
+
+.card {
+  background:var(--card);
+  border-radius:10px;
+  padding:14px;
+  box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
+
+.card h3 {
+  margin:0 0 6px 0;
+}
+
+.badge {
+  font-size:12px;
+  padding:2px 8px;
+  border-radius:999px;
+  color:#fff;
+}
+
+.badge.cashier { background:#2563eb; }
+.badge.kitchen { background:#ea580c; }
+.badge.off { background:#6b7280; }
+
+.field {
+  margin-bottom:8px;
+}
+
+label {
+  font-size:13px;
+  display:block;
+  margin-bottom:3px;
+}
+
+input, select {
+  width:100%;
+  padding:6px;
+  border:1px solid var(--border);
+  border-radius:6px;
+}
+
+.modal {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+
+.modal.active { display:flex; }
+
+.modal-box {
+  background:#fff;
+  width:95%;
+  max-width:520px;
+  max-height:90vh;
+  overflow:auto;
+  border-radius:10px;
+  padding:16px;
+}
+
+.modal h2 {
+  margin-top:0;
+}
+
+.row {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
 </style>
 </head>
 
 <body>
 
-<div class="header">🖨️ Printer Manager</div>
+<header>🖨️ AndroPrint – Printer Manager</header>
 
-<div class="card">
-  <button class="add" onclick="add('CASHIER')">➕ Add Cashier Printer</button>
-  <button class="add" onclick="add('KITCHEN')">➕ Add Kitchen Printer</button>
+<div class="container">
+  <button onclick="openAdd()">➕ Add Printer</button>
+  <div id="printerList" class="grid"></div>
 </div>
 
-<div id="list"></div>
+<!-- MODAL -->
+<div id="modal" class="modal">
+  <div class="modal-box">
+    <h2 id="modalTitle">Add Printer</h2>
+
+    <div class="field">
+      <label>Printer ID</label>
+      <input id="pid">
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Name</label>
+        <input id="name">
+      </div>
+      <div class="field">
+        <label>Role</label>
+        <select id="role">
+          <option value="CASHIER">Cashier</option>
+          <option value="KITCHEN">Kitchen</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>IP Address</label>
+        <input id="ip">
+      </div>
+      <div class="field">
+        <label>Port</label>
+        <input id="port" value="9100">
+      </div>
+    </div>
+
+    <hr>
+
+    <h4>Paper Settings</h4>
+    <div class="field">
+      <label>Paper Size</label>
+      <select id="paperSize">
+        <option>RECEIPT(40mm x 30mm)</option>
+        <option>RECEIPT(50mm x 70mm)</option>
+        <option>RECEIPT(50mm x 80mm)</option>
+        <option>RECEIPT(60mm x 70mm)</option>
+        <option>RECEIPT(72mm x 100mm)</option>
+        <option>RECEIPT(72mm x 150mm)</option>
+        <option>RECEIPT(72mm x 180mm)</option>
+        <option selected>RECEIPT(72mm x 297mm)</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Density</label>
+        <select id="density">
+          <option>Default</option>
+          <option>1</option><option>2</option><option>3</option>
+          <option>4</option><option>5</option><option>6</option>
+          <option>7</option><option>8</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Picture Contrast</label>
+        <input id="contrast" value="200">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Cutter</label>
+        <select id="cutter">
+          <option>NONE</option>
+          <option>Before printing</option>
+          <option>After page</option>
+          <option>After document</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Beeper</label>
+        <select id="beeper">
+          <option>NONE</option>
+          <option>After page</option>
+          <option>After document</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Paper feed after</label>
+        <select id="feed">
+          <option>0mm</option><option>3mm</option>
+          <option>6mm</option><option>9mm</option>
+          <option>12mm</option><option>15mm</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Enable</label>
+        <select id="enabled">
+          <option value="true">Enabled</option>
+          <option value="false">Disabled</option>
+        </select>
+      </div>
+    </div>
+
+    <br>
+    <button onclick="save()">💾 Save</button>
+    <button class="secondary" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
 
 <script>
-function load(){
-  fetch("/admin/printers")
-  .then(r=>r.json())
-  .then(p=>{
-    list.innerHTML="";
-    Object.values(p).forEach(render);
+let printers = [];
+let editId = null;
+
+async function load() {
+  const r = await fetch("/api/printers");
+  printers = (await r.json()).printers || [];
+  render();
+}
+
+function render() {
+  const box = document.getElementById("printerList");
+  box.innerHTML = "";
+  printers.forEach(p => {
+    box.innerHTML += `
+      <div class="card">
+        <h3>${p.name}</h3>
+        <span class="badge ${p.role === 'CASHIER' ? 'cashier':'kitchen'}">${p.role}</span>
+        <span class="badge ${p.enabled?'':'off'}">${p.enabled?'ON':'OFF'}</span>
+        <p>${p.connection.ip}:${p.connection.port}</p>
+        <button onclick="test('${p.id}')">🧪 Test</button>
+        <button onclick="edit('${p.id}')">✏️ Edit</button>
+        <button class="danger" onclick="del('${p.id}')">❌</button>
+      </div>`;
   });
 }
 
-function add(role){
-  fetch("/admin/printers/add",{
+function openAdd() {
+  editId = null;
+  document.getElementById("modalTitle").innerText = "Add Printer";
+  document.getElementById("modal").classList.add("active");
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.remove("active");
+}
+
+function edit(id) {
+  const p = printers.find(x=>x.id===id);
+  editId = id;
+  pid.value = p.id;
+  name.value = p.name;
+  role.value = p.role;
+  ip.value = p.connection.ip;
+  port.value = p.connection.port;
+  document.getElementById("modal").classList.add("active");
+}
+
+async function save() {
+  await fetch("/api/printer/save", {
     method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({role})
-  })
-  .then(r=>r.json())
-  .then(x=>{
-    if(x.error) alert(x.error);
-    else load();
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      id:pid.value,
+      name:name.value,
+      role:role.value,
+      enabled:enabled.value==="true",
+      connection:{ ip:ip.value, port:Number(port.value) },
+      paper:{ size:paperSize.value, feed:feed.value },
+      print:{ density:density.value, cutter:cutter.value, beeper:beeper.value },
+      image:{ contrast:Number(contrast.value) }
+    })
   });
+  closeModal();
+  load();
 }
 
-function render(p){
-  const d=document.createElement("div");
-  d.className="card";
-  d.innerHTML=`
-    <h3>${p.id}</h3>
+async function del(id) {
+  if(!confirm("Delete printer?")) return;
+  await fetch("/api/printer/delete",{method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({id})});
+  load();
+}
 
-    <label>Name</label><input value="${p.name}">
-    <label>IP</label><input value="${p.ip}">
-    <label>Port</label><input value="${p.port}">
-    <label>Width</label>
-    <select>
-      <option value="576" ${p.width==="576"?"selected":""}>576</option>
-      <option value="384" ${p.width==="384"?"selected":""}>384</option>
-    </select>
-
-    <div class="toggle"><span>Auto Cut</span>
-      <input type="checkbox" ${p.cut==="true"?"checked":""}>
-    </div>
-
-    <div class="toggle"><span>Enabled</span>
-      <input type="checkbox" ${p.status==="enabled"?"checked":""}>
-    </div>
-
-    <div class="actions">
-      <button class="save">Save</button>
-      <button class="test">Test</button>
-    </div>
-  `;
-
-  const i=d.querySelectorAll("input,select");
-
-  d.querySelector(".save").onclick=()=>{
-    fetch("/admin/printers/save",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        id:p.id,
-        name:i[0].value,
-        ip:i[1].value,
-        port:i[2].value,
-        width:i[3].value,
-        cut:i[4].checked?"true":"false",
-        status:i[5].checked?"enabled":"disabled",
-        role:p.role,
-        encoding:p.encoding,
-        align:p.align,
-        feed:p.feed
-      })
-    }).then(()=>alert("Saved"));
-  };
-
-  d.querySelector(".test").onclick=()=>{
-    fetch("/admin/printers/test",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({id:p.id})
-    }).then(()=>alert("Test sent"));
-  };
-
-  list.appendChild(d);
+async function test(id) {
+  await fetch("/api/printer/test",{method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({id})});
 }
 
 load();
