@@ -4,14 +4,15 @@
 <meta name="viewport" content="width=device-width">
 <title>Dashboard</title>
 <style>
-body{font-family:sans-serif;background:#f1f5f9}
-.card{background:#fff;margin:10px;padding:12px;border-radius:10px}
-a{display:block;margin:6px 0}
+body{font-family:system-ui;background:#f1f5f9;margin:0}
+.header{background:#2563eb;color:#fff;padding:16px}
+.card{background:#fff;margin:10px;padding:14px;border-radius:12px}
+a{display:block;margin:8px 0;color:#2563eb;text-decoration:none;font-weight:600}
 </style>
 </head>
 <body>
 
-<h2>🖨 AndroPrint Dashboard</h2>
+<div class="header">🖨 AndroPrint Dashboard</div>
 
 <div class="card" id="info">Loading...</div>
 
@@ -27,11 +28,12 @@ if(!localStorage.getItem("auth")) location.href="index.html";
 fetch("/api/config")
 .then(r=>r.json())
 .then(d=>{
-  document.getElementById("info").innerHTML=
-  `<b>Server ID:</b> ${d.serverId}<br>
-   <b>Port:</b> ${d.port}<br>
-   <b>Default Printer:</b> ${d.defaultPrinter || "-"}<br>
-   <b>Cloudflare:</b> ${d.cloudflare || "Disabled"}`;
+  document.getElementById("info").innerHTML=`
+  <b>Server ID:</b> ${d.serverId}<br>
+  <b>Port:</b> ${d.port}<br>
+  <b>Cloudflare:</b> ${d.cloudflare || "Disabled"}<br>
+  <b>Client Auth:</b> ${d.authEnabled ? "Enabled" : "Disabled"}
+  `;
 });
 </script>
 

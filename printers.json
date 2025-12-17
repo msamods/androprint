@@ -1,0 +1,203 @@
+{
+  "printers": [
+    {
+      "id": "Cashier1",
+      "name": "Cash Counter 1",
+      "role": "CASHIER",
+      "enabled": true,
+
+      "connection": {
+        "type": "tcp",
+        "ip": "192.168.1.10",
+        "port": 9100
+      },
+
+      "paper": {
+        "name": "RECEIPT(72mm x 297mm)",
+        "width": 576
+      },
+
+      "printSettings": {
+        "density": "Default",
+        "contrast": 200,
+        "feedAfter": 0,
+        "cut": "AFTER_DOCUMENT",
+        "beeper": "AFTER_DOCUMENT",
+        "cashDrawer": "NONE"
+      },
+
+      "logo": {
+        "top": {
+          "enabled": false,
+          "index": 1,
+          "mode": "Normal"
+        },
+        "bottom": {
+          "enabled": false,
+          "index": 1,
+          "mode": "Normal"
+        }
+      }
+    },
+
+    {
+      "id": "Cashier2",
+      "name": "Cash Counter 2",
+      "role": "CASHIER",
+      "enabled": true,
+
+      "connection": {
+        "type": "tcp",
+        "ip": "192.168.1.11",
+        "port": 9100
+      },
+
+      "paper": {
+        "name": "RECEIPT(72mm x 180mm)",
+        "width": 576
+      },
+
+      "printSettings": {
+        "density": "2",
+        "contrast": 180,
+        "feedAfter": 6,
+        "cut": "AFTER_PAGE",
+        "beeper": "NONE",
+        "cashDrawer": "AFTER_PRINT"
+      },
+
+      "logo": {
+        "top": { "enabled": false },
+        "bottom": { "enabled": false }
+      }
+    },
+
+    {
+      "id": "Cashier3",
+      "name": "Cash Counter 3",
+      "role": "CASHIER",
+      "enabled": false,
+
+      "connection": {
+        "type": "tcp",
+        "ip": "192.168.1.12",
+        "port": 9100
+      },
+
+      "paper": {
+        "name": "RECEIPT(72mm x 150mm)",
+        "width": 576
+      },
+
+      "printSettings": {
+        "density": "Default",
+        "contrast": 200,
+        "feedAfter": 3,
+        "cut": "NONE",
+        "beeper": "NONE",
+        "cashDrawer": "NONE"
+      },
+
+      "logo": {
+        "top": { "enabled": false },
+        "bottom": { "enabled": false }
+      }
+    },
+
+    {
+      "id": "Kitchen1",
+      "name": "Kitchen Printer 1",
+      "role": "KITCHEN",
+      "enabled": true,
+
+      "connection": {
+        "type": "tcp",
+        "ip": "192.168.1.20",
+        "port": 9100
+      },
+
+      "paper": {
+        "name": "RECEIPT(72mm x 297mm)",
+        "width": 576
+      },
+
+      "printSettings": {
+        "density": "3",
+        "contrast": 220,
+        "feedAfter": 6,
+        "cut": "AFTER_DOCUMENT",
+        "beeper": "AFTER_DOCUMENT",
+        "cashDrawer": "NONE"
+      },
+
+      "logo": {
+        "top": { "enabled": false },
+        "bottom": { "enabled": false }
+      }
+    },
+
+    {
+      "id": "Kitchen2",
+      "name": "Kitchen Printer 2",
+      "role": "KITCHEN",
+      "enabled": false,
+
+      "connection": {
+        "type": "tcp",
+        "ip": "192.168.1.21",
+        "port": 9100
+      },
+
+      "paper": {
+        "name": "RECEIPT(60mm x 70mm)",
+        "width": 480
+      },
+
+      "printSettings": {
+        "density": "Default",
+        "contrast": 200,
+        "feedAfter": 0,
+        "cut": "NONE",
+        "beeper": "NONE",
+        "cashDrawer": "NONE"
+      },
+
+      "logo": {
+        "top": { "enabled": false },
+        "bottom": { "enabled": false }
+      }
+    },
+
+    {
+      "id": "Kitchen3",
+      "name": "Kitchen Printer 3",
+      "role": "KITCHEN",
+      "enabled": false,
+
+      "connection": {
+        "type": "tcp",
+        "ip": "192.168.1.22",
+        "port": 9100
+      },
+
+      "paper": {
+        "name": "RECEIPT(50mm x 80mm)",
+        "width": 384
+      },
+
+      "printSettings": {
+        "density": "Default",
+        "contrast": 200,
+        "feedAfter": 0,
+        "cut": "NONE",
+        "beeper": "NONE",
+        "cashDrawer": "NONE"
+      },
+
+      "logo": {
+        "top": { "enabled": false },
+        "bottom": { "enabled": false }
+      }
+    }
+  ]
+}

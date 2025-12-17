@@ -3,26 +3,41 @@
 <head>
 <meta name="viewport" content="width=device-width">
 <title>Clients</title>
+<style>
+body{font-family:system-ui;background:#f1f5f9}
+.card{background:#fff;margin:10px;padding:14px;border-radius:12px}
+button{padding:10px 14px}
+pre{background:#eef;padding:10px;border-radius:8px}
+</style>
 </head>
 <body>
 
-<h3>Clients</h3>
-<button onclick="create()">➕ Create Client</button>
-<pre id="out"></pre>
+<h2 style="margin:10px">👥 Clients</h2>
+<button onclick="create()" style="margin:10px">➕ Create Client</button>
+
+<div class="card">
+<pre id="out">Loading...</pre>
+</div>
 
 <script>
-fetch("/api/clients")
-.then(r=>r.json())
-.then(d=>out.innerText=JSON.stringify(d,null,2));
+function load(){
+  fetch("/api/clients")
+  .then(r=>r.json())
+  .then(d=>{
+    out.textContent=JSON.stringify(d,null,2);
+  });
+}
 
 function create(){
   fetch("/api/client/create",{method:"POST"})
   .then(r=>r.json())
   .then(d=>{
     alert("CLIENT ID: "+d.client_id+"\nPIN: "+d.pin);
-    location.reload();
+    load();
   });
 }
+
+load();
 </script>
 
 </body>
