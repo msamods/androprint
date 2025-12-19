@@ -1,236 +1,312 @@
 /**
- * ANDROPRINT SERVER (FINAL)
- * Developed by MSAMODS
+ * ANDROPRINT – FINAL STABLE SERVER
+ * --------------------------------
+ * ✔ Persistent Server ID
+ * ✔ Client Auth (ENABLE_AUTH)
+ * ✔ Printer CRUD
+ * ✔ Real TCP Printer Status
+ * ✔ Real Test Print (no fake success)
+ * ✔ Safe JSON handling
+ * ✔ Localhost + 127.0.0.1
  */
 
+require("dotenv").config();
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const { execSync, spawn } = require("child_process");
-const multer = require("multer");
-const bodyParser = require("body-parser");
+const net = require("net");
+const cors = require("cors");
+const crypto = require("crypto");
 const { ThermalPrinter, PrinterTypes } = require("node-thermal-printer");
-require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const ENABLE_AUTH = process.env.ENABLE_AUTH === "true";
 
-/* --------------------------------------------------
-   PATHS
--------------------------------------------------- */
 const DATA_DIR = __dirname;
-const PRINTER_FILE = path.join(DATA_DIR, "printers.json");
-const CLIENT_FILE  = path.join(DATA_DIR, "clients.json");
-const UPLOAD_DIR   = path.join(DATA_DIR, "uploads");
+const PRINTER_FILE = path.join(DATA_DIR, "printer.json");
+const CLIENT_FILE = path.join(DATA_DIR, "clients.json");
+const SERVER_ID_FILE = path.join(DATA_DIR, "server.id");
 
-/* --------------------------------------------------
-   PREP
--------------------------------------------------- */
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
-if (!fs.existsSync(PRINTER_FILE)) fs.writeFileSync(PRINTER_FILE, JSON.stringify({ printers: [] }, null, 2));
-if (!fs.existsSync(CLIENT_FILE)) fs.writeFileSync(CLIENT_FILE, JSON.stringify({ clients: [] }, null, 2));
-
-const upload = multer({ dest: UPLOAD_DIR });
-
-app.use(bodyParser.json({ limit: "10mb" }));
+app.use(cors());
+app.use(express.json());
 app.use(express.static("public"));
 
-/* --------------------------------------------------
-   HELPERS
--------------------------------------------------- */
-const readPrinters = () => JSON.parse(fs.readFileSync(PRINTER_FILE)).printers;
-const savePrinters = (p) => fs.writeFileSync(PRINTER_FILE, JSON.stringify({ printers: p }, null, 2));
+/* ---------------- SERVER ID ---------------- */
 
-const readClients = () => JSON.parse(fs.readFileSync(CLIENT_FILE)).clients;
+function getServerId() {
+  if (fs.existsSync(SERVER_ID_FILE)) {
+    return fs.readFileSync(SERVER_ID_FILE, "utf8").trim();
+  }
+  const id = "srv-" + crypto.randomBytes(4).toString("hex");
+  fs.writeFileSync(SERVER_ID_FILE, id);
+  return id;
+}
 
-function authCheck(req, res) {
-  if (process.env.ENABLE_CLIENT_AUTH !== "true") return true;
+const SERVER_ID = getServerId();
 
-  const id = req.headers["x-client-id"];
+/* ---------------- SAFE JSON ---------------- */
+
+function safeRead(file, fallback) {
+  try {
+    if (!fs.existsSync(file)) return fallback;
+    const raw = fs.readFileSync(file, "utf8").trim();
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function safeWrite(file, data) {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+}
+
+/* ---------------- LOADERS ---------------- */
+
+function loadPrinters() {
+  return safeRead(PRINTER_FILE, { printers: [] }).printers;
+}
+
+function savePrinters(printers) {
+  safeWrite(PRINTER_FILE, { printers });
+}
+
+function loadClients() {
+  return safeRead(CLIENT_FILE, { clients: [] }).clients;
+}
+
+function saveClients(clients) {
+  safeWrite(CLIENT_FILE, { clients });
+}
+
+/* ---------------- AUTH ---------------- */
+
+function authRequired(req, res, next) {
+  if (!ENABLE_AUTH) return next();
+
+  const cid = req.headers["x-client-id"];
   const key = req.headers["x-print-key"];
 
-  const clients = readClients();
-  const valid = clients.find(c => c.id === id && c.pin === key && c.enabled);
-
-  if (!valid) {
-    res.status(401).json({ error: "Unauthorized" });
-    return false;
+  if (!cid || !key) {
+    return res.status(401).json({ error: "Client ID / Print Key missing" });
   }
-  return true;
+
+  const client = loadClients().find(c => c.id === cid);
+
+  if (!client || !client.enabled) {
+    return res.status(403).json({ error: "Client not allowed" });
+  }
+
+  if (client.pin !== key) {
+    return res.status(403).json({ error: "Invalid Print Key" });
+  }
+
+  req.client = client;
+  next();
 }
 
-async function getPrinter(printerId) {
-  const printers = readPrinters();
-  return printers.find(p => p.id === printerId && p.enabled);
-}
+/* ---------------- TCP CHECK ---------------- */
 
-/* --------------------------------------------------
-   CLOUDFARE (TEMP)
--------------------------------------------------- */
-let cloudflareURL = null;
+function isPrinterOnline(ip, port, timeout = 1500) {
+  return new Promise(resolve => {
+    const socket = new net.Socket();
+    let online = false;
 
-if (process.env.CLOUDFLARE === "true") {
-  try {
-    const cf = spawn("cloudflared", ["tunnel", "--url", `http://localhost:${PORT}`]);
-    cf.stdout.on("data", d => {
-      const m = d.toString().match(/https:\/\/.*trycloudflare.com/);
-      if (m) {
-        cloudflareURL = m[0];
-        console.log("\n☁ CLOUDFLARE TEMP URL");
-        console.log(cloudflareURL);
-      }
+    socket.setTimeout(timeout);
+    socket.connect(port, ip, () => {
+      online = true;
+      socket.destroy();
     });
-  } catch (e) {
-    console.log("Cloudflare failed:", e.message);
-  }
+
+    socket.on("error", () => {});
+    socket.on("timeout", () => socket.destroy());
+    socket.on("close", () => resolve(online));
+  });
 }
 
-/* --------------------------------------------------
-   API – INFO
--------------------------------------------------- */
-app.get("/api/config", (req, res) => {
+/* ---------------- PRINT TEXT HELPER ---------------- */
+
+async function printText(printer, text) {
+  const device = new ThermalPrinter({
+    type: PrinterTypes.EPSON,
+    interface: `tcp://${printer.connection.ip}:${printer.connection.port}`,
+    removeSpecialCharacters: false,
+    characterSet: "SLOVENIA"
+  });
+
+  device.println(text);
+  device.cut();
+
+  await device.execute();
+}
+
+/* ---------------- API: SERVER INFO ---------------- */
+
+app.get("/api/server", (req, res) => {
   res.json({
-    port: PORT,
-    cloudflare: cloudflareURL,
-    authEnabled: process.env.ENABLE_CLIENT_AUTH === "true"
+    serverId: SERVER_ID,
+    auth: ENABLE_AUTH
   });
 });
 
-app.get("/api/cloudflare", (req, res) => {
-  res.json({ url: cloudflareURL });
+/* ---------------- API: CLIENTS ---------------- */
+
+app.get("/api/clients", (req, res) => {
+  res.json({ clients: loadClients() });
 });
 
-/* --------------------------------------------------
-   API – PRINTER MANAGEMENT
--------------------------------------------------- */
-app.get("/api/printers", (req, res) => {
-  res.json({ printers: readPrinters() });
+app.post("/api/client/create", (req, res) => {
+  const clients = loadClients();
+  const id = "clt-" + crypto.randomBytes(3).toString("hex");
+  const pin = Math.floor(100000 + Math.random() * 900000).toString();
+
+  const client = {
+    id,
+    pin,
+    role: "CLIENT",
+    enabled: true,
+    createdAt: new Date().toISOString()
+  };
+
+  clients.push(client);
+  saveClients(clients);
+
+  res.json(client);
 });
 
-app.post("/api/printer/save", (req, res) => {
-  const printers = readPrinters();
+/* ---------------- API: PRINTERS ---------------- */
+
+app.get("/api/printers", async (req, res) => {
+  const printers = loadPrinters();
+
+  const enriched = await Promise.all(
+    printers.map(async p => ({
+      ...p,
+      online: await isPrinterOnline(
+        p.connection.ip,
+        p.connection.port
+      )
+    }))
+  );
+
+  res.json({ printers: enriched });
+});
+
+app.post("/api/printer/save", authRequired, (req, res) => {
+  const printers = loadPrinters();
   const p = req.body;
 
-  const cash = printers.filter(x => x.role === "CASHIER").length;
-  const kit  = printers.filter(x => x.role === "KITCHEN").length;
-
-  if (!printers.find(x => x.id === p.id)) {
-    if (p.role === "CASHIER" && cash >= 3) return res.status(400).json({ error: "Max Cashier printers reached" });
-    if (p.role === "KITCHEN" && kit >= 3) return res.status(400).json({ error: "Max Kitchen printers reached" });
-    printers.push(p);
-  } else {
-    const i = printers.findIndex(x => x.id === p.id);
-    printers[i] = p;
-  }
+  const index = printers.findIndex(x => x.id === p.id);
+  if (index >= 0) printers[index] = p;
+  else printers.push(p);
 
   savePrinters(printers);
   res.json({ success: true });
 });
 
-app.post("/api/printer/delete", (req, res) => {
-  const printers = readPrinters().filter(p => p.id !== req.body.id);
+app.post("/api/printer/delete", authRequired, (req, res) => {
+  const printers = loadPrinters().filter(p => p.id !== req.body.id);
   savePrinters(printers);
   res.json({ success: true });
 });
 
-app.post("/api/printer/test", async (req, res) => {
-  const printer = await getPrinter(req.body.id);
-  if (!printer) return res.status(404).json({ error: "Printer not found" });
+/* ---------------- REAL TEST PRINT ---------------- */
 
+app.post("/api/printer/test", authRequired, async (req, res) => {
   try {
+    const { printerId } = req.body;
+    const printer = loadPrinters().find(p => p.id === printerId && p.enabled);
+
+    if (!printer) {
+      return res.status(404).json({ error: "Printer not found" });
+    }
+
+    const online = await isPrinterOnline(
+      printer.connection.ip,
+      printer.connection.port
+    );
+
+    if (!online) {
+      return res.status(500).json({
+        printed: false,
+        error: "Printer offline"
+      });
+    }
+
     const tp = new ThermalPrinter({
       type: PrinterTypes.EPSON,
       interface: `tcp://${printer.connection.ip}:${printer.connection.port}`,
-      characterSet: "PC437"
+      timeout: 3000
     });
-    tp.println("=== ANDROPRINT TEST ===");
-    tp.println(printer.name);
+
+    tp.println("==== ANDROPRINT TEST ====");
+    tp.println(`Printer: ${printer.name}`);
+    tp.println(`Server : ${SERVER_ID}`);
     tp.println(new Date().toLocaleString());
     tp.cut();
-    await tp.execute();
-    res.json({ success: true });
+
+    const ok = await tp.execute();
+    if (!ok) throw new Error("Execute failed");
+
+    res.json({ success: true, printed: true });
+
   } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-/* --------------------------------------------------
-   PRINT – TEXT
--------------------------------------------------- */
-app.post("/print", async (req, res) => {
-  if (!authCheck(req, res)) return;
-
-  const printer = await getPrinter(req.headers["x-printer-id"]);
-  if (!printer) return res.status(404).json({ error: "Printer not found" });
-
-  try {
-    const tp = new ThermalPrinter({
-      type: PrinterTypes.EPSON,
-      interface: `tcp://${printer.connection.ip}:${printer.connection.port}`,
-      characterSet: "PC437"
+    res.status(500).json({
+      success: false,
+      printed: false,
+      error: e.message
     });
-    tp.println(req.body.text || "");
-    tp.cut();
-    await tp.execute();
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
   }
 });
 
-/* --------------------------------------------------
-   PRINT – IMAGE
--------------------------------------------------- */
-app.post("/img", upload.single("file"), async (req, res) => {
-  const printer = await getPrinter(req.headers["x-printer-id"]);
-  if (!printer) return res.status(404).json({ error: "Printer not found" });
-
+app.post("/print", authRequired, async (req, res) => {
   try {
-    const tp = new ThermalPrinter({
-      type: PrinterTypes.EPSON,
-      interface: `tcp://${printer.connection.ip}:${printer.connection.port}`
-    });
-    await tp.printImage(req.file.path);
-    tp.cut();
-    await tp.execute();
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
+    const printerId =
+      req.headers["x-printer-id"] || req.body.printerId;
+    const text = req.body.text;
 
-/* --------------------------------------------------
-   PRINT – PDF → IMAGE
--------------------------------------------------- */
-app.post("/pdftoimg", upload.single("file"), async (req, res) => {
-  const printer = await getPrinter(req.headers["x-printer-id"]);
-  if (!printer) return res.status(404).json({ error: "Printer not found" });
+    if (!printerId || !text) {
+      return res.status(400).json({
+        error: "printerId or text missing"
+      });
+    }
 
-  const img = req.file.path + ".png";
+    const printers = loadPrinters();
+    const printer = printers.find(
+      p => p.id === printerId && p.enabled
+    );
 
-  try {
-    execSync(`pdftoppm -png -singlefile "${req.file.path}" "${req.file.path}"`);
-    execSync(`convert "${img}" -resize 576 -colorspace Gray "${img}"`);
+    if (!printer) {
+      return res.status(404).json({
+        error: "Printer not found or disabled"
+      });
+    }
 
-    const tp = new ThermalPrinter({
-      type: PrinterTypes.EPSON,
-      interface: `tcp://${printer.connection.ip}:${printer.connection.port}`
+    await printText(printer, text);
+
+    res.json({
+      success: true,
+      message: "Printed successfully",
+      printerId
     });
 
-    await tp.printImage(img);
-    tp.cut();
-    await tp.execute();
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  } catch (err) {
+    console.error("PRINT ERROR:", err);
+    res.status(500).json({
+      error: err.message
+    });
   }
 });
 
-/* --------------------------------------------------
-   START
--------------------------------------------------- */
+/* ---------------- START ---------------- */
+
 app.listen(PORT, () => {
-  console.log("\n🖨 ANDROPRINT SERVER STARTED");
-  console.log("PORT :", PORT);
-  if (cloudflareURL) console.log("CLOUDFLARE:", cloudflareURL);
+  console.log("================================");
+  console.log("ANDROPRINT SERVER RUNNING");
+  console.log("Local URL :", `http://localhost:${PORT}`);
+  console.log("Local IP  :", `http://127.0.0.1:${PORT}`);
+  console.log("Server ID :", SERVER_ID);
+  console.log("Auth      :", ENABLE_AUTH ? "ENABLED" : "DISABLED");
+  console.log("================================");
 });
