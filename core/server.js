@@ -16,10 +16,11 @@ const cors = require("cors");               // ✅ FIX 1
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");           // ✅ FIX 2
-
+const net = require("net");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ENABLE_AUTH = process.env.ENABLE_AUTH === "true";
+const { ThermalPrinter, PrinterTypes } = require("node-thermal-printer");
 
 /* ===============================
    BASE DIRECTORIES (IMPORTANT)
@@ -314,6 +315,30 @@ app.post("/print", authRequired, async (req, res) => {
   }
 });
 
+function getCloudflareUrl() {
+  try {
+    const log = fs.readFileSync("logs/cloudflared.log", "utf8");
+    const match = log.match(/https:\/\/[^\s]+\.trycloudflare\.com/);
+    return match ? match[0] : null;
+  } catch {
+    return null;
+  }
+}
+app.get("/api/cloudflare", (req, res) => {
+  if (process.env.CLOUDFLARE !== "true") {
+    return res.json({ enabled: false });
+  }
+
+  res.json({
+    enabled: true,
+    url: getCloudflareUrl(),
+    endpoints: {
+      print: "/print/format",
+      printers: "/api/printers",
+      clients: "/api/clients"
+    }
+  });
+});
 /* ---------------- START ---------------- */
 
 app.listen(PORT, () => {

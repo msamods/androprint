@@ -1,8 +1,8 @@
 {
   "printers": [
     {
-      "id": "Cashier1",
-      "name": "Cash Counter 1",
+      "id": "cashier1-166558",
+      "name": "Cashier1",
       "role": "CASHIER",
       "enabled": true,
       "connection": {
@@ -10,11 +10,11 @@
         "port": 9100
       },
       "paper": {
-        "name": "RECEIPT(72mm)",
+        "name": "RECIEPT(72mm)",
         "width": 576
       },
       "printSettings": {
-        "cut": false
+        "cut": true
       }
     }
   ]
