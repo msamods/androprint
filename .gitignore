@@ -19,3 +19,15 @@ uploads/*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Android build outputs & Gradle caches
+.gradle/
+android-app/.gradle/
+android-app/app/build/
+android-app/build/
+*.apk
+*.aab
+dist/
+server.key
+server.cert
+
