@@ -27,7 +27,8 @@ android-app/app/build/
 android-app/build/
 *.apk
 *.aab
+local.properties
+android-app/local.properties
 dist/
 server.key
 server.cert
-

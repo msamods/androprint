@@ -4,18 +4,25 @@
   "description": "Next-Gen ESC/POS Cloud Print Server & Relay with Web Management Dashboard",
   "private": true,
   "main": "server.js",
+  "bin": "server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
     "ssl": "node generate-ssl.js",
-    "build:exe": "npx pkg . --targets node18-win-x64 --output dist/androprint-windows.exe"
+    "build:exe": "npx -y @yao-pkg/pkg . --targets node18-win-x64 --output dist/AndroPrint-Windows.exe --compress GZip"
+  },
+  "pkg": {
+    "assets": [
+      "public/**/*",
+      "node_modules/sql.js/dist/sql-wasm.wasm"
+    ],
+    "outputPath": "dist"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.1",
-    "nanoid": "^5.0.7",
     "node-thermal-printer": "^4.4.3",
     "sql.js": "1.10.3"
   }
