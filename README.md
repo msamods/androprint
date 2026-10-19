@@ -1,6 +1,9 @@
 # 🖨️ AndroPrint v2.0 – Cloud & LAN ESC/POS Print Gateway
 
 <p align="center">
+  <b>Developed By : MSA MODS x WhatYouWantKerala</b>
+</p>
+<p align="center">
   <img src="https://img.shields.io/badge/version-2.0.0-blue.svg?style=flat-square" alt="Version 2.0.0">
   <img src="https://img.shields.io/badge/platform-Termux%20%7C%20Linux%20%7C%20Windows%20%7C%20Docker-brightgreen.svg?style=flat-square" alt="Platforms">
   <img src="https://img.shields.io/badge/license-MIT-purple.svg?style=flat-square" alt="License">
@@ -184,6 +187,9 @@ androprint/
 
 ---
 
-## 📄 License
+## 📄 License & Credits
 
-MIT © [msamods](https://github.com/msamods)
+Developed By : **MSA MODS x WhatYouWantKerala**  
+GitHub: [https://github.com/msamods](https://github.com/msamods)
+
+Licensed under the [MIT License](LICENSE).

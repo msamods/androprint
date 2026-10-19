@@ -611,13 +611,14 @@ app.post("/api/quickprint", authRequired, async (req, res) => {
 
 server.listen(PORT, () => {
   console.log("");
-  console.log("╔══════════════════════════════════════╗");
-  console.log("║     ANDROPRINT v2.0 CLOUD SERVER     ║");
-  console.log("╠══════════════════════════════════════╣");
-  console.log(`║  Local    : http://localhost:${PORT}     ║`);
-  console.log(`║  Server ID: ${SERVER_ID}            ║`);
-  console.log(`║  Auth     : ${ENABLE_AUTH ? "ENABLED " : "DISABLED"}              ║`);
-  console.log(`║  SSE      : READY                    ║`);
-  console.log("╚══════════════════════════════════════╝");
+  console.log("╔════════════════════════════════════════════════════════════╗");
+  console.log("║               ANDROPRINT v2.0 CLOUD SERVER                 ║");
+  console.log("║     Developed By : MSA MODS x WhatYouWantKerala            ║");
+  console.log("╠════════════════════════════════════════════════════════════╣");
+  console.log(`║  Local    : http://localhost:${PORT}                           ║`);
+  console.log(`║  Server ID: ${SERVER_ID}                                  ║`);
+  console.log(`║  Auth     : ${ENABLE_AUTH ? "ENABLED " : "DISABLED"}                                    ║`);
+  console.log(`║  SSE      : READY                                          ║`);
+  console.log("╚════════════════════════════════════════════════════════════╝");
   console.log("");
 });
