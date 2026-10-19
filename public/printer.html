@@ -554,6 +554,10 @@
                 <a href="webprint.html" class="btn btn-glass" style="color:var(--accent); border-color:rgba(6,182,212,0.3);">
                     <span>📶</span> Web Bluetooth / USB
                 </a>
+                <button class="btn btn-glass" onclick="triggerLogoUpload()" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);">
+                    <span>🖼️</span> Receipt Logo
+                </button>
+                <input type="file" id="logoFileInput" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleLogoUpload(event)">
                 <button class="btn btn-primary" onclick="openPrinterModal()">
                     <span>＋</span> Add Printer
                 </button>
@@ -816,9 +820,18 @@
                             </div>
                         </div>
 
-                        <div class="card-actions">
+                        <div class="card-actions" style="display:flex; flex-wrap:wrap; gap:6px;">
                             <button class="btn-action test" onclick="testPrinter('${p.id}')" ${!isEnabled ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-                                📄 Test Print
+                                📄 Test
+                            </button>
+                            <button class="btn-action" style="color:var(--success); border-color:rgba(16,185,129,0.3);" onclick="openUpiModal('${p.id}')" ${!isEnabled ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+                                📲 UPI QR
+                            </button>
+                            <button class="btn-action" style="color:var(--accent); border-color:rgba(6,182,212,0.3);" onclick="kickDrawer('${p.id}')" ${!isEnabled ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+                                💵 Drawer
+                            </button>
+                            <button class="btn-action" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);" onclick="soundBuzzer('${p.id}')" ${!isEnabled ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+                                🔔 Buzzer
                             </button>
                             <button class="btn-action" onclick="openPrinterModal('${p.id}')">
                                 ✏️ Edit
@@ -827,7 +840,7 @@
                                 ${isEnabled ? '⏸ Disable' : '▶ Enable'}
                             </button>
                             <button class="btn-action danger" onclick="confirmDeletePrinter('${p.id}', '${escapeHtml(p.name)}')">
-                                🗑 Delete
+                                🗑
                             </button>
                         </div>
                     </div>
@@ -953,6 +966,113 @@
                 console.error('Test print error:', err);
                 showToast('Test print failed: ' + err.message, 'error');
             }
+        }
+
+        // Cash Drawer Kick
+        async function kickDrawer(id) {
+            try {
+                showToast('Kicking cash drawer...', 'info');
+                const res = await fetch('/api/printer/drawer-kick', {
+                    method: 'POST',
+                    headers: { ...AUTH, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ printerId: id })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('💵 Cash drawer opened!', 'success');
+                } else {
+                    showToast(data.error || 'Failed to open drawer', 'error');
+                }
+            } catch (e) {
+                showToast('Drawer error: ' + e.message, 'error');
+            }
+        }
+
+        // Kitchen Buzzer Alert
+        async function soundBuzzer(id) {
+            try {
+                showToast('Triggering buzzer beep...', 'info');
+                const res = await fetch('/api/printer/buzzer', {
+                    method: 'POST',
+                    headers: { ...AUTH, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ printerId: id, count: 2 })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('🔔 Buzzer sounded successfully!', 'success');
+                } else {
+                    showToast(data.error || 'Failed to trigger buzzer', 'error');
+                }
+            } catch (e) {
+                showToast('Buzzer error: ' + e.message, 'error');
+            }
+        }
+
+        // Dynamic UPI QR Prompt & Print
+        function openUpiModal(id) {
+            const pa = prompt("Enter Merchant UPI ID (e.g. merchant@upi):", "msamods@okaxis");
+            if (!pa) return;
+            const am = prompt("Enter Amount to Pay in ₹ (optional):", "150.00") || "";
+            const pn = prompt("Enter Store / Payee Name:", "AndroPrint Store") || "";
+            printUpiQr(id, pa, am, pn);
+        }
+
+        async function printUpiQr(printerId, pa, am, pn) {
+            try {
+                showToast('Generating and printing UPI QR Code...', 'info');
+                const res = await fetch('/api/printer/qr', {
+                    method: 'POST',
+                    headers: { ...AUTH, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        printerId,
+                        qr: {
+                            upi: { pa, am, pn, cu: 'INR', tn: 'Store Bill Payment' }
+                        },
+                        title: 'SCAN & PAY WITH ANY UPI APP',
+                        footer: 'GPay • PhonePe • Paytm • BHIM'
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('📲 Dynamic UPI QR printed!', 'success');
+                } else {
+                    showToast(data.error || 'Failed to print QR code', 'error');
+                }
+            } catch (e) {
+                showToast('QR Print error: ' + e.message, 'error');
+            }
+        }
+
+        // Store Logo Upload
+        function triggerLogoUpload() {
+            document.getElementById('logoFileInput').click();
+        }
+
+        function handleLogoUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                const base64 = evt.target.result;
+                try {
+                    showToast('Rasterizing and saving store logo...', 'info');
+                    const res = await fetch('/api/printer/logo', {
+                        method: 'POST',
+                        headers: { ...AUTH, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imageBase64: base64 })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast('🖼️ Store logo saved! Will appear on top of receipts.', 'success');
+                    } else {
+                        showToast(data.error || 'Failed to save logo', 'error');
+                    }
+                } catch (err) {
+                    showToast('Upload error: ' + err.message, 'error');
+                }
+            };
+            reader.readAsDataURL(file);
         }
 
         // Toggle Enabled

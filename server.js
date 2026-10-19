@@ -22,6 +22,9 @@ const crypto = require("crypto");
 const http = require("http");
 const https = require("https");
 const { ThermalPrinter, PrinterTypes } = require("node-thermal-printer");
+const QRCode = require("qrcode");
+const { Jimp } = require("jimp");
+const { PNG } = require("pngjs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,6 +56,7 @@ const PRINTER_FILE = path.join(DATA_DIR, "printer.json");
 const CLIENT_FILE = path.join(DATA_DIR, "clients.json");
 const SERVER_ID_FILE = path.join(DATA_DIR, "server.id");
 const JOBS_FILE = path.join(DATA_DIR, "jobs.json");
+const STORE_LOGO_PATH = path.join(DATA_DIR, "uploads", "store_logo.png");
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
@@ -211,10 +215,100 @@ function isPrinterOnline(ip, port, timeout = 1500) {
   });
 }
 
-/* ============ PRINT TEXT HELPER ============ */
+/* ============ IMAGE RASTERIZER (Monochrome ESC/POS) ============ */
 
-async function printText(printer, text) {
-  // Support UTF-8 multilingual characters and fallback encoding
+async function rasterizeImage(imageInput, maxWidth = 384) {
+  try {
+    let buf = null;
+    if (Buffer.isBuffer(imageInput)) {
+      buf = imageInput;
+    } else if (typeof imageInput === "string") {
+      if (imageInput.startsWith("data:")) {
+        const parts = imageInput.split(",");
+        if (parts.length > 1) {
+          buf = Buffer.from(parts[1], "base64");
+        }
+      } else if (imageInput.length > 300 && !imageInput.includes("\n") && !fs.existsSync(imageInput)) {
+        buf = Buffer.from(imageInput, "base64");
+      } else if (fs.existsSync(imageInput)) {
+        buf = fs.readFileSync(imageInput);
+      }
+    }
+
+    if (!buf) return null;
+
+    const image = await Jimp.read(buf);
+    if (!image) return null;
+
+    // Constrain width while maintaining aspect ratio
+    if (image.bitmap.width > maxWidth) {
+      image.resize({ w: maxWidth });
+    }
+
+    // Convert to high-contrast monochrome for thermal paper
+    image.greyscale();
+    
+    // Output PNG buffer for node-thermal-printer
+    const pngBuffer = await image.getBuffer("image/png");
+    return pngBuffer;
+  } catch (err) {
+    console.error("Rasterize Image Error:", err.message);
+    return null;
+  }
+}
+
+/* ============ DYNAMIC UPI & QR HELPER ============ */
+
+async function generateQrBuffer(qrInput) {
+  let qrText = "";
+  if (typeof qrInput === "string") {
+    qrText = qrInput;
+  } else if (typeof qrInput === "object" && qrInput !== null) {
+    if (qrInput.upi) {
+      // Dynamic UPI payment URL format for GPay, PhonePe, Paytm, BHIM
+      const { pa, pn = "", am = "", cu = "INR", tn = "Bill Payment" } = qrInput.upi;
+      const params = new URLSearchParams();
+      if (pa) params.set("pa", pa);
+      if (pn) params.set("pn", pn);
+      if (am) params.set("am", am);
+      if (cu) params.set("cu", cu);
+      if (tn) params.set("tn", tn);
+      qrText = "upi://pay?" + params.toString();
+    } else if (qrInput.text || qrInput.data) {
+      qrText = qrInput.text || qrInput.data;
+    }
+  }
+
+  if (!qrText) return null;
+
+  // Universal Raster QR — 100% compatible with all thermal printers
+  const pngBuffer = await QRCode.toBuffer(qrText, {
+    type: "png",
+    width: 220,
+    margin: 1,
+    errorCorrectionLevel: "M"
+  });
+
+  return { pngBuffer, qrText };
+}
+
+/* ============ COMPREHENSIVE PRINT RECEIPT ============ */
+
+async function printReceipt(printer, options = {}) {
+  const {
+    text = "",
+    logo = null,
+    qr = null,
+    barcode = null,
+    drawerKick = false,
+    buzzer = false,
+    beep = false,
+    cut = true,
+    align = "left",
+    bold = false,
+    underline = false
+  } = options;
+
   const device = new ThermalPrinter({
     type: PrinterTypes.EPSON,
     interface: `tcp://${printer.connection.ip}:${printer.connection.port}`,
@@ -225,18 +319,112 @@ async function printText(printer, text) {
     }
   });
 
-  // ESC/POS UTF-8 and multilingual codepage configuration
-  // FS & (Select Chinese/Kanji/Asian mode) or ESC t (select character code table)
+  // ESC @: Initialize hardware
   try {
     device.raw(Buffer.from([0x1B, 0x40])); // ESC @ (Initialize)
-    device.raw(Buffer.from([0x1C, 0x26])); // FS & (Select Kanji/Multilingual mode if supported)
-    device.raw(Buffer.from([0x1B, 0x74, 0x00])); // ESC t 0 (Standard/PC437/UTF-8 base)
+    device.raw(Buffer.from([0x1C, 0x26])); // FS & (Select Kanji/Multilingual mode)
+    device.raw(Buffer.from([0x1B, 0x74, 0x00])); // ESC t 0 (Standard code page)
   } catch (e) {}
 
-  device.println(text);
-  device.cut();
+  // 1. CASH DRAWER KICK (kick pin 2 / pin 5)
+  if (drawerKick) {
+    try {
+      device.openCashDrawer();
+    } catch (e) {
+      // Raw fallback: ESC p 0 25 250
+      device.raw(Buffer.from([0x1B, 0x70, 0x00, 0x19, 0xFA]));
+      device.raw(Buffer.from([0x1B, 0x70, 0x01, 0x19, 0xFA]));
+    }
+  }
 
-  await device.execute();
+  // 2. KITCHEN BUZZER / BEEP (acoustic alert for kitchen/waiter)
+  if (buzzer || beep) {
+    try {
+      device.beep();
+    } catch (e) {
+      // Raw fallback: ESC B 2 2 (2 beeps, 200ms)
+      device.raw(Buffer.from([0x1B, 0x42, 0x02, 0x02]));
+    }
+  }
+
+  // 3. STORE LOGO / RASTER IMAGE
+  const effectiveLogo = logo || (fs.existsSync(STORE_LOGO_PATH) && logo !== false ? STORE_LOGO_PATH : null);
+  if (effectiveLogo) {
+    try {
+      const maxWidth = (printer.paperWidth === 58) ? 320 : 480;
+      const pngBuf = await rasterizeImage(effectiveLogo, maxWidth);
+      if (pngBuf) {
+        const png = PNG.sync.read(pngBuf);
+        device.alignCenter();
+        const imgCmd = device.printer.printImageBuffer(png.width, png.height, png.data);
+        device.append(imgCmd);
+        device.newLine();
+      }
+    } catch (e) {
+      console.warn("Logo print warning:", e.message);
+    }
+  }
+
+  // 4. MAIN RECEIPT TEXT (with alignment & styling)
+  if (text) {
+    if (align === "center") device.alignCenter();
+    else if (align === "right") device.alignRight();
+    else device.alignLeft();
+
+    if (bold) device.bold(true);
+    if (underline) device.underline(true);
+
+    device.println(text);
+
+    if (bold) device.bold(false);
+    if (underline) device.underline(false);
+  }
+
+  // 5. BARCODE (Code128 / EAN13)
+  if (barcode) {
+    try {
+      device.alignCenter();
+      const codeData = typeof barcode === "string" ? barcode : barcode.data;
+      const codeType = typeof barcode === "object" && barcode.type ? barcode.type.toUpperCase() : "CODE128";
+      if (codeType === "CODE128" || !codeType) {
+        device.code128(codeData, { width: 2, height: 60 });
+      } else {
+        device.printBarcode(codeData, codeType, { width: 2, height: 60 });
+      }
+      device.newLine();
+    } catch (e) {
+      console.warn("Barcode print warning:", e.message);
+    }
+  }
+
+  // 6. DYNAMIC UPI QR / QR CODE
+  if (qr) {
+    try {
+      const qrRes = await generateQrBuffer(qr);
+      if (qrRes && qrRes.pngBuffer) {
+        const png = PNG.sync.read(qrRes.pngBuffer);
+        device.alignCenter();
+        const imgCmd = device.printer.printImageBuffer(png.width, png.height, png.data);
+        device.append(imgCmd);
+        device.newLine();
+      }
+    } catch (e) {
+      console.warn("QR print warning:", e.message);
+    }
+  }
+
+  // 7. PAPER CUT
+  if (cut) {
+    device.cut();
+  }
+
+  const ok = await device.execute();
+  return ok;
+}
+
+/* Legacy wrapper for backward compatibility */
+async function printText(printer, text) {
+  return await printReceipt(printer, { text, cut: true });
 }
 
 /* ============ API: SERVER INFO (ENHANCED) ============ */
@@ -451,20 +639,33 @@ app.post("/api/printer/test", authRequired, async (req, res) => {
 
 app.post("/print", authRequired, async (req, res) => {
   try {
-    const printerId =
-      req.headers["x-printer-id"] || req.body.printerId;
-    const text = req.body.text;
+    const printerId = req.headers["x-printer-id"] || req.body.printerId;
+    const {
+      text = "",
+      logo = null,
+      qr = null,
+      barcode = null,
+      drawerKick = false,
+      buzzer = false,
+      beep = false,
+      cut = true,
+      align = "left",
+      bold = false,
+      underline = false
+    } = req.body;
 
-    if (!printerId || !text) {
+    if (!printerId) {
+      return res.status(400).json({ error: "printerId missing" });
+    }
+
+    if (!text && !logo && !qr && !barcode && !drawerKick && !buzzer && !beep) {
       return res.status(400).json({
-        error: "printerId or text missing"
+        error: "At least one print action (text, logo, qr, barcode, drawerKick, buzzer) required"
       });
     }
 
     const printers = loadPrinters();
-    const printer = printers.find(
-      p => p.id === printerId && p.enabled
-    );
+    const printer = printers.find(p => p.id === printerId && p.enabled);
 
     if (!printer) {
       addJob({
@@ -472,21 +673,31 @@ app.post("/print", authRequired, async (req, res) => {
         type: "print",
         status: "failed",
         error: "Printer not found or disabled",
-        textPreview: text.substring(0, 100)
+        textPreview: (text || "Rich Receipt").substring(0, 100)
       });
-      return res.status(404).json({
-        error: "Printer not found or disabled"
-      });
+      return res.status(404).json({ error: "Printer not found or disabled" });
     }
 
-    await printText(printer, text);
+    await printReceipt(printer, {
+      text,
+      logo,
+      qr,
+      barcode,
+      drawerKick,
+      buzzer,
+      beep,
+      cut,
+      align,
+      bold,
+      underline
+    });
 
     addJob({
       printerId,
       printerName: printer.name,
       type: "print",
       status: "success",
-      textPreview: text.substring(0, 100),
+      textPreview: (text || (qr ? "QR Receipt" : "Receipt")).substring(0, 100),
       clientId: req.client?.id || "anonymous"
     });
 
@@ -504,10 +715,155 @@ app.post("/print", authRequired, async (req, res) => {
       status: "failed",
       error: err.message
     });
-    res.status(500).json({
-      error: err.message
-    });
+    res.status(500).json({ error: err.message });
   }
+});
+
+/* ============ DEDICATED HARDWARE CONTROL ENDPOINTS ============ */
+
+// 1. Cash Drawer Kick
+app.post("/api/printer/drawer-kick", authRequired, async (req, res) => {
+  try {
+    const { printerId } = req.body;
+    if (!printerId) return res.status(400).json({ error: "printerId required" });
+
+    const printer = loadPrinters().find(p => p.id === printerId && p.enabled);
+    if (!printer) return res.status(404).json({ error: "Printer not found" });
+
+    await printReceipt(printer, { drawerKick: true, cut: false });
+    addJob({
+      printerId,
+      printerName: printer.name,
+      type: "drawer_kick",
+      status: "success",
+      textPreview: "[Cash Drawer Kick Command]"
+    });
+
+    res.json({ success: true, message: "Cash drawer kicked successfully" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 2. Kitchen Buzzer / Beep
+app.post("/api/printer/buzzer", authRequired, async (req, res) => {
+  try {
+    const { printerId, count = 2 } = req.body;
+    if (!printerId) return res.status(400).json({ error: "printerId required" });
+
+    const printer = loadPrinters().find(p => p.id === printerId && p.enabled);
+    if (!printer) return res.status(404).json({ error: "Printer not found" });
+
+    await printReceipt(printer, { buzzer: true, cut: false });
+    addJob({
+      printerId,
+      printerName: printer.name,
+      type: "buzzer",
+      status: "success",
+      textPreview: `[Kitchen Buzzer Alert x${count}]`
+    });
+
+    res.json({ success: true, message: "Buzzer beep triggered" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 3. Dynamic UPI / QR Code Direct Print
+app.post("/api/printer/qr", authRequired, async (req, res) => {
+  try {
+    const { printerId, qr, title = "SCAN & PAY WITH ANY UPI APP", footer = "GPay / PhonePe / Paytm / BHIM" } = req.body;
+    if (!printerId || !qr) return res.status(400).json({ error: "printerId and qr payload required" });
+
+    const printer = loadPrinters().find(p => p.id === printerId && p.enabled);
+    if (!printer) return res.status(404).json({ error: "Printer not found" });
+
+    let headerText = title ? `\n${title}\n================================\n` : "";
+    let footerText = footer ? `\n${footer}\n\n\n` : "\n\n\n";
+
+    await printReceipt(printer, {
+      text: headerText,
+      align: "center",
+      bold: true,
+      qr,
+      cut: true
+    });
+
+    addJob({
+      printerId,
+      printerName: printer.name,
+      type: "qr_print",
+      status: "success",
+      textPreview: `[UPI / QR Code Print]`
+    });
+
+    res.json({ success: true, message: "QR Code printed successfully" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 4. Barcode Direct Print
+app.post("/api/printer/barcode", authRequired, async (req, res) => {
+  try {
+    const { printerId, barcode, type = "CODE128", label = "" } = req.body;
+    if (!printerId || !barcode) return res.status(400).json({ error: "printerId and barcode string required" });
+
+    const printer = loadPrinters().find(p => p.id === printerId && p.enabled);
+    if (!printer) return res.status(404).json({ error: "Printer not found" });
+
+    await printReceipt(printer, {
+      text: label ? `\n${label}\n` : "\n",
+      align: "center",
+      barcode: { data: barcode, type },
+      cut: true
+    });
+
+    addJob({
+      printerId,
+      printerName: printer.name,
+      type: "barcode_print",
+      status: "success",
+      textPreview: `[Barcode: ${barcode}]`
+    });
+
+    res.json({ success: true, message: "Barcode printed successfully" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 5. Store Logo Management
+app.post("/api/printer/logo", authRequired, async (req, res) => {
+  try {
+    const { imageBase64 } = req.body;
+    if (!imageBase64) return res.status(400).json({ error: "imageBase64 required" });
+
+    const pngBuf = await rasterizeImage(imageBase64, 480);
+    if (!pngBuf) return res.status(400).json({ error: "Invalid image or failed to rasterize" });
+
+    fs.mkdirSync(path.join(DATA_DIR, "uploads"), { recursive: true });
+    fs.writeFileSync(STORE_LOGO_PATH, pngBuf);
+
+    res.json({ success: true, message: "Store logo saved and rasterized successfully" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/printer/logo", (req, res) => {
+  if (fs.existsSync(STORE_LOGO_PATH)) {
+    res.sendFile(STORE_LOGO_PATH);
+  } else {
+    res.status(404).json({ exists: false, error: "No store logo uploaded" });
+  }
+});
+
+app.delete("/api/printer/logo", authRequired, (req, res) => {
+  if (fs.existsSync(STORE_LOGO_PATH)) {
+    fs.unlinkSync(STORE_LOGO_PATH);
+  }
+  res.json({ success: true, message: "Store logo removed" });
 });
 
 /* ============ API: PRINT JOBS ============ */

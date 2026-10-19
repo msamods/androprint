@@ -51,15 +51,49 @@ When `ENABLE_AUTH=true` is set in the environment / `.env`, all protected routes
 ## 🖨️ Print Endpoints
 
 ### `POST /print`
-Prints text and ESC/POS formatted content to the specified printer. Auto-initializes UTF-8 encoding, multi-byte character tables, and paper cut.
+Comprehensive receipt print dispatcher. Supports rich multimedia tickets with store logo rasterization, dynamic UPI QR codes, barcodes, cash drawer kick, and buzzer alerts.
 
-#### Request Body (JSON)
+#### Rich Request Body (JSON)
 ```json
 {
   "printerId": "printer_main_01",
-  "text": "      MY RESTAURANT\n--------------------------------\nToken #42 - Table 4\nChicken Biryani x 2    ₹360.00\nLime Juice x 1          ₹40.00\n--------------------------------\nTOTAL:                 ₹400.00\n--------------------------------\n  Thank You! Visit Again!\n\n\n"
+  "text": "      MY RESTAURANT\n--------------------------------\nToken #42 - Table 4\nChicken Biryani x 2    ₹360.00\nLime Juice x 1          ₹40.00\n--------------------------------\nTOTAL:                 ₹400.00\n--------------------------------\n  Thank You! Visit Again!\n\n",
+  "align": "left",
+  "bold": false,
+  "drawerKick": true,
+  "buzzer": true,
+  "cut": true,
+  "qr": {
+    "upi": {
+      "pa": "merchant@okaxis",
+      "pn": "My Restaurant",
+      "am": "400.00",
+      "cu": "INR",
+      "tn": "Order #42"
+    }
+  },
+  "barcode": {
+    "data": "ORD-2026-0042",
+    "type": "CODE128"
+  },
+  "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
 }
 ```
+
+#### Payload Fields Reference
+| Field | Type | Description |
+|---|---|---|
+| `printerId` | String | Target printer identifier (**Required**) |
+| `text` | String | Plain or formatted UTF-8 receipt text |
+| `align` | String | Text alignment: `"left"`, `"center"`, or `"right"` |
+| `bold` | Boolean | Enable bold font style for text body |
+| `underline` | Boolean | Enable underline font style |
+| `drawerKick` | Boolean | Triggers RJ11/RJ12 cash drawer kick on print |
+| `buzzer` / `beep` | Boolean | Triggers acoustic buzzer alert on thermal printer |
+| `cut` | Boolean | Automatically feeds and cuts paper (default: `true`) |
+| `qr` | Object / String | QR payload. Supports `{ upi: { pa, pn, am, cu, tn } }` for Google Pay / PhonePe / Paytm dynamic QR |
+| `barcode` | Object / String | Barcode payload. String or `{ data: "...", type: "CODE128" }` |
+| `logo` | String | Base64 PNG/JPG/WebP data URL or server file path |
 
 #### Headers
 ```http
@@ -79,11 +113,62 @@ x-print-key: 9842
 }
 ```
 
-#### Error Responses
-- `400 Bad Request`: `{"error": "printerId or text missing"}`
-- `403 Forbidden`: `{"error": "Invalid Print Key"}` or `{"error": "Client not allowed"}`
-- `404 Not Found`: `{"error": "Printer not found or disabled"}`
-- `500 Internal Server Error`: `{"error": "connect ECONNREFUSED 192.168.1.100:9100"}`
+---
+
+### Hardware Control Endpoints
+
+#### `POST /api/printer/drawer-kick`
+Kicks open the cash drawer immediately without requiring a print ticket.
+```json
+{
+  "printerId": "printer_main_01"
+}
+```
+
+#### `POST /api/printer/buzzer`
+Fires an audible beep alert on kitchen/bar printers.
+```json
+{
+  "printerId": "printer_kitchen",
+  "count": 2
+}
+```
+
+#### `POST /api/printer/qr`
+Prints a standalone dynamic UPI or text QR code with header/footer.
+```json
+{
+  "printerId": "printer_main_01",
+  "qr": {
+    "upi": {
+      "pa": "merchant@okaxis",
+      "pn": "AndroPrint Store",
+      "am": "250.00"
+    }
+  },
+  "title": "SCAN & PAY WITH ANY UPI APP",
+  "footer": "GPay • PhonePe • Paytm • BHIM"
+}
+```
+
+#### `POST /api/printer/barcode`
+Prints a standalone barcode with optional text label.
+```json
+{
+  "printerId": "printer_main_01",
+  "barcode": "INV-2026-0042",
+  "type": "CODE128",
+  "label": "INVOICE #0042"
+}
+```
+
+#### `POST /api/printer/logo`
+Uploads and saves a persistent store logo that prints at the top of receipts.
+```json
+{
+  "imageBase64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+}
+```
 
 ---
 
