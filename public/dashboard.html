@@ -3,693 +3,1087 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dashboard - AndroPrint</title>
+    <title>Dashboard – AndroPrint Cloud</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-        }
-        
+        * { margin:0; padding:0; box-sizing:border-box; }
+
         :root {
-            --primary-color: #2563eb;
-            --primary-dark: #1d4ed8;
-            --secondary-color: #64748b;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
-            --light-bg: #f8fafc;
-            --card-bg: #ffffff;
-            --border-color: #e2e8f0;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --accent: #06b6d4;
+            --bg: #0f0f23;
+            --bg-surface: #161637;
+            --bg-card: rgba(255,255,255,0.04);
+            --glass: rgba(255,255,255,0.06);
+            --glass-border: rgba(255,255,255,0.08);
+            --text: #e2e8f0;
+            --text-dim: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --radius: 16px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.3);
         }
-        
+
         body {
-            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
-            color: #334155;
             line-height: 1.5;
         }
-        
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            color: white;
-            padding: 20px 16px;
+
+        /* ===== TOP BAR ===== */
+        .topbar {
+            background: rgba(15,15,35,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 12px 20px;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
             display: flex;
             align-items: center;
             gap: 12px;
         }
-        
-        .header-icon {
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.2);
+
+        .topbar-logo {
+            width: 38px; height: 38px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
             border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 16px rgba(99,102,241,0.25);
         }
-        
-        .header-content {
+
+        .topbar-title {
             flex: 1;
         }
-        
-        .header h1 {
-            font-size: 1.4rem;
+
+        .topbar-title h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .topbar-title span {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            display: block;
+        }
+
+        .topbar-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .status-pill {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 0.72rem;
             font-weight: 600;
+            background: rgba(16,185,129,0.12);
+            color: var(--success);
+            border: 1px solid rgba(16,185,129,0.2);
+        }
+
+        .status-pill .dot {
+            width: 7px; height: 7px;
+            background: currentColor;
+            border-radius: 50%;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%,100% { opacity:1; }
+            50% { opacity:0.3; }
+        }
+
+        .icon-btn {
+            width: 38px; height: 38px;
+            border-radius: 12px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        /* ===== MAIN CONTAINER ===== */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ===== STAT CARDS ===== */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(99,102,241,0.3);
+            transform: translateY(-2px);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .stat-card:nth-child(1)::before { background: linear-gradient(90deg, var(--primary), var(--accent)); }
+        .stat-card:nth-child(2)::before { background: linear-gradient(90deg, var(--success), #34d399); }
+        .stat-card:nth-child(3)::before { background: linear-gradient(90deg, var(--warning), #fbbf24); }
+        .stat-card:nth-child(4)::before { background: linear-gradient(90deg, var(--info), #60a5fa); }
+        .stat-card:nth-child(5)::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+
+        .stat-icon {
+            width: 40px; height: 40px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+        }
+
+        .stat-card:nth-child(1) .stat-icon { background: rgba(99,102,241,0.15); }
+        .stat-card:nth-child(2) .stat-icon { background: rgba(16,185,129,0.15); }
+        .stat-card:nth-child(3) .stat-icon { background: rgba(245,158,11,0.15); }
+        .stat-card:nth-child(4) .stat-icon { background: rgba(59,130,246,0.15); }
+        .stat-card:nth-child(5) .stat-icon { background: rgba(139,92,246,0.15); }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1;
             margin-bottom: 4px;
         }
-        
-        .header-subtitle {
-            font-size: 0.85rem;
-            opacity: 0.9;
+
+        .stat-label {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            font-weight: 500;
         }
-        
-        .logout-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
+
+        /* ===== SECTION GRID ===== */
+        .section-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .card-header {
             display: flex;
             align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--glass-border);
         }
-        
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+
+        .card-header h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex; align-items: center; gap: 8px;
         }
-        
-        /* Main Container */
-        .container {
-            padding: 16px;
-            max-width: 800px;
-            margin: 0 auto;
+
+        .card-body {
+            padding: 16px 20px;
         }
-        
-        /* Status Card */
-        .status-card {
-            background: var(--card-bg);
-            border-radius: 20px;
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-            animation: fadeIn 0.5s ease;
+
+        .card-header .badge {
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
-        
-        .status-header {
+
+        .badge-success {
+            background: rgba(16,185,129,0.15);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(245,158,11,0.15);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(239,68,68,0.15);
+            color: var(--danger);
+        }
+
+        .badge-info {
+            background: rgba(59,130,246,0.15);
+            color: var(--info);
+        }
+
+        /* ===== PRINTERS LIVE ===== */
+        .printer-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 2px solid var(--light-bg);
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
         }
-        
-        .status-icon {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-        }
-        
-        .status-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: #1e293b;
-        }
-        
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-        }
-        
-        .status-item {
-            padding: 16px;
-            background: var(--light-bg);
-            border-radius: 14px;
-            border: 1px solid var(--border-color);
-        }
-        
-        .status-label {
-            font-size: 0.85rem;
-            color: var(--secondary-color);
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .status-value {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #1e293b;
-            word-break: break-all;
-        }
-        
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            gap: 6px;
-        }
-        
-        .badge-success {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .badge-warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .badge-danger {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        
-        .badge-info {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-        
-        .badge-dot {
-            width: 8px;
-            height: 8px;
+
+        .printer-item:last-child { border-bottom: none; }
+
+        .printer-dot {
+            width: 10px; height: 10px;
             border-radius: 50%;
+            flex-shrink: 0;
         }
-        
-        .badge-success .badge-dot {
-            background: #10b981;
-        }
-        
-        .badge-warning .badge-dot {
-            background: #f59e0b;
-        }
-        
-        .badge-danger .badge-dot {
-            background: #ef4444;
-        }
-        
-        .badge-info .badge-dot {
-            background: #3b82f6;
-        }
-        
-        /* Quick Actions */
-        .quick-actions {
-            margin-bottom: 20px;
-        }
-        
-        .section-title {
-            font-size: 1.1rem;
+
+        .printer-dot.online { background: var(--success); box-shadow: 0 0 8px rgba(16,185,129,0.5); }
+        .printer-dot.offline { background: var(--danger); }
+
+        .printer-info { flex: 1; min-width: 0; }
+        .printer-info .name { font-size: 0.88rem; font-weight: 600; }
+        .printer-info .meta { font-size: 0.72rem; color: var(--text-dim); }
+
+        .printer-status-badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.7rem;
             font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
-        
-        .section-title::before {
-            content: '';
-            width: 4px;
-            height: 20px;
-            background: var(--primary-color);
-            border-radius: 2px;
-        }
-        
+
+        /* ===== QUICK ACTIONS ===== */
         .actions-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
         }
-        
+
         .action-card {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
+            padding: 16px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
             text-decoration: none;
             color: inherit;
         }
-        
+
         .action-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-            border-color: var(--primary-color);
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(99,102,241,0.3);
+            transform: translateY(-2px);
         }
-        
+
         .action-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
             flex-shrink: 0;
         }
-        
-        .action-card:nth-child(1) .action-icon {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-        }
-        
-        .action-card:nth-child(2) .action-icon {
-            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-            color: white;
-        }
-        
-        .action-card:nth-child(3) .action-icon {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-        }
-        
-        .action-content {
-            flex: 1;
-        }
-        
+
+        .action-card:nth-child(1) .action-icon { background: linear-gradient(135deg, #10b981, #059669); }
+        .action-card:nth-child(2) .action-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .action-card:nth-child(3) .action-icon { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+        .action-card:nth-child(4) .action-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
         .action-title {
-            font-size: 1rem;
+            font-size: 0.85rem;
             font-weight: 600;
-            color: #1e293b;
+        }
+
+        .action-desc {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+        }
+
+        /* ===== JOBS ===== */
+        .job-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.82rem;
+        }
+
+        .job-item:last-child { border-bottom: none; }
+
+        .job-status {
+            width: 28px; height: 28px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .job-status.success {
+            background: rgba(16,185,129,0.15);
+            color: var(--success);
+        }
+
+        .job-status.failed {
+            background: rgba(239,68,68,0.15);
+            color: var(--danger);
+        }
+
+        .job-info { flex: 1; min-width: 0; }
+        .job-info .job-title { font-weight: 500; }
+        .job-info .job-meta { font-size: 0.7rem; color: var(--text-dim); }
+
+        .job-time {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            white-space: nowrap;
+        }
+
+        /* ===== CLOUD PANEL ===== */
+        .cloud-banner {
+            background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(6,182,212,0.15));
+            border: 1px solid rgba(99,102,241,0.2);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cloud-banner::before {
+            content: '';
+            position: absolute;
+            top: -50%; right: -20%;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(99,102,241,0.1), transparent);
+            border-radius: 50%;
+        }
+
+        .cloud-icon {
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+        }
+
+        .cloud-info { flex: 1; position: relative; z-index: 1; }
+        .cloud-info h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
             margin-bottom: 4px;
         }
-        
-        .action-desc {
-            font-size: 0.85rem;
-            color: var(--secondary-color);
-        }
-        
-        .action-arrow {
-            color: var(--secondary-color);
-            font-size: 1.2rem;
-        }
-        
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: var(--secondary-color);
-            font-size: 0.85rem;
-            margin-top: 20px;
-            border-top: 1px solid var(--border-color);
-        }
-        
-        /* Loading Animation */
-        .loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 20px;
-            gap: 16px;
-        }
-        
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--border-color);
-            border-top: 4px solid var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        /* Animations */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Responsive Design */
-        @media (max-width: 640px) {
-            .header {
-                padding: 16px;
-            }
-            
-            .header h1 {
-                font-size: 1.2rem;
-            }
-            
-            .container {
-                padding: 12px;
-            }
-            
-            .status-card {
-                padding: 20px;
-            }
-            
-            .status-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .actions-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .action-card {
-                padding: 16px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .header-icon, .logout-btn {
-                width: 36px;
-                height: 36px;
-                font-size: 1.2rem;
-            }
-            
-            .status-icon {
-                width: 40px;
-                height: 40px;
-                font-size: 1.2rem;
-            }
-            
-            .action-icon {
-                width: 40px;
-                height: 40px;
-                font-size: 1.2rem;
-            }
-        }
-        
-        /* Error State */
-        .error-card {
-            background: #fee2e2;
-            border: 2px solid #ef4444;
-            color: #991b1b;
-            padding: 20px;
-            border-radius: 16px;
-            text-align: center;
-            animation: fadeIn 0.5s ease;
-        }
-        
-        .error-icon {
-            font-size: 2rem;
+        .cloud-info p {
+            font-size: 0.82rem;
+            color: var(--text-dim);
             margin-bottom: 12px;
         }
-        
-        .retry-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 10px 20px;
+
+        .cloud-url {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: rgba(0,0,0,0.3);
             border-radius: 10px;
-            margin-top: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.2s ease;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--accent);
+            word-break: break-all;
         }
-        
-        .retry-btn:hover {
-            background: #dc2626;
+
+        .copy-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover { background: var(--primary-dark); }
+
+        /* ===== QUICK PRINT PANEL ===== */
+        .quickprint-area {
+            padding: 16px 20px;
+        }
+
+        .quickprint-area select,
+        .quickprint-area textarea {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: #fff;
+            font-family: 'Inter', monospace;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .quickprint-area select:focus,
+        .quickprint-area textarea:focus {
+            border-color: var(--primary);
+        }
+
+        .quickprint-area textarea {
+            height: 80px;
+            resize: vertical;
+        }
+
+        .quickprint-area option {
+            background: var(--bg-surface);
+        }
+
+        .send-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .send-btn:hover {
+            box-shadow: 0 4px 16px rgba(99,102,241,0.4);
+            transform: translateY(-1px);
+        }
+
+        /* ===== FULL WIDTH ===== */
+        .full-width { grid-column: 1 / -1; }
+
+        /* ===== SYSTEM INFO ===== */
+        .sys-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.82rem;
+        }
+
+        .sys-row:last-child { border-bottom: none; }
+
+        .sys-label { color: var(--text-dim); }
+
+        .sys-value {
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ===== UPTIME BAR ===== */
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 1s ease;
+        }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 9999;
+            animation: toastIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(20px);
+        }
+
+        .toast.success {
+            background: rgba(16,185,129,0.2);
+            border: 1px solid rgba(16,185,129,0.3);
+            color: var(--success);
+        }
+
+        .toast.error {
+            background: rgba(239,68,68,0.2);
+            border: 1px solid rgba(239,68,68,0.3);
+            color: var(--danger);
+        }
+
+        @keyframes toastIn {
+            from { opacity:0; transform: translateX(-50%) translateY(20px); }
+            to { opacity:1; transform: translateX(-50%) translateY(0); }
+        }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-dim);
+        }
+
+        .empty-state .empty-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            opacity: 0.5;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .section-grid { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .actions-grid { grid-template-columns: 1fr; }
+            .cloud-banner { flex-direction: column; text-align: center; }
+        }
+
+        @media (max-width: 480px) {
+            .stats-row { grid-template-columns: 1fr 1fr; }
+            .topbar { padding: 10px 14px; }
+            .main { padding: 14px; }
+        }
+
+        /* ===== ANIMATIONS ===== */
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header">
-        <div class="header-icon">🖨</div>
-        <div class="header-content">
-            <h1>AndroPrint Dashboard</h1>
-            <div class="header-subtitle">Remote Printer Management System</div>
+    <!-- TOP BAR -->
+    <div class="topbar">
+        <div class="topbar-logo">🖨️</div>
+        <div class="topbar-title">
+            <h1>AndroPrint Cloud</h1>
+            <span id="serverIdDisplay">Loading...</span>
         </div>
-        <button class="logout-btn" onclick="logout()" title="Logout">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-        </button>
-    </div>
-    
-    <!-- Main Content -->
-    <div class="container">
-        <!-- Status Card -->
-        <div class="status-card" id="statusCard">
-            <div class="status-header">
-                <div class="status-icon">📊</div>
-                <div class="status-title">System Status</div>
+        <div class="topbar-actions">
+            <div class="status-pill" id="connectionPill">
+                <span class="dot"></span>
+                <span id="connText">Live</span>
             </div>
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <div>Loading system information...</div>
-            </div>
-            <div class="status-grid" id="statusGrid" style="display: none;">
-                <!-- Status items will be populated here -->
-            </div>
-            <div class="error-card" id="errorCard" style="display: none;">
-                <div class="error-icon">⚠️</div>
-                <div id="errorMessage">Failed to load system information</div>
-                <button class="retry-btn" onclick="loadSystemInfo()">Retry</button>
-            </div>
-        </div>
-        
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-            <div class="section-title">Quick Actions</div>
-            <div class="actions-grid">
-                <a href="printer.html" class="action-card">
-                    <div class="action-icon">🖨</div>
-                    <div class="action-content">
-                        <div class="action-title">Printer Settings</div>
-                        <div class="action-desc">Configure and manage printers</div>
-                    </div>
-                    <div class="action-arrow">→</div>
-                </a>
-                
-                <a href="clients.html" class="action-card">
-                    <div class="action-icon">👥</div>
-                    <div class="action-content">
-                        <div class="action-title">Client Management</div>
-                        <div class="action-desc">Manage API clients and access</div>
-                    </div>
-                    <div class="action-arrow">→</div>
-                </a>
-                
-                <a href="cloudflare.html" class="action-card">
-                    <div class="action-icon">☁</div>
-                    <div class="action-content">
-                        <div class="action-title">Cloudflare Tunnel</div>
-                        <div class="action-desc">Configure remote access</div>
-                    </div>
-                    <div class="action-arrow">→</div>
-                </a>
-            </div>
+            <button class="icon-btn" onclick="refreshAll()" title="Refresh">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+            </button>
+            <button class="icon-btn" onclick="logout()" title="Logout">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+            </button>
         </div>
     </div>
-    
-    <!-- Footer -->
-    <div class="footer">
-        AndroPrint Server • v1.0.0 • All systems operational
+
+    <div class="main">
+        <!-- STAT CARDS -->
+        <div class="stats-row fade-in" id="statsRow">
+            <div class="stat-card">
+                <div class="stat-icon">🖨️</div>
+                <div class="stat-value" id="statPrinters">-</div>
+                <div class="stat-label">Printers Online</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-value" id="statJobs">-</div>
+                <div class="stat-label">Print Jobs Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value" id="statClients">-</div>
+                <div class="stat-label">Active Clients</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value" id="statRate">-</div>
+                <div class="stat-label">Success Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-value" id="statUptime">-</div>
+                <div class="stat-label">Uptime</div>
+            </div>
+        </div>
+
+        <!-- CLOUD BANNER -->
+        <div class="cloud-banner fade-in" id="cloudBanner" style="display:none;">
+            <div class="cloud-icon">☁️</div>
+            <div class="cloud-info">
+                <h3>Cloud Connected</h3>
+                <p>Your print server is accessible from anywhere via tunnel</p>
+                <div class="cloud-url">
+                    <span id="cloudUrl">-</span>
+                    <button class="copy-btn" onclick="copyCloudUrl()">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN GRID -->
+        <div class="section-grid">
+            <!-- LIVE PRINTERS -->
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h3>🖨️ Live Printers</h3>
+                    <span class="badge badge-success" id="printerCountBadge">0</span>
+                </div>
+                <div class="card-body" id="printersList">
+                    <div class="empty-state">
+                        <div class="empty-icon">🔄</div>
+                        <div>Loading printers...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUICK ACTIONS -->
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h3>⚡ Quick Actions</h3>
+                </div>
+                <div class="card-body">
+                    <div class="actions-grid">
+                        <a href="printer.html" class="action-card">
+                            <div class="action-icon">🖨️</div>
+                            <div>
+                                <div class="action-title">Printers</div>
+                                <div class="action-desc">Manage & configure</div>
+                            </div>
+                        </a>
+                        <a href="clients.html" class="action-card">
+                            <div class="action-icon">👥</div>
+                            <div>
+                                <div class="action-title">Clients</div>
+                                <div class="action-desc">API access keys</div>
+                            </div>
+                        </a>
+                        <a href="cloud.html" class="action-card">
+                            <div class="action-icon">☁️</div>
+                            <div>
+                                <div class="action-title">Cloud</div>
+                                <div class="action-desc">Tunnel & remote</div>
+                            </div>
+                        </a>
+                        <a href="jobs.html" class="action-card">
+                            <div class="action-icon">📋</div>
+                            <div>
+                                <div class="action-title">Job History</div>
+                                <div class="action-desc">Print logs</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RECENT JOBS -->
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h3>📋 Recent Jobs</h3>
+                    <span class="badge badge-info" id="jobCountBadge">0</span>
+                </div>
+                <div class="card-body" id="jobsList">
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div>No print jobs yet</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUICK PRINT -->
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h3>🚀 Quick Print</h3>
+                </div>
+                <div class="quickprint-area">
+                    <select id="qpPrinter">
+                        <option value="">Select printer...</option>
+                    </select>
+                    <textarea id="qpText" placeholder="Type text to print..."></textarea>
+                    <button class="send-btn" onclick="quickPrint()">
+                        🖨️ Send to Printer
+                    </button>
+                </div>
+            </div>
+
+            <!-- SYSTEM INFO -->
+            <div class="card fade-in full-width">
+                <div class="card-header">
+                    <h3>🔧 System Info</h3>
+                    <span class="badge badge-success" id="sysStatusBadge">Running</span>
+                </div>
+                <div class="card-body" id="systemInfo">
+                    <div class="sys-row">
+                        <span class="sys-label">Server ID</span>
+                        <span class="sys-value" id="sysServerId">-</span>
+                    </div>
+                    <div class="sys-row">
+                        <span class="sys-label">Version</span>
+                        <span class="sys-value">v2.0.0</span>
+                    </div>
+                    <div class="sys-row">
+                        <span class="sys-label">Authentication</span>
+                        <span class="sys-value" id="sysAuth">-</span>
+                    </div>
+                    <div class="sys-row">
+                        <span class="sys-label">Memory Usage</span>
+                        <span class="sys-value" id="sysMemory">-</span>
+                    </div>
+                    <div class="sys-row">
+                        <span class="sys-label">SSE Connections</span>
+                        <span class="sys-value" id="sysConnections">-</span>
+                    </div>
+                    <div class="sys-row">
+                        <span class="sys-label">Total Print Jobs</span>
+                        <span class="sys-value" id="sysTotalJobs">-</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="successBar" style="width:100%;background:var(--success);"></div>
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--text-dim);margin-top:4px;" id="successLabel">
+                        100% success rate
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    
+
     <script>
-        // Check authentication
+        // Auth check
         if (!localStorage.getItem("auth")) {
             window.location.href = "index.html";
         }
-        
-        // DOM Elements
-        const loadingElement = document.getElementById('loading');
-        const statusGrid = document.getElementById('statusGrid');
-        const errorCard = document.getElementById('errorCard');
-        const errorMessage = document.getElementById('errorMessage');
-        
-        // Format badge based on status
-        function getBadge(status, value) {
-            if (typeof value === 'boolean') {
-                value = value ? 'Enabled' : 'Disabled';
-            }
-            
-            const statusMap = {
-                'Enabled': 'success',
-                'Disabled': 'danger',
-                'Running': 'success',
-                'Stopped': 'danger',
-                'Active': 'success',
-                'Inactive': 'warning',
-                'Online': 'success',
-                'Offline': 'danger'
+
+        // SSE Connection
+        let eventSource = null;
+
+        function connectSSE() {
+            eventSource = new EventSource('/api/events');
+
+            eventSource.onmessage = (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data.type === 'printer_update') loadPrinters();
+                    if (data.type === 'job_update') loadJobs();
+                    if (data.type === 'client_update') loadServerInfo();
+                    if (data.type === 'cloud_update') loadCloudInfo();
+                } catch {}
             };
-            
-            const badgeType = statusMap[value] || 'info';
-            const badgeClass = `badge-${badgeType}`;
-            
-            return `
-                <div class="badge ${badgeClass}">
-                    <div class="badge-dot"></div>
-                    ${value}
-                </div>
-            `;
+
+            eventSource.onerror = () => {
+                document.getElementById('connText').textContent = 'Reconnecting...';
+                document.getElementById('connectionPill').style.background = 'rgba(245,158,11,0.12)';
+                document.getElementById('connectionPill').style.color = 'var(--warning)';
+                document.getElementById('connectionPill').style.borderColor = 'rgba(245,158,11,0.2)';
+            };
+
+            eventSource.onopen = () => {
+                document.getElementById('connText').textContent = 'Live';
+                document.getElementById('connectionPill').style.background = 'rgba(16,185,129,0.12)';
+                document.getElementById('connectionPill').style.color = 'var(--success)';
+                document.getElementById('connectionPill').style.borderColor = 'rgba(16,185,129,0.2)';
+            };
         }
-        
-        // Load system information
-        async function loadSystemInfo() {
+
+        // Load all data
+        async function loadServerInfo() {
             try {
-                // Show loading, hide others
-                loadingElement.style.display = 'flex';
-                statusGrid.style.display = 'none';
-                errorCard.style.display = 'none';
-                
-                // Fetch server config
-                const response = await fetch('/api/server');
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                // Hide loading, show status grid
-                loadingElement.style.display = 'none';
-                
-                // Create status items
-                statusGrid.innerHTML = `
-                    <div class="status-item">
-                        <div class="status-label">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>
-                                <path d="M12 8v8M8 12h8"></path>
-                            </svg>
-                            Server ID
-                        </div>
-                        <div class="status-value">${data.data.serverId || 'N/A'}</div>
-                    </div>
-                    
-                    <div class="status-item">
-                        <div class="status-label">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12 6 12 12 16 14"></polyline>
-                            </svg>
-                            Server Port
-                        </div>
-                        <div class="status-value">${data.data.port || window.location.port || 'N/A'}</div>
-                    </div>
-                    
-                    <div class="status-item">
-                        <div class="status-label">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                                <polyline points="12 22 12 12 21 8"></polyline>
-                                <polyline points="3 8 12 12 12 22"></polyline>
-                            </svg>
-                            Cloudflare Status
-                        </div>
-                        <div class="status-value">${getBadge('Cloudflare', data.data.cloudflare || 'Disabled')}</div>
-                    </div>
-                    
-                    <div class="status-item">
-                        <div class="status-label">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                            </svg>
-                            Client Auth
-                        </div>
-                        <div class="status-value">${getBadge('Auth', data.data.authEnabled || true)}</div>
-                    </div>
-                    
-                    <div class="status-item">
-                        <div class="status-label">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="1" y="5" width="22" height="14" rx="2" ry="2"></rect>
-                                <line x1="1" y1="10" x2="23" y2="10"></line>
-                            </svg>
-                            Uptime
-                        </div>
-                        <div class="status-value">${data.data.createdAt ? new Date(data.data.createdAt).toLocaleDateString() : 'N/A'}</div>
-                    </div>
-                    
-                    <div class="status-item">
-                        <div class="status-label">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                            </svg>
-                            Last Updated
-                        </div>
-                        <div class="status-value">${new Date().toLocaleTimeString()}</div>
-                    </div>
-                `;
-                
-                statusGrid.style.display = 'grid';
-                
-            } catch (error) {
-                console.error('Error loading system info:', error);
-                
-                // Show error
-                loadingElement.style.display = 'none';
-                statusGrid.style.display = 'none';
-                errorMessage.textContent = `Failed to load system information: ${error.message}`;
-                errorCard.style.display = 'block';
+                const res = await fetch('/api/server');
+                const data = await res.json();
+
+                document.getElementById('serverIdDisplay').textContent = `Server ${data.serverId} • v${data.version}`;
+                document.getElementById('sysServerId').textContent = data.serverId;
+                document.getElementById('sysAuth').textContent = data.auth ? 'Enabled' : 'Disabled';
+
+                // Stats
+                document.getElementById('statPrinters').textContent = `${data.stats.onlinePrinters}/${data.stats.totalPrinters}`;
+                document.getElementById('statClients').textContent = data.stats.activeClients;
+                document.getElementById('statUptime').textContent = data.uptimeFormatted;
+                document.getElementById('printerCountBadge').textContent = `${data.stats.onlinePrinters} online`;
+
+            } catch (e) {
+                console.error('Server info error:', e);
             }
         }
-        
-        // Logout function
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+
+                document.getElementById('statJobs').textContent = data.jobs.last24h;
+                document.getElementById('statRate').textContent = data.jobs.successRate + '%';
+                document.getElementById('sysMemory').textContent = `${data.memory.heapUsed}MB / ${data.memory.heapTotal}MB`;
+                document.getElementById('sysConnections').textContent = data.connections.sseClients;
+                document.getElementById('sysTotalJobs').textContent = data.jobs.total;
+                document.getElementById('statUptime').textContent = data.uptimeFormatted;
+
+                document.getElementById('successBar').style.width = data.jobs.successRate + '%';
+                document.getElementById('successLabel').textContent = `${data.jobs.successRate}% success rate (${data.jobs.success}/${data.jobs.total})`;
+
+            } catch (e) {
+                console.error('Stats error:', e);
+            }
+        }
+
+        async function loadPrinters() {
+            try {
+                const res = await fetch('/api/printers');
+                const data = await res.json();
+                const container = document.getElementById('printersList');
+                const select = document.getElementById('qpPrinter');
+
+                if (!data.printers || data.printers.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">🖨️</div>
+                            <div>No printers configured</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Update printer select
+                select.innerHTML = '<option value="">Select printer...</option>';
+                data.printers.filter(p => p.enabled).forEach(p => {
+                    select.innerHTML += `<option value="${p.id}">${p.name} ${p.online ? '🟢' : '🔴'}</option>`;
+                });
+
+                // Render printer list
+                container.innerHTML = data.printers.map(p => `
+                    <div class="printer-item">
+                        <div class="printer-dot ${p.online ? 'online' : 'offline'}"></div>
+                        <div class="printer-info">
+                            <div class="name">${p.name}</div>
+                            <div class="meta">${p.connection?.ip}:${p.connection?.port} • ${p.role || 'CASHIER'}</div>
+                        </div>
+                        <span class="printer-status-badge" style="background:${p.online ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'};color:${p.online ? 'var(--success)' : 'var(--danger)'}">
+                            ${p.online ? 'Online' : 'Offline'}
+                        </span>
+                    </div>
+                `).join('');
+
+            } catch (e) {
+                console.error('Printers error:', e);
+            }
+        }
+
+        async function loadJobs() {
+            try {
+                const res = await fetch('/api/jobs?limit=8');
+                const data = await res.json();
+                const container = document.getElementById('jobsList');
+
+                document.getElementById('jobCountBadge').textContent = data.jobs.length;
+
+                if (!data.jobs || data.jobs.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">📭</div>
+                            <div>No print jobs yet</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.jobs.map(j => {
+                    const time = new Date(j.timestamp);
+                    const ago = timeAgo(time);
+                    return `
+                        <div class="job-item">
+                            <div class="job-status ${j.status}">
+                                ${j.status === 'success' ? '✓' : '✗'}
+                            </div>
+                            <div class="job-info">
+                                <div class="job-title">${j.printerName || j.printerId || 'Unknown'}</div>
+                                <div class="job-meta">${j.type} ${j.textPreview ? '• ' + j.textPreview.substring(0, 30) + '...' : ''}</div>
+                            </div>
+                            <div class="job-time">${ago}</div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (e) {
+                console.error('Jobs error:', e);
+            }
+        }
+
+        async function loadCloudInfo() {
+            try {
+                const res = await fetch('/api/cloud');
+                const data = await res.json();
+                const banner = document.getElementById('cloudBanner');
+
+                if (data.tunnel && data.tunnel.active && data.tunnel.url) {
+                    banner.style.display = 'flex';
+                    document.getElementById('cloudUrl').textContent = data.tunnel.url;
+                } else {
+                    banner.style.display = 'none';
+                }
+            } catch {}
+        }
+
+        // Quick Print
+        async function quickPrint() {
+            const printerId = document.getElementById('qpPrinter').value;
+            const text = document.getElementById('qpText').value;
+
+            if (!printerId || !text) {
+                showToast('Select a printer and enter text', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/quickprint', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ printerId, text })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Print sent successfully!', 'success');
+                    document.getElementById('qpText').value = '';
+                    loadJobs();
+                } else {
+                    showToast(data.error || 'Print failed', 'error');
+                }
+            } catch (e) {
+                showToast('Connection error', 'error');
+            }
+        }
+
+        // Helpers
+        function timeAgo(date) {
+            const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+            return Math.floor(seconds / 86400) + 'd ago';
+        }
+
+        function copyCloudUrl() {
+            const url = document.getElementById('cloudUrl').textContent;
+            navigator.clipboard.writeText(url);
+            showToast('URL copied!', 'success');
+        }
+
+        function showToast(msg, type = 'success') {
+            const existing = document.querySelectorAll('.toast');
+            existing.forEach(t => t.remove());
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `${type === 'success' ? '✓' : '✗'} ${msg}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         function logout() {
-            if (confirm('Are you sure you want to logout?')) {
+            if (confirm('Logout from AndroPrint?')) {
                 localStorage.removeItem('auth');
                 window.location.href = 'index.html';
             }
         }
-        
-        // Auto-refresh every 30 seconds
-        function startAutoRefresh() {
-            setInterval(loadSystemInfo, 30000);
+
+        function refreshAll() {
+            loadServerInfo();
+            loadStats();
+            loadPrinters();
+            loadJobs();
+            loadCloudInfo();
+            showToast('Dashboard refreshed', 'success');
         }
-        
-        // Initialize
+
+        // Init
         document.addEventListener('DOMContentLoaded', () => {
-            loadSystemInfo();
-            startAutoRefresh();
+            connectSSE();
+            loadServerInfo();
+            loadStats();
+            loadPrinters();
+            loadJobs();
+            loadCloudInfo();
+
+            // Auto-refresh stats every 30s
+            setInterval(() => {
+                loadStats();
+                loadServerInfo();
+            }, 30000);
         });
-        
-        // Handle offline/online events
-        window.addEventListener('offline', () => {
-            errorMessage.textContent = 'You are offline. Please check your internet connection.';
-            errorCard.style.display = 'block';
-            statusGrid.style.display = 'none';
-        });
-        
-        window.addEventListener('online', loadSystemInfo);
     </script>
 </body>
 </html>

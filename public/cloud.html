@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cloud Connect – AndroPrint</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{--primary:#6366f1;--primary-dark:#4f46e5;--accent:#06b6d4;--bg:#0f0f23;--bg-card:rgba(255,255,255,0.04);--glass-border:rgba(255,255,255,0.08);--text:#e2e8f0;--text-dim:#64748b;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;--radius:16px}
+        body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+        .topbar{background:rgba(15,15,35,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--glass-border);padding:12px 20px;position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px}
+        .topbar-logo{width:38px;height:38px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+        .topbar h1{flex:1;font-size:1.15rem;font-weight:700;letter-spacing:-0.02em}
+        .back-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;transition:all 0.2s}
+        .back-btn:hover{background:rgba(255,255,255,0.1);color:#fff}
+
+        .main{max-width:900px;margin:0 auto;padding:20px}
+
+        /* Hero */
+        .cloud-hero{background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(6,182,212,0.12));border:1px solid rgba(99,102,241,0.2);border-radius:20px;padding:40px 32px;text-align:center;margin-bottom:24px;position:relative;overflow:hidden}
+        .cloud-hero::before{content:'';position:absolute;top:-100px;right:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(99,102,241,0.08),transparent);border-radius:50%}
+        .cloud-hero::after{content:'';position:absolute;bottom:-100px;left:-100px;width:300px;height:300px;background:radial-gradient(circle,rgba(6,182,212,0.08),transparent);border-radius:50%}
+        .cloud-hero-content{position:relative;z-index:1}
+        .cloud-hero .hero-icon{width:80px;height:80px;margin:0 auto 20px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;box-shadow:0 8px 32px rgba(99,102,241,0.3)}
+        .cloud-hero h2{font-size:1.8rem;font-weight:800;margin-bottom:8px;letter-spacing:-0.02em}
+        .cloud-hero p{color:var(--text-dim);font-size:0.92rem;max-width:500px;margin:0 auto}
+
+        /* Status indicator */
+        .tunnel-status{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:100px;margin-top:20px;font-weight:600;font-size:0.88rem}
+        .tunnel-status.active{background:rgba(16,185,129,0.15);color:var(--success);border:1px solid rgba(16,185,129,0.25)}
+        .tunnel-status.inactive{background:rgba(245,158,11,0.15);color:var(--warning);border:1px solid rgba(245,158,11,0.25)}
+        .tunnel-status .dot{width:10px;height:10px;border-radius:50%;background:currentColor;animation:blink 2s ease-in-out infinite}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+        /* Cards */
+        .card{background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+        .card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--glass-border)}
+        .card-header h3{font-size:0.95rem;font-weight:600;display:flex;align-items:center;gap:8px}
+        .card-body{padding:20px}
+
+        /* Connect form */
+        .form-group{margin-bottom:16px}
+        .form-label{display:block;font-size:0.8rem;font-weight:500;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em}
+        .form-input,.form-select{width:100%;padding:14px 16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;color:#fff;font-size:0.9rem;font-family:'Inter',sans-serif;outline:none;transition:all 0.3s}
+        .form-input:focus,.form-select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,0.15)}
+        .form-input::placeholder{color:rgba(255,255,255,0.25)}
+        .form-select option{background:var(--bg)}
+
+        .btn{padding:14px 24px;border:none;border-radius:14px;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.3s;font-family:'Inter',sans-serif;display:inline-flex;align-items:center;gap:8px}
+        .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff}
+        .btn-primary:hover{box-shadow:0 4px 20px rgba(99,102,241,0.4);transform:translateY(-2px)}
+        .btn-danger{background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.2)}
+        .btn-danger:hover{background:rgba(239,68,68,0.25)}
+        .btn-full{width:100%;justify-content:center}
+
+        /* URL display */
+        .url-display{background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+        .url-display code{flex:1;font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--accent);word-break:break-all}
+        .url-display .copy-btn{background:var(--primary);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap}
+        .url-display .copy-btn:hover{background:var(--primary-dark)}
+
+        /* API Endpoints */
+        .endpoint-list{list-style:none}
+        .endpoint-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+        .endpoint-item:last-child{border-bottom:none}
+        .method-badge{padding:4px 10px;border-radius:6px;font-size:0.72rem;font-weight:700;font-family:'JetBrains Mono',monospace;min-width:50px;text-align:center}
+        .method-badge.get{background:rgba(16,185,129,0.15);color:var(--success)}
+        .method-badge.post{background:rgba(59,130,246,0.15);color:#3b82f6}
+        .endpoint-path{font-family:'JetBrains Mono',monospace;font-size:0.85rem;flex:1}
+        .endpoint-desc{font-size:0.78rem;color:var(--text-dim)}
+
+        /* Code block */
+        .code-block{background:rgba(0,0,0,0.4);border:1px solid var(--glass-border);border-radius:12px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--text);overflow-x:auto;line-height:1.8;white-space:pre}
+        .code-block .keyword{color:var(--accent)}
+        .code-block .string{color:#fbbf24}
+        .code-block .comment{color:var(--text-dim)}
+
+        /* Steps */
+        .step{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+        .step:last-child{border-bottom:none}
+        .step-num{width:32px;height:32px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;flex-shrink:0}
+        .step-content h4{font-size:0.9rem;font-weight:600;margin-bottom:4px}
+        .step-content p{font-size:0.82rem;color:var(--text-dim)}
+        .step-content code{background:rgba(99,102,241,0.15);color:var(--primary);padding:2px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:0.78rem}
+
+        /* Toast */
+        .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:14px;font-size:0.85rem;font-weight:500;z-index:9999;backdrop-filter:blur(20px);display:flex;align-items:center;gap:8px}
+        .toast.success{background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.3);color:var(--success)}
+        .toast.error{background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.3);color:var(--danger)}
+
+        .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        @media(max-width:768px){.grid-2{grid-template-columns:1fr}.cloud-hero{padding:28px 20px}.cloud-hero h2{font-size:1.4rem}}
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <a href="dashboard.html" class="back-btn">←</a>
+        <div class="topbar-logo">☁️</div>
+        <h1>Cloud Connect</h1>
+    </div>
+
+    <div class="main">
+        <!-- HERO -->
+        <div class="cloud-hero">
+            <div class="cloud-hero-content">
+                <div class="hero-icon">☁️</div>
+                <h2>Cloud Print Gateway</h2>
+                <p>Connect your AndroPrint server to the cloud. Print from anywhere in the world using Cloudflare Tunnel.</p>
+                <div class="tunnel-status inactive" id="tunnelStatus">
+                    <span class="dot"></span>
+                    <span id="tunnelText">Not Connected</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- CONNECT / DISCONNECT -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>🔗 Tunnel Configuration</h3>
+                </div>
+                <div class="card-body" id="tunnelConfig">
+                    <div class="form-group">
+                        <label class="form-label">Provider</label>
+                        <select class="form-select" id="provider">
+                            <option value="cloudflare">Cloudflare Tunnel</option>
+                            <option value="ngrok">ngrok</option>
+                            <option value="localtunnel">LocalTunnel</option>
+                            <option value="custom">Custom URL</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tunnel URL</label>
+                        <input class="form-input" id="tunnelUrl" placeholder="https://your-tunnel.trycloudflare.com">
+                    </div>
+                    <button class="btn btn-primary btn-full" id="connectBtn" onclick="connectTunnel()">
+                        ☁️ Register Cloud URL
+                    </button>
+                    <button class="btn btn-danger btn-full" id="disconnectBtn" onclick="disconnectTunnel()" style="display:none;margin-top:10px;">
+                        🔌 Disconnect Tunnel
+                    </button>
+                </div>
+            </div>
+
+            <!-- ACTIVE URL -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>🌐 Active Connection</h3>
+                </div>
+                <div class="card-body" id="activeConnection">
+                    <div style="text-align:center;padding:20px;color:var(--text-dim);">
+                        <div style="font-size:2rem;margin-bottom:8px;opacity:0.5">🔌</div>
+                        <div>No active tunnel</div>
+                        <div style="font-size:0.78rem;margin-top:4px;">Register a tunnel URL to enable cloud printing</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETUP GUIDE -->
+        <div class="card">
+            <div class="card-header">
+                <h3>📖 Quick Setup Guide</h3>
+            </div>
+            <div class="card-body">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <h4>Install Cloudflare Tunnel</h4>
+                        <p>Download <code>cloudflared</code> on your Termux or server machine.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <h4>Start the Tunnel</h4>
+                        <p>Run <code>cloudflared tunnel --url http://localhost:3000</code> to create a public URL.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <h4>Register the URL</h4>
+                        <p>Copy the generated URL and paste it above to enable cloud printing.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div class="step-content">
+                        <h4>Print from Anywhere!</h4>
+                        <p>Use the cloud URL as your print API endpoint. Same API, global access. 🌍</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API ENDPOINTS -->
+        <div class="card">
+            <div class="card-header">
+                <h3>🔌 API Endpoints</h3>
+            </div>
+            <div class="card-body">
+                <ul class="endpoint-list" id="endpointList">
+                    <li class="endpoint-item">
+                        <span class="method-badge post">POST</span>
+                        <span class="endpoint-path">/print</span>
+                        <span class="endpoint-desc">Send text to printer</span>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="method-badge post">POST</span>
+                        <span class="endpoint-path">/api/printer/test</span>
+                        <span class="endpoint-desc">Test a printer</span>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="method-badge get">GET</span>
+                        <span class="endpoint-path">/api/printers</span>
+                        <span class="endpoint-desc">List all printers</span>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="method-badge get">GET</span>
+                        <span class="endpoint-path">/api/server</span>
+                        <span class="endpoint-desc">Server info & stats</span>
+                    </li>
+                    <li class="endpoint-item">
+                        <span class="method-badge get">GET</span>
+                        <span class="endpoint-path">/api/events</span>
+                        <span class="endpoint-desc">SSE real-time stream</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- EXAMPLE CURL -->
+        <div class="card">
+            <div class="card-header">
+                <h3>💻 Example Request</h3>
+            </div>
+            <div class="card-body">
+                <div class="code-block" id="curlExample"><span class="comment"># Print via Cloud</span>
+<span class="keyword">curl</span> -X POST <span class="string">"http://localhost:3000/print"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -H <span class="string">"x-client-id: YOUR_CLIENT_ID"</span> \
+  -H <span class="string">"x-print-key: YOUR_PRINT_KEY"</span> \
+  -d <span class="string">'{"printerId":"Cashier1","text":"Hello Cloud!"}'</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (!localStorage.getItem("auth")) window.location.href = "index.html";
+
+        async function loadCloudInfo() {
+            try {
+                const res = await fetch('/api/cloud');
+                const data = await res.json();
+
+                const status = document.getElementById('tunnelStatus');
+                const statusText = document.getElementById('tunnelText');
+                const connectBtn = document.getElementById('connectBtn');
+                const disconnectBtn = document.getElementById('disconnectBtn');
+                const activeConn = document.getElementById('activeConnection');
+
+                if (data.tunnel && data.tunnel.active) {
+                    status.className = 'tunnel-status active';
+                    statusText.textContent = `Connected via ${data.tunnel.provider}`;
+                    connectBtn.style.display = 'none';
+                    disconnectBtn.style.display = 'flex';
+                    document.getElementById('tunnelUrl').value = data.tunnel.url || '';
+
+                    activeConn.innerHTML = `
+                        <div style="margin-bottom:12px;">
+                            <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:6px;">PUBLIC URL</div>
+                            <div class="url-display">
+                                <code>${data.tunnel.url}</code>
+                                <button class="copy-btn" onclick="copyUrl('${data.tunnel.url}')">Copy</button>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                            <div>
+                                <div style="font-size:0.72rem;color:var(--text-dim);">Provider</div>
+                                <div style="font-weight:600;">${data.tunnel.provider}</div>
+                            </div>
+                            <div>
+                                <div style="font-size:0.72rem;color:var(--text-dim);">Connected Since</div>
+                                <div style="font-weight:600;">${data.tunnel.startedAt ? new Date(data.tunnel.startedAt).toLocaleString() : 'Unknown'}</div>
+                            </div>
+                            <div>
+                                <div style="font-size:0.72rem;color:var(--text-dim);">Server ID</div>
+                                <div style="font-weight:600;">${data.serverId}</div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Update curl example
+                    updateCurlExample(data.tunnel.url);
+                } else {
+                    status.className = 'tunnel-status inactive';
+                    statusText.textContent = 'Not Connected';
+                    connectBtn.style.display = 'flex';
+                    disconnectBtn.style.display = 'none';
+                }
+            } catch {}
+        }
+
+        async function connectTunnel() {
+            const url = document.getElementById('tunnelUrl').value.trim();
+            const provider = document.getElementById('provider').value;
+
+            if (!url) {
+                showToast('Please enter a tunnel URL', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/cloud/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, provider })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Cloud tunnel connected!', 'success');
+                    loadCloudInfo();
+                }
+            } catch (e) {
+                showToast('Connection failed', 'error');
+            }
+        }
+
+        async function disconnectTunnel() {
+            if (!confirm('Disconnect cloud tunnel?')) return;
+            try {
+                await fetch('/api/cloud/disconnect', { method: 'POST' });
+                showToast('Tunnel disconnected', 'success');
+                loadCloudInfo();
+            } catch {
+                showToast('Disconnect failed', 'error');
+            }
+        }
+
+        function updateCurlExample(cloudUrl) {
+            const block = document.getElementById('curlExample');
+            block.innerHTML = `<span class="comment"># Print via Cloud</span>
+<span class="keyword">curl</span> -X POST <span class="string">"${cloudUrl}/print"</span> \\
+  -H <span class="string">"Content-Type: application/json"</span> \\
+  -H <span class="string">"x-client-id: YOUR_CLIENT_ID"</span> \\
+  -H <span class="string">"x-print-key: YOUR_PRINT_KEY"</span> \\
+  -d <span class="string">'{"printerId":"Cashier1","text":"Hello Cloud!"}'</span>`;
+        }
+
+        function copyUrl(url) {
+            navigator.clipboard.writeText(url);
+            showToast('URL copied!', 'success');
+        }
+
+        function showToast(msg, type = 'success') {
+            document.querySelectorAll('.toast').forEach(t => t.remove());
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `${type === 'success' ? '✓' : '✗'} ${msg}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        loadCloudInfo();
+    </script>
+</body>
+</html>
