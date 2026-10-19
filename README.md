@@ -12,6 +12,10 @@
 [![Cloud](https://img.shields.io/badge/Cloud-Cloudflare%20%7C%20Ngrok%20%7C%20SSL-06b6d4?style=for-the-badge&logo=cloudflare&logoColor=white)](https://github.com/msamods/androprint)
 [![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)](LICENSE)
 
+[![Download Android APK](https://img.shields.io/badge/Download-Android%20APK%20(v2.0.0)-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/msamods/androprint/releases/download/v2.0.0/AndroPrint-v2.0.0-release.apk)
+[![Download Windows EXE](https://img.shields.io/badge/Download-Windows%20EXE%20(v2.0.0)-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/msamods/androprint/releases/download/v2.0.0/AndroPrint-Windows.exe)
+[![GitHub Release](https://img.shields.io/badge/GitHub-All%20Releases-orange?style=for-the-badge&logo=github&logoColor=white)](https://github.com/msamods/androprint/releases/tag/v2.0.0)
+
 <br/>
 
 > **Developed By : [MSA MODS](https://github.com/msamods) × WhatYouWantKerala**  
