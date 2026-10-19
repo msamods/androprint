@@ -57,6 +57,7 @@ const CLIENT_FILE = path.join(DATA_DIR, "clients.json");
 const SERVER_ID_FILE = path.join(DATA_DIR, "server.id");
 const JOBS_FILE = path.join(DATA_DIR, "jobs.json");
 const STORE_LOGO_PATH = path.join(DATA_DIR, "uploads", "store_logo.png");
+const WEBHOOK_FILE = path.join(DATA_DIR, "webhooks.json");
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
@@ -994,6 +995,331 @@ app.post("/api/quickprint", authRequired, async (req, res) => {
     });
     res.status(500).json({ error: e.message });
   }
+});
+
+/* ============ WEBHOOK PRINTING ENGINE ============ */
+
+function loadWebhookConfig() {
+  try {
+    if (fs.existsSync(WEBHOOK_FILE)) {
+      return JSON.parse(fs.readFileSync(WEBHOOK_FILE, "utf8"));
+    }
+  } catch (e) {}
+  return {
+    enabled: true,
+    defaultPrinterId: "",
+    secret: "",
+    soundBuzzer: true,
+    printUpiQr: true,
+    drawerKick: false,
+    merchantVpa: "msamods@okaxis",
+    merchantName: "AndroPrint Merchant",
+    autoCut: true,
+    printBarcode: true
+  };
+}
+
+function saveWebhookConfig(cfg) {
+  fs.writeFileSync(WEBHOOK_FILE, JSON.stringify(cfg, null, 2));
+}
+
+function padRight(str, len) {
+  str = String(str || "");
+  return str.length >= len ? str.substring(0, len) : str + " ".repeat(len - str.length);
+}
+
+function padLeft(str, len) {
+  str = String(str || "");
+  return str.length >= len ? str.substring(0, len) : " ".repeat(len - str.length) + str;
+}
+
+function centerText(str, len) {
+  str = String(str || "");
+  if (str.length >= len) return str;
+  const left = Math.floor((len - str.length) / 2);
+  const right = len - str.length - left;
+  return " ".repeat(left) + str + " ".repeat(right);
+}
+
+function formatOrderReceipt(order, source = "generic", paperWidth = 80) {
+  const lineLen = paperWidth === 58 ? 32 : 42;
+  const sep = "-".repeat(lineLen);
+  const dsep = "=".repeat(lineLen);
+
+  let title = "ONLINE ORDER";
+  let orderId = "";
+  let customerName = "";
+  let customerPhone = "";
+  let address = "";
+  let items = [];
+  let subtotal = "";
+  let tax = "";
+  let total = "0.00";
+  let paymentMethod = "";
+  let notes = "";
+
+  if (source === "woocommerce") {
+    title = "WOOCOMMERCE ORDER";
+    orderId = order.number || order.id || "N/A";
+    customerName = [order.billing?.first_name, order.billing?.last_name].filter(Boolean).join(" ");
+    customerPhone = order.billing?.phone || "";
+    address = [order.shipping?.address_1 || order.billing?.address_1, order.shipping?.city || order.billing?.city].filter(Boolean).join(", ");
+    total = order.total || "0.00";
+    paymentMethod = order.payment_method_title || order.payment_method || "Online";
+    items = (order.line_items || []).map(item => ({
+      name: item.name || "Item",
+      qty: item.quantity || 1,
+      price: parseFloat(item.total || item.price || 0).toFixed(2)
+    }));
+  } else if (source === "shopify") {
+    title = "SHOPIFY ORDER";
+    orderId = order.order_number || order.name || order.id || "N/A";
+    const cust = order.customer || order.shipping_address || order.billing_address || {};
+    customerName = [cust.first_name, cust.last_name].filter(Boolean).join(" ");
+    customerPhone = cust.phone || order.phone || "";
+    const ship = order.shipping_address || {};
+    address = [ship.address1, ship.city, ship.province].filter(Boolean).join(", ");
+    total = order.total_price || "0.00";
+    paymentMethod = order.financial_status ? `Status: ${order.financial_status.toUpperCase()}` : "Shopify Checkout";
+    items = (order.line_items || []).map(item => ({
+      name: item.title || item.name || "Item",
+      qty: item.quantity || 1,
+      price: (parseFloat(item.price || 0) * (item.quantity || 1)).toFixed(2)
+    }));
+  } else {
+    title = order.title || "ORDER RECEIPT";
+    orderId = order.orderId || order.invoiceNumber || order.id || ("#" + Date.now().toString().slice(-4));
+    customerName = order.customerName || order.customer?.name || order.name || "";
+    customerPhone = order.phone || order.customerPhone || order.customer?.phone || "";
+    address = order.address || order.shippingAddress || "";
+    total = (order.total || order.amount || 0).toString();
+    subtotal = order.subtotal ? order.subtotal.toString() : "";
+    tax = order.tax ? order.tax.toString() : "";
+    paymentMethod = order.paymentMethod || order.payment || "Online";
+    notes = order.notes || order.instructions || "";
+    items = (order.items || order.lineItems || []).map(it => ({
+      name: it.name || it.item || "Item",
+      qty: it.qty || it.quantity || 1,
+      price: parseFloat(it.price || it.total || 0).toFixed(2)
+    }));
+  }
+
+  let out = "";
+  out += `${dsep}\n`;
+  out += centerText(title, lineLen) + "\n";
+  out += `${dsep}\n`;
+  out += `Order #   : ${orderId}\n`;
+  out += `Date/Time : ${new Date().toLocaleString()}\n`;
+  if (customerName.trim()) out += `Customer  : ${customerName.trim()}\n`;
+  if (customerPhone.trim()) out += `Phone     : ${customerPhone.trim()}\n`;
+  if (address.trim()) out += `Address   : ${address.trim()}\n`;
+  out += `${sep}\n`;
+
+  const nameWidth = lineLen - 14;
+  out += padRight("ITEM", nameWidth) + padRight("QTY", 5) + padLeft("PRICE", 9) + "\n";
+  out += `${sep}\n`;
+
+  for (const it of items) {
+    let itemName = it.name;
+    if (itemName.length > nameWidth) {
+      itemName = itemName.substring(0, nameWidth - 1) + "…";
+    }
+    out += padRight(itemName, nameWidth) + padRight(String(it.qty), 5) + padLeft(String(it.price), 9) + "\n";
+  }
+
+  out += `${sep}\n`;
+  if (subtotal) out += padRight("Subtotal:", lineLen - 10) + padLeft(subtotal, 10) + "\n";
+  if (tax) out += padRight("Tax / GST:", lineLen - 10) + padLeft(tax, 10) + "\n";
+  out += padRight("TOTAL AMOUNT:", lineLen - 12) + padLeft("Rs " + parseFloat(total).toFixed(2), 12) + "\n";
+  out += `${sep}\n`;
+  if (paymentMethod) out += `Payment   : ${paymentMethod}\n`;
+  if (notes) out += `Notes     : ${notes}\n`;
+  out += `${dsep}\n`;
+  out += centerText("Thank You For Your Order!", lineLen) + "\n\n";
+
+  return {
+    receiptText: out,
+    orderId,
+    total: parseFloat(total) || 0,
+    customerName,
+    itemsCount: items.length
+  };
+}
+
+async function handleIncomingWebhook(req, res, source = "generic") {
+  try {
+    const config = loadWebhookConfig();
+    if (!config.enabled) {
+      return res.status(403).json({ error: "Webhook printing is currently disabled in settings" });
+    }
+
+    if (config.secret) {
+      const providedSecret = req.headers["x-webhook-secret"] || req.query.secret || req.body?.secret;
+      if (providedSecret !== config.secret) {
+        return res.status(401).json({ error: "Invalid webhook secret token" });
+      }
+    }
+
+    const printerId = req.params?.printerId || req.query.printerId || req.headers["x-printer-id"] || req.body?.printerId || config.defaultPrinterId;
+    const printers = loadPrinters();
+    let printer = printers.find(p => p.id === printerId && p.enabled);
+    if (!printer) {
+      printer = printers.find(p => p.enabled);
+    }
+
+    if (!printer) {
+      return res.status(404).json({ error: "No enabled printer found to process webhook" });
+    }
+
+    const payload = req.body || {};
+    let printOptions = {};
+
+    if (payload.text && typeof payload.text === "string" && !payload.line_items && !payload.items) {
+      printOptions = {
+        text: payload.text,
+        cut: config.autoCut !== false,
+        buzzer: config.soundBuzzer !== false,
+        drawerKick: config.drawerKick === true
+      };
+    } else {
+      const parsed = formatOrderReceipt(payload, source, printer.paperWidth || 80);
+      
+      let qrPayload = null;
+      if (config.printUpiQr && parsed.total > 0 && config.merchantVpa) {
+        qrPayload = {
+          upi: {
+            pa: config.merchantVpa,
+            pn: config.merchantName || "AndroPrint Merchant",
+            am: parsed.total.toFixed(2),
+            cu: "INR",
+            tn: `Order ${parsed.orderId}`
+          }
+        };
+      }
+
+      let barcodePayload = null;
+      if (config.printBarcode && parsed.orderId) {
+        barcodePayload = {
+          data: String(parsed.orderId).replace(/[^a-zA-Z0-9-]/g, "").substring(0, 20) || "ORD-001",
+          type: "CODE128"
+        };
+      }
+
+      printOptions = {
+        text: parsed.receiptText,
+        qr: qrPayload,
+        barcode: barcodePayload,
+        buzzer: config.soundBuzzer !== false,
+        drawerKick: config.drawerKick === true,
+        cut: config.autoCut !== false
+      };
+    }
+
+    await printReceipt(printer, printOptions);
+
+    addJob({
+      printerId: printer.id,
+      printerName: printer.name,
+      type: `webhook_${source}`,
+      status: "success",
+      textPreview: `[Webhook: ${source.toUpperCase()}] Printed on ${printer.name}`
+    });
+
+    res.json({
+      success: true,
+      message: `Webhook processed and printed on ${printer.name}`,
+      printer: printer.name,
+      source
+    });
+
+  } catch (err) {
+    console.error("Webhook print error:", err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/* Webhook Endpoints */
+app.post("/webhook/print", (req, res) => handleIncomingWebhook(req, res, "generic"));
+app.post("/webhook/print/:printerId", (req, res) => handleIncomingWebhook(req, res, "generic"));
+app.post("/webhook/woocommerce", (req, res) => handleIncomingWebhook(req, res, "woocommerce"));
+app.post("/webhook/shopify", (req, res) => handleIncomingWebhook(req, res, "shopify"));
+app.post("/webhook/telegram", (req, res) => handleIncomingWebhook(req, res, "telegram"));
+app.post("/webhook/generic", (req, res) => handleIncomingWebhook(req, res, "generic"));
+
+/* Webhook Management API */
+app.get("/api/webhook/config", (req, res) => {
+  res.json(loadWebhookConfig());
+});
+
+app.post("/api/webhook/config", authRequired, (req, res) => {
+  const current = loadWebhookConfig();
+  const updated = { ...current, ...req.body };
+  saveWebhookConfig(updated);
+  res.json({ success: true, config: updated });
+});
+
+app.post("/api/webhook/simulate", authRequired, async (req, res) => {
+  const { type = "woocommerce" } = req.body;
+  let samplePayload = {};
+
+  if (type === "woocommerce") {
+    samplePayload = {
+      id: 4092,
+      number: "WC-4092",
+      total: "420.00",
+      payment_method_title: "Cash on Delivery",
+      billing: {
+        first_name: "Rahul",
+        last_name: "Sharma",
+        phone: "+91 98765 43210",
+        address_1: "Flat 4B, Emerald Heights",
+        city: "Kochi, Kerala"
+      },
+      line_items: [
+        { name: "Malabar Chicken Dum Biryani", quantity: 2, total: "360.00" },
+        { name: "Fresh Mint Lime Juice", quantity: 1, total: "40.00" },
+        { name: "Packaging & Delivery", quantity: 1, total: "20.00" }
+      ]
+    };
+  } else if (type === "shopify") {
+    samplePayload = {
+      order_number: 1084,
+      total_price: "850.00",
+      financial_status: "paid",
+      customer: {
+        first_name: "Ananya",
+        last_name: "Nair",
+        phone: "+91 94471 23456"
+      },
+      shipping_address: {
+        address1: "House #12, Rose Villa",
+        city: "Trivandrum",
+        province: "Kerala"
+      },
+      line_items: [
+        { title: "Cotton Casual Kurti (M)", quantity: 1, price: "650.00" },
+        { title: "Matching Silk Scarf", quantity: 1, price: "200.00" }
+      ]
+    };
+  } else {
+    samplePayload = {
+      orderId: "ORD-" + Math.floor(1000 + Math.random() * 9000),
+      customerName: "Suhail Ahmed",
+      phone: "+91 99955 88822",
+      address: "Beach Road, Calicut",
+      items: [
+        { name: "Kozhikodan Halwa 500g", qty: 2, price: "180.00" },
+        { name: "Banana Chips 250g", qty: 1, price: "90.00" }
+      ],
+      subtotal: "270.00",
+      tax: "13.50",
+      total: "283.50",
+      paymentMethod: "UPI Scan & Pay"
+    };
+  }
+
+  req.body = samplePayload;
+  return handleIncomingWebhook(req, res, type);
 });
 
 /* ============ START ============ */
