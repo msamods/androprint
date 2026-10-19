@@ -210,6 +210,9 @@ AndroPrint supports raw UTF-8 multi-byte encoding for printing receipts in any i
 
 ## 🔌 REST API Documentation
 
+> 📖 **Full Interactive API Wiki & Payload Schema**: [**Read the Complete API Reference Wiki →**](wiki/API-Reference.md)  
+> 🏠 **Wiki Home**: [**AndroPrint Documentation Wiki →**](wiki/Home.md)
+
 ### Authentication Headers
 For secure endpoints, pass your client credentials:
 ```http
