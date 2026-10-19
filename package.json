@@ -6,7 +6,9 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "ssl": "node generate-ssl.js",
+    "build:exe": "npx pkg . --targets node18-win-x64 --output dist/androprint-windows.exe"
   },
   "dependencies": {
     "cors": "^2.8.5",

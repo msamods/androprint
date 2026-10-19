@@ -20,12 +20,33 @@ const net = require("net");
 const cors = require("cors");
 const crypto = require("crypto");
 const http = require("http");
+const https = require("https");
 const { ThermalPrinter, PrinterTypes } = require("node-thermal-printer");
 
 const app = express();
-const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 const ENABLE_AUTH = process.env.ENABLE_AUTH === "true";
+
+// SSL / HTTPS Setup
+const SSL_KEY_PATH = process.env.SSL_KEY_PATH || path.join(__dirname, "server.key");
+const SSL_CERT_PATH = process.env.SSL_CERT_PATH || path.join(__dirname, "server.cert");
+const USE_SSL = (process.env.USE_SSL === "true" || (fs.existsSync(SSL_KEY_PATH) && fs.existsSync(SSL_CERT_PATH)));
+
+let server;
+if (USE_SSL) {
+  try {
+    const sslOptions = {
+      key: fs.readFileSync(SSL_KEY_PATH),
+      cert: fs.readFileSync(SSL_CERT_PATH)
+    };
+    server = https.createServer(sslOptions, app);
+  } catch (err) {
+    console.warn("⚠️ Failed to load SSL certs, falling back to HTTP:", err.message);
+    server = http.createServer(app);
+  }
+} else {
+  server = http.createServer(app);
+}
 
 const DATA_DIR = __dirname;
 const PRINTER_FILE = path.join(DATA_DIR, "printer.json");
@@ -622,15 +643,17 @@ app.post("/api/quickprint", authRequired, async (req, res) => {
 /* ============ START ============ */
 
 server.listen(PORT, () => {
+  const protocol = USE_SSL ? "https" : "http";
   console.log("");
   console.log("╔════════════════════════════════════════════════════════════╗");
   console.log("║               ANDROPRINT v2.0 CLOUD SERVER                 ║");
   console.log("║     Developed By : MSA MODS x WhatYouWantKerala            ║");
   console.log("╠════════════════════════════════════════════════════════════╣");
-  console.log(`║  Local    : http://localhost:${PORT}                           ║`);
+  console.log(`║  Local    : ${protocol}://localhost:${PORT}                          ║`);
+  console.log(`║  SSL/TLS  : ${USE_SSL ? "ACTIVE (HTTPS)" : "INACTIVE (HTTP)"}                          ║`);
   console.log(`║  Server ID: ${SERVER_ID}                                  ║`);
   console.log(`║  Auth     : ${ENABLE_AUTH ? "ENABLED " : "DISABLED"}                                    ║`);
-  console.log(`║  SSE      : READY                                          ║`);
+  console.log(`║  SSE / WS : READY                                          ║`);
   console.log("╚════════════════════════════════════════════════════════════╝");
   console.log("");
 });
