@@ -550,9 +550,14 @@
             <div style="font-size:0.9rem; font-weight:600; color:var(--text-dim);" id="listSummary">
                 Manage ESC/POS hardware connections
             </div>
-            <button class="btn btn-primary" onclick="openPrinterModal()">
-                <span>＋</span> Add Printer
-            </button>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <a href="webprint.html" class="btn btn-glass" style="color:var(--accent); border-color:rgba(6,182,212,0.3);">
+                    <span>📶</span> Web Bluetooth / USB
+                </a>
+                <button class="btn btn-primary" onclick="openPrinterModal()">
+                    <span>＋</span> Add Printer
+                </button>
+            </div>
         </div>
 
         <!-- Printers Container -->

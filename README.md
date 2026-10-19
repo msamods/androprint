@@ -17,6 +17,8 @@
 ## ✨ What's New in v2.0
 
 - 🚀 **Real-Time SSE Event Streaming**: Live updates for print jobs, printer connectivity status, and cloud tunnel state via Server-Sent Events (`/api/events`).
+- 📶 **Web Bluetooth (BLE) Direct Printing**: Connect and print wirelessly from any Chromium browser directly to portable receipt printers with zero drivers or local spoolers.
+- 🔌 **WebUSB (OTG) Hardware Bridge**: High-speed, direct USB cable printing via browser WebUSB standards for Point of Sale terminals and desktop receipt printers.
 - ☁️ **First-Class Cloud Connect**: Seamless integration with Cloudflare Tunnels, Ngrok, and Localtunnel with automatic URL registration and management interface.
 - 🎨 **Next-Gen Glassmorphic UI**: Ultra-clean, modern dark mode dashboard with live telemetry, stat counters, quick-print widget, and responsive layout.
 - 📜 **Full Job Queue & Audit History**: In-memory and persisted print history (`jobs.json`) with status inspection, error logging, and retry abilities.
