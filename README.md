@@ -1,81 +1,116 @@
-# 🖨️ AndroPrint v2.0 – Cloud & LAN ESC/POS Print Gateway
+<div align="center">
+
+# 🖨️ ANDROPRINT v2.0
+### *Next-Gen Cloud & LAN Thermal ESC/POS Print Gateway*
 
 <p align="center">
-  <b>Developed By : MSA MODS x WhatYouWantKerala</b>
-</p>
-<p align="center">
-  <img src="https://img.shields.io/badge/version-2.0.0-blue.svg?style=flat-square" alt="Version 2.0.0">
-  <img src="https://img.shields.io/badge/platform-Termux%20%7C%20Linux%20%7C%20Windows%20%7C%20Docker-brightgreen.svg?style=flat-square" alt="Platforms">
-  <img src="https://img.shields.io/badge/license-MIT-purple.svg?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Cloud-Cloudflare%20%7C%20Ngrok%20%7C%20Localtunnel-cyan.svg?style=flat-square" alt="Cloud Support">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,18,24&height=180&section=header&text=AndroPrint%20Cloud&fontSize=42&fontColor=fff&animation=twinkling&fontAlignY=38&desc=Enterprise%20ESC/POS%20Print%20Gateway%20%7C%20No%20PC%20Required&descSize=16&descAlignY=62&descColor=06b6d4" width="100%" alt="AndroPrint Banner" />
 </p>
 
-**AndroPrint** transforms any Android phone, Raspberry Pi, or mini-PC into an enterprise-grade **Cloud & LAN ESC/POS Thermal Print Server**. Connect POS systems, web shops, and mobile apps directly to physical thermal receipt printers without needing manufacturer drivers or expensive dedicated hardware.
+[![Version](https://img.shields.io/badge/Version-2.0.0-6366f1?style=for-the-badge&logo=semver&logoColor=white)](https://github.com/msamods/androprint)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Termux%20%7C%20Windows%20%7C%20Linux-10b981?style=for-the-badge&logo=android&logoColor=white)](https://github.com/msamods/androprint)
+[![Cloud](https://img.shields.io/badge/Cloud-Cloudflare%20%7C%20Ngrok%20%7C%20SSL-06b6d4?style=for-the-badge&logo=cloudflare&logoColor=white)](https://github.com/msamods/androprint)
+[![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)](LICENSE)
+
+<br/>
+
+> **Developed By : [MSA MODS](https://github.com/msamods) × WhatYouWantKerala**  
+> *Transform any Android Phone, Windows Desktop, or Raspberry Pi into a high-speed, secure Cloud Thermal Print Server with zero drivers.*
+
+<br/>
+
+[✨ Features](#-key-features) • [🌐 Web Direct Print](#-web-direct-printing) • [📱 Native APK](#-native-android-print-agent-apk) • [🪟 Windows Exe](#-windows-standalone-exe) • [🔒 Localhost SSL](#-localhost-https--ssl-support) • [🔌 API Docs](#-rest-api-documentation)
 
 ---
 
-## ✨ What's New in v2.0
+</div>
 
-- 🚀 **Real-Time SSE Event Streaming**: Live updates for print jobs, printer connectivity status, and cloud tunnel state via Server-Sent Events (`/api/events`).
-- 📶 **Web Bluetooth (BLE) Direct Printing**: Connect and print wirelessly from any Chromium browser directly to portable receipt printers with zero drivers or local spoolers.
-- 🔌 **WebUSB (OTG) Hardware Bridge**: High-speed, direct USB cable printing via browser WebUSB standards for Point of Sale terminals and desktop receipt printers.
-- ☁️ **First-Class Cloud Connect**: Seamless integration with Cloudflare Tunnels, Ngrok, and Localtunnel with automatic URL registration and management interface.
-- 🎨 **Next-Gen Glassmorphic UI**: Ultra-clean, modern dark mode dashboard with live telemetry, stat counters, quick-print widget, and responsive layout.
-- 📜 **Full Job Queue & Audit History**: In-memory and persisted print history (`jobs.json`) with status inspection, error logging, and retry abilities.
-- ⚡ **Direct Quick-Print Engine**: Instant raw text and receipt test engine right from the web dashboard.
-- 👥 **Advanced Client & Token Access**: Point of Sale client generation, instant credential copying, header helpers, and granular enable/disable controls.
+<br/>
+
+## 🌟 Highlights at a Glance
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" width="100%" />
+      <h3>📱 Mobile-First Architecture</h3>
+      <p>Runs on any cheap Android device with background Wakelock. No PCs, Raspberry Pis, or dedicated spoolers required.</p>
+    </td>
+    <td width="50%" align="center">
+      <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" width="100%" />
+      <h3>☁️ Cloud Connected Relay</h3>
+      <p>Print from remote Web Apps, Shopify, WooCommerce, or AWS directly to physical kitchen/cashier printers worldwide.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <h3>📶 Web Bluetooth & USB</h3>
+      <p>Connect and print directly inside Chromium web browsers using Web Bluetooth (BLE) or WebUSB OTG cables.</p>
+    </td>
+    <td width="50%" align="center">
+      <h3>🌐 Any-Language UTF-8</h3>
+      <p>Full support for Malayalam (മലയാളം), Hindi, Tamil, Arabic, Chinese, Cyrillic, and European scripts.</p>
+    </td>
+  </tr>
+</table>
+
+<br/>
 
 ---
 
-## 🏗️ Architecture
+## ⚡ Key Features
 
+```mermaid
+graph TD
+    A[Cloud & POS Apps] -->|HTTPS / WSS / API| B(AndroPrint Gateway v2.0)
+    B -->|Zero Driver LAN Socket| C[Kitchen Thermal Printer]
+    B -->|Direct Web Bluetooth| D[Portable BLE Belt Printer]
+    B -->|Direct WebUSB OTG| E[Counter POS USB Printer]
+    B -->|SSE Live Stream| F[Real-Time Web Dashboard]
 ```
-  ┌──────────────────────────────────────────────────────────────┐
-  │                        Cloud Clients                         │
-  │     (E-commerce, Shopify, WooCommerce, Remote POS, Web)       │
-  └──────────────────────────────┬───────────────────────────────┘
-                                 │ HTTPS / Webhook
-                                 ▼
-                     ┌───────────────────────┐
-                     │ Cloudflare / Ngrok    │ (Optional Secure Tunnel)
-                     └───────────┬───────────┘
-                                 │
-                                 ▼
-┌────────────────────────────────────────────────────────────────┐
-│               AndroPrint Server v2.0 (Node.js)                 │
-│                                                                │
-│  ┌─────────────────┐  ┌──────────────────┐  ┌───────────────┐  │
-│  │ Web Dashboard   │  │ SSE Realtime Hub │  │ Print Queue   │  │
-│  └─────────────────┘  └──────────────────┘  └───────────────┘  │
-│  ┌─────────────────┐  ┌──────────────────┐  ┌───────────────┐  │
-│  │ Auth & Clients  │  │ Cloud Connector  │  │ ESC/POS Logic │  │
-│  └─────────────────┘  └──────────────────┘  └───────────────┘  │
-└────────────────────────────────┬───────────────────────────────┘
-                                 │ RAW TCP Socket (Port 9100)
-                                 ▼
-         ┌───────────────────────────────────────────────┐
-         │       LAN ESC/POS Thermal Printers            │
-         │  (58mm / 80mm Network Receipts / Kitchen)     │
-         └───────────────────────────────────────────────┘
-```
+
+- 🚀 **Zero-Driver ESC/POS Engine**: Communicates over RAW TCP socket (Port 9100) directly to thermal receipt printers.
+- 🎨 **Futuristic Glassmorphic Web Dashboard**: Dark-mode operations terminal with live telemetry, stat counters, and quick-actions.
+- 📡 **Real-Time SSE Streaming**: Server-Sent Events (`/api/events`) push real-time printer status, job results, and tunnel events.
+- 📶 **Web Bluetooth (BLE) & WebUSB Direct Print**: Pair & print straight from web browser tabs with zero desktop spoolers.
+- 🌍 **Cloudflare Tunnel Auto-Manager**: Instant public HTTPS tunnel without static IP addresses or complex router port forwarding.
+- 🔒 **Enterprise-Grade Client Auth**: Generate client credentials with instant copy headers (`x-client-id`, `x-print-key`).
+- 📜 **Audited Print Job Queue**: Complete print history logged and persisted to `jobs.json` with retry capability.
+- 🛡️ **Localhost HTTPS / WSS**: Built-in SSL cert auto-detection solving browser mixed-content restrictions on local agents.
+
+<br/>
 
 ---
 
-## 🚀 Quick Start
+## 🏗️ Interactive Web Dashboard
 
-### Option 1: On Android via Termux
+| Interface | Description | Live Route |
+| :--- | :--- | :--- |
+| **🖨️ Operations Terminal** | Telemetry, device health, quick print, and live printer cards | [`dashboard.html`](public/dashboard.html) |
+| **📶 Web Direct Print** | Browser-to-Printer Bluetooth & USB OTG direct controller | [`webprint.html`](public/webprint.html) |
+| **⚙️ Hardware Config** | Network printer management, test print dispatch, paper sizes | [`printer.html`](public/printer.html) |
+| **👥 POS Clients** | API keys, secret tokens, granular client permission toggles | [`clients.html`](public/clients.html) |
+| **☁️ Cloud Connect** | Cloudflare & Ngrok tunnel registration and cURL generators | [`cloud.html`](public/cloud.html) |
+| **📋 Queue Telemetry** | Historical logs, success/failure analytics, and job inspector | [`jobs.html`](public/jobs.html) |
 
-1. Install **Termux** from F-Droid.
-2. Clone & run setup:
-   ```bash
-   git clone https://github.com/msamods/androprint.git
-   cd androprint
-   bash setup.sh
-   node server.js
-   ```
+<br/>
 
-### Option 2: Linux / Windows / macOS
+---
 
+## 🚀 Quick Start Guide
+
+### 1️⃣ Option A: Android (Termux)
+```bash
+# Clone and setup
+git clone https://github.com/msamods/androprint.git
+cd androprint
+bash setup.sh
+
+# Run Server
+node server.js
+```
+
+### 2️⃣ Option B: Linux / Windows / macOS (Node.js)
 ```bash
 git clone https://github.com/msamods/androprint.git
 cd androprint
@@ -83,115 +118,190 @@ npm install
 npm start
 ```
 
-### Accessing the Web Dashboard
-
-Open your browser at `http://localhost:3000` (or `http://<phone-ip>:3000`):
-- **Default Username:** `admin`
-- **Default PIN:** `1231` (or your configured admin PIN)
-
----
-
-## ☁️ Cloud Connect (Cloudflare Tunnels)
-
-Expose your local Android or LAN printer server securely to the Internet in under 60 seconds without port forwarding:
-
-1. Install `cloudflared` on your phone or host:
-   ```bash
-   pkg install cloudflared
-   ```
-2. Start the tunnel to AndroPrint:
-   ```bash
-   cloudflared tunnel --url http://localhost:3000
-   ```
-3. Copy your generated `https://xxxx.trycloudflare.com` URL and register it in the **Cloud Connect** tab in the web UI or via API:
-   ```bash
-   curl -X POST http://localhost:3000/api/cloud/register \
-     -H "Content-Type: application/json" \
-     -d '{"url": "https://xxxx.trycloudflare.com", "provider": "cloudflare"}'
-   ```
-
-Now you can send print jobs from anywhere in the world!
+### 3️⃣ Option C: Windows Standalone (`.exe`)
+No Node.js or npm needed on client PCs! Build or run the standalone Windows binary:
+```bash
+npm run build:exe
+```
+Generates `dist/androprint-windows.exe`. Double-click to launch the print agent as a background Windows service.
 
 ---
 
-## 🔌 API Reference
+## 📱 Native Android Print Agent (APK)
+
+A complete native Android application project with **Background Foreground Service** and **WakeLock** is available in [`android-app/`](android-app/):
+
+- **One-Touch Start / Stop**: Toggle the print engine with a single button.
+- **Doze Mode Immunity**: Runs 24/7 without being stopped by Android battery managers.
+- **Auto Wi-Fi IP Detection**: Instantly shows your phone's LAN IP address on the screen.
+- **Build APK**: Open `androprint/android-app` in Android Studio and click **Build > Build APK(s)**.
+
+<br/>
+
+---
+
+## 🔒 Localhost HTTPS & SSL Configuration
+
+When your web app is hosted on an HTTPS domain (e.g. `https://pos.myrestaurant.com`), modern browsers block calls to insecure `http://localhost:3000` (Mixed Content).
+
+AndroPrint includes native SSL support:
+
+```bash
+# Generate trusted localhost certificates
+npm run ssl
+# OR using mkcert
+mkcert -key-file server.key -cert-file server.cert localhost 127.0.0.1 ::1
+
+# Start server with SSL enabled
+USE_SSL=true node server.js
+```
+The server will now automatically bind to **`https://localhost:3000`** with zero mixed-content warnings!
+
+<br/>
+
+---
+
+## 🌐 Any-Language Multilingual Receipts
+
+AndroPrint supports raw UTF-8 multi-byte encoding for printing receipts in any international or regional script:
+
+<details>
+<summary><b>Click to view Malayalam (മലയാളം) Receipt Payload</b></summary>
+
+```json
+{
+  "printerId": "Cashier1",
+  "text": "*** ആന്ത്രോപ്രിന്റ് ക്ലൗഡ് ***\nമേശ നമ്പർ: 04    തീയതി: 2026-10-20\n--------------------------------\n1x ചിക്കൻ ബിരിയാണി        ₹180.00\n1x മലബാർ പൊറോട്ട (3 എണ്ണം)  ₹45.00\n1x ഫ്രഷ് ലൈം സോഡ          ₹40.00\n--------------------------------\nആകെ തുക:                   ₹265.00\n--------------------------------\n       നന്ദി! വീണ്ടും വരിക!\n"
+}
+```
+</details>
+
+<details>
+<summary><b>Click to view Hindi (हिन्दी) Receipt Payload</b></summary>
+
+```json
+{
+  "printerId": "Cashier1",
+  "text": "*** एंड्रोप्रिंट क्लाउड ***\nमेज संख्या: 04    दिनांक: 2026-10-20\n--------------------------------\n1x पनीर टिक्का मसाला      ₹220.00\n2x तंदूरी रोटी              ₹40.00\n1x मीठी लस्सी               ₹50.00\n--------------------------------\nकुल योग:                  ₹310.00\n--------------------------------\n    धन्यवाद! फिर पधारें!\n"
+}
+```
+</details>
+
+<details>
+<summary><b>Click to view Arabic (العربية) Receipt Payload</b></summary>
+
+```json
+{
+  "printerId": "Cashier1",
+  "text": "*** أندروبرينت كلاود ***\nطاولة رقم: ٠٤\n--------------------------------\n١x شاورما دجاج             ٣٥.٠٠ ر.س\n١x بطاطس مقلية            ١٥.٠٠ ر.س\n--------------------------------\nالمجموع الكلي:            ٥٠.٠٠ ر.س\n--------------------------------\n        شكراً لزيارتكم!\n"
+}
+```
+</details>
+
+<br/>
+
+---
+
+## 🔌 REST API Documentation
 
 ### Authentication Headers
-For secure print and admin endpoints, pass:
+For secure endpoints, pass your client credentials:
 ```http
 x-client-id: clt-admin
 x-print-key: 123456
 ```
 
-### Endpoints
+### Endpoints Table
 
 | Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/status` | Server health, version, uptime | No |
-| `GET` | `/api/stats` | System telemetry, print counts, memory | No |
-| `GET` | `/api/events` | Server-Sent Events (SSE) live stream | No |
-| `GET` | `/api/printers` | List all configured printers & online state | Yes |
-| `POST` | `/api/printer/save` | Add or update a printer configuration | Yes |
-| `POST` | `/api/printer/delete` | Remove a printer by ID | Yes |
-| `POST` | `/api/printer/test` | Dispatch a receipt test print | Yes |
-| `POST` | `/api/print` | Send standard print payload (text/receipt) | Yes |
+|:--- |:--- |:--- |:---:|
+| `POST` | `/print` | Dispatch standard ESC/POS ticket | **Yes** |
 | `POST` | `/api/quickprint` | Send fast raw text directly to printer | No |
-| `GET` | `/api/jobs` | Retrieve recent print job history | No |
-| `POST` | `/api/jobs/clear` | Clear job history log | No |
-| `GET` | `/api/clients` | List POS client credentials | No |
-| `POST` | `/api/client/create` | Generate a new POS client credential | No |
-| `POST` | `/api/client/toggle` | Enable or disable a client ID | No |
-| `POST` | `/api/client/delete` | Delete a client ID | No |
-| `GET` | `/api/cloud` | Get active cloud tunnel configuration | No |
-| `POST` | `/api/cloud/register` | Register an active tunnel URL | No |
-| `POST` | `/api/cloud/disconnect` | Clear active cloud tunnel | No |
+| `GET` | `/api/printers` | List all configured printers & TCP online state | **Yes** |
+| `POST` | `/api/printer/save` | Add or update printer configuration | **Yes** |
+| `POST` | `/api/printer/test` | Dispatch diagnostic hardware test ticket | **Yes** |
+| `POST` | `/api/printer/delete` | Remove printer by ID | **Yes** |
+| `GET` | `/api/jobs` | Retrieve print job queue history | No |
+| `POST` | `/api/jobs/clear` | Clear print job history | No |
+| `GET` | `/api/events` | Server-Sent Events (SSE) live push stream | No |
+| `GET` | `/api/clients` | List all POS API clients | No |
+| `POST` | `/api/client/create` | Generate new API client & key | No |
+| `POST` | `/api/client/toggle` | Enable or disable client access | No |
+| `POST` | `/api/client/delete` | Delete an API client | No |
+| `GET` | `/api/cloud` | Query active Cloudflare tunnel status | No |
+| `POST` | `/api/cloud/register` | Register active cloud tunnel URL | No |
+| `POST` | `/api/cloud/disconnect`| Disconnect cloud tunnel | No |
 
-### Example: Quick Print
-
-```bash
-curl -X POST http://localhost:3000/api/quickprint \
-  -H "Content-Type: application/json" \
-  -d '{
-    "printerId": "cashier-1",
-    "text": "Hello from Cloud Print!\nTable 4 - Order #1024\n"
-  }'
-```
+<br/>
 
 ---
 
-## 📁 Project Structure
+## 💻 Integration Code Snippets
 
+<details>
+<summary><b>Kotlin (Android App)</b></summary>
+
+```kotlin
+val client = OkHttpClient()
+val json = JSONObject().apply {
+    put("printerId", "Cashier1")
+    put("text", "Receipt Text Here\n")
+}
+val body = json.toString().toRequestBody("application/json".toMediaType())
+val request = Request.Builder()
+    .url("https://print.yourdomain.com/print")
+    .addHeader("x-client-id", "clt-admin")
+    .addHeader("x-print-key", "123456")
+    .post(body)
+    .build()
+
+client.newCall(request).enqueue(callback)
 ```
-androprint/
-├── public/                 # Glassmorphic Web Dashboard
-│   ├── index.html          # Modern login screen
-│   ├── dashboard.html      # Live telemetry & operations dashboard
-│   ├── printer.html        # Printer configuration & management
-│   ├── clients.html        # API credentials & client keys
-│   ├── cloud.html          # Cloudflare & remote tunnel hub
-│   └── jobs.html           # Print jobs history & queue log
-├── server.js               # Core Express & ESC/POS socket gateway
-├── setup.sh                # Automated Termux environment setup script
-├── printer.json            # Persisted printer network configurations
-├── clients.json            # Persisted API clients & access keys
-├── jobs.json               # Persisted print logs & audit trail
-├── package.json            # Node.js dependencies & manifest
-└── README.md               # Documentation
+</details>
+
+<details>
+<summary><b>C# / .NET (Windows Desktop .exe)</b></summary>
+
+```csharp
+using var client = new HttpClient();
+var payload = new { printerId = "Cashier1", text = "Invoice #1024\n" };
+var request = new HttpRequestMessage(HttpMethod.Post, "https://localhost:3000/print") {
+    Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
+};
+request.Headers.Add("x-client-id", "clt-admin");
+request.Headers.Add("x-print-key", "123456");
+await client.SendAsync(request);
 ```
+</details>
+
+<details>
+<summary><b>Python (Backend / Microservice)</b></summary>
+
+```python
+import requests
+
+requests.post(
+    "https://your-tunnel.trycloudflare.com/print",
+    headers={"x-client-id": "clt-admin", "x-print-key": "123456"},
+    json={"printerId": "Cashier1", "text": "Order #42\nTotal: Rs. 250\n"}
+)
+```
+</details>
+
+<br/>
 
 ---
 
-## 🔒 Security Best Practices
-
-- Always update the default admin credentials and client keys before deploying into production.
-- Use Cloudflare Access or token-based authentication on tunnels exposed publicly.
-- Ensure the Android device running the server is kept connected to a continuous power supply with battery protection or background wakelock enabled (`termux-wake-lock`).
-
----
+<div align="center">
 
 ## 📄 License & Credits
 
-Developed By : **MSA MODS x WhatYouWantKerala**  
-GitHub: [https://github.com/msamods](https://github.com/msamods)
+Developed with ❤️ By **[MSA MODS](https://github.com/msamods)** × **WhatYouWantKerala**
 
-Licensed under the [MIT License](LICENSE).
+Released under the **[MIT License](LICENSE)**.
+
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,18,24&height=100&section=footer" width="100%" />
+</p>
+
+</div>
