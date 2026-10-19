@@ -429,22 +429,18 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Receipt Content / ESC/POS Text</label>
-                        <textarea class="form-textarea" id="btPrintText" placeholder="Enter text to print...
-[ESC/POS Formatting Supported]">*** ANDROPRINT CLOUD ***
-Developed By:
-MSA MODS x WhatYouWantKerala
---------------------------------
-Table: 04          Date: 2026-10-20
-Server: Terminal 1
---------------------------------
-1x Chicken Biryani         ₹180.00
-1x Fresh Lime Soda          ₹40.00
---------------------------------
-TOTAL:                     ₹220.00
---------------------------------
-   Thank You! Visit Again!
-</textarea>
+                        <label class="form-label">Multilingual Preset / Character Encoding</label>
+                        <select class="form-select" id="btLangPreset" onchange="applyLanguagePreset('bt', this.value)" style="margin-bottom:10px;">
+                            <option value="en">English / Latin (Default)</option>
+                            <option value="ml">Malayalam (മലയാളം - കേരളം)</option>
+                            <option value="hi">Hindi (हिन्दी / देवनागरी)</option>
+                            <option value="ta">Tamil (தமிழ்)</option>
+                            <option value="ar">Arabic (العربية)</option>
+                            <option value="zh">Chinese (中文 - 繁體/简体)</option>
+                            <option value="ru">Russian (Русский / Cyrillic)</option>
+                        </select>
+                        <label class="form-label">Receipt Content (Unicode / UTF-8 Supported)</label>
+                        <textarea class="form-textarea" id="btPrintText" placeholder="Enter text in any language..."></textarea>
                     </div>
 
                     <div class="btn-row">
@@ -478,24 +474,18 @@ TOTAL:                     ₹220.00
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Receipt Content / ESC/POS Text</label>
-                        <textarea class="form-textarea" id="usbPrintText" placeholder="Enter text to print via USB...">*** ANDROPRINT USB POS ***
-Developed By:
-MSA MODS x WhatYouWantKerala
-================================
-Order ID: #USB-8921
-Terminal: POS Counter 01
-================================
-2x Special Kerala Meals    ₹240.00
-1x Malabar Parotta (3pcs)   ₹45.00
-1x Beef Roast Dry          ₹160.00
-================================
-SUBTOTAL:                  ₹445.00
-TAX (5%):                   ₹22.25
-TOTAL:                     ₹467.25
-================================
-   POWERED BY ANDROPRINT CLOUD
-</textarea>
+                        <label class="form-label">Multilingual Preset / Character Encoding</label>
+                        <select class="form-select" id="usbLangPreset" onchange="applyLanguagePreset('usb', this.value)" style="margin-bottom:10px;">
+                            <option value="en">English / Latin (Default)</option>
+                            <option value="ml">Malayalam (മലയാളം - കേരളം)</option>
+                            <option value="hi">Hindi (हिन्दी / देवनागरी)</option>
+                            <option value="ta">Tamil (தமிழ்)</option>
+                            <option value="ar">Arabic (العربية)</option>
+                            <option value="zh">Chinese (中文 - 繁體/简体)</option>
+                            <option value="ru">Russian (Русский / Cyrillic)</option>
+                        </select>
+                        <label class="form-label">Receipt Content (Unicode / UTF-8 Supported)</label>
+                        <textarea class="form-textarea" id="usbPrintText" placeholder="Enter text in any language..."></textarea>
                     </div>
 
                     <div class="btn-row">
@@ -523,7 +513,114 @@ TOTAL:                     ₹467.25
             document.getElementById('tabUsbBtn').classList.toggle('active', tab === 'usb');
         }
 
-        // ==================== WEB BLUETOOTH ENGINE ====================
+        // Language Presets for multilingual printing
+        const LANGUAGE_PRESETS = {
+            en: `*** ANDROPRINT CLOUD ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+Table: 04          Date: ${new Date().toLocaleDateString()}
+Server: Terminal 1
+--------------------------------
+1x Chicken Biryani         ₹180.00
+1x Fresh Lime Soda          ₹40.00
+--------------------------------
+TOTAL:                     ₹220.00
+--------------------------------
+   Thank You! Visit Again!`,
+
+            ml: `*** ആന്ത്രോപ്രിന്റ് ക്ലൗഡ് ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+മേശ നമ്പർ: 04     തീയതി: ${new Date().toLocaleDateString()}
+കൗണ്ടർ: മെയിൻ കൗണ്ടർ
+--------------------------------
+1x ചിക്കൻ ബിരിയാണി        ₹180.00
+1x മലബാർ പൊറോട്ട (3 എണ്ണം)  ₹45.00
+1x ഫ്രഷ് ലൈം സോഡ          ₹40.00
+--------------------------------
+ആകെ തുക:                   ₹265.00
+--------------------------------
+       നന്ദി! വീണ്ടും വരിക!`,
+
+            hi: `*** एंड्रोप्रिंट क्लाउड ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+मेज संख्या: 04    दिनांक: ${new Date().toLocaleDateString()}
+काउंटर: मुख्य काउंटर
+--------------------------------
+1x पनीर टिक्का मसाला      ₹220.00
+2x तंदूरी रोटी              ₹40.00
+1x मीठी लस्सी               ₹50.00
+--------------------------------
+कुल योग:                  ₹310.00
+--------------------------------
+    धन्यवाद! फिर पधारें!`,
+
+            ta: `*** ஆண்ட்ரோபிரிண்ட் கிளவுட் ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+மேசை எண்: 04      தேதி: ${new Date().toLocaleDateString()}
+--------------------------------
+1x நெய் ரோஸ்ட் தோசை       ₹90.00
+1x மெது வடை (2 துண்டு)     ₹40.00
+1x ஃபில்டர் காபி           ₹30.00
+--------------------------------
+மொத்தம்:                  ₹160.00
+--------------------------------
+   நன்றி! மீண்டும் வருக!`,
+
+            ar: `*** أندروبرينت كلاود ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+طاولة رقم: ٠٤       التاريخ: ${new Date().toLocaleDateString()}
+--------------------------------
+١x شاورما دجاج             ٣٥.٠٠ ر.س
+١x بطاطس مقلية            ١٥.٠٠ ر.س
+١x عصير برتقال طازج       ١٢.٠٠ ر.س
+--------------------------------
+المجموع الكلي:            ٦٢.٠٠ ر.س
+--------------------------------
+        شكراً لزيارتكم!`,
+
+            zh: `*** 雲端智能收銀打印 ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+桌號: 04           日期: ${new Date().toLocaleDateString()}
+--------------------------------
+1x 招牌小籠包 (8隻)       ¥48.00
+1x 揚州炒飯               ¥32.00
+1x 凍頂烏龍茶             ¥15.00
+--------------------------------
+實收金額:                 ¥95.00
+--------------------------------
+      謝謝惠顧，歡迎再次光臨！`,
+
+            ru: `*** АНДРОПРИНТ ОБЛАКО ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+Стол: 04          Дата: ${new Date().toLocaleDateString()}
+--------------------------------
+1x Борщ со сметаной      320.00 ₽
+1x Бефстроганов          580.00 ₽
+1x Морс ягодный          120.00 ₽
+--------------------------------
+ИТОГО К ОПЛАТЕ:         1020.00 ₽
+--------------------------------
+    Спасибо! Ждем вас снова!`
+        };
+
+        function applyLanguagePreset(panel, lang) {
+            const textarea = document.getElementById(panel === 'bt' ? 'btPrintText' : 'usbPrintText');
+            if (LANGUAGE_PRESETS[lang]) {
+                textarea.value = LANGUAGE_PRESETS[lang];
+            }
+        }
+
+        // Initialize default text on load
+        document.addEventListener('DOMContentLoaded', () => {
+            applyLanguagePreset('bt', 'en');
+            applyLanguagePreset('usb', 'en');
+        });
         let btDevice = null;
         let btCharacteristic = null;
 

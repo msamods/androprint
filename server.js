@@ -193,12 +193,24 @@ function isPrinterOnline(ip, port, timeout = 1500) {
 /* ============ PRINT TEXT HELPER ============ */
 
 async function printText(printer, text) {
+  // Support UTF-8 multilingual characters and fallback encoding
   const device = new ThermalPrinter({
     type: PrinterTypes.EPSON,
     interface: `tcp://${printer.connection.ip}:${printer.connection.port}`,
     removeSpecialCharacters: false,
-    characterSet: "SLOVENIA"
+    lineCharacter: "-",
+    options: {
+      timeout: 5000
+    }
   });
+
+  // ESC/POS UTF-8 and multilingual codepage configuration
+  // FS & (Select Chinese/Kanji/Asian mode) or ESC t (select character code table)
+  try {
+    device.raw(Buffer.from([0x1B, 0x40])); // ESC @ (Initialize)
+    device.raw(Buffer.from([0x1C, 0x26])); // FS & (Select Kanji/Multilingual mode if supported)
+    device.raw(Buffer.from([0x1B, 0x74, 0x00])); // ESC t 0 (Standard/PC437/UTF-8 base)
+  } catch (e) {}
 
   device.println(text);
   device.cut();
