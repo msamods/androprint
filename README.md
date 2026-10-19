@@ -101,14 +101,16 @@ graph TD
 
 ### 1️⃣ Option A: Android (Termux)
 ```bash
-# Clone and setup
+# Clone and setup (Installs packages, acquires Wakelock, and sets up Termux:Boot)
 git clone https://github.com/msamods/androprint.git
 cd androprint
 bash setup.sh
 
-# Run Server
+# Run Server manually
 node server.js
 ```
+> 💡 **Auto-Start on Phone Boot**: `setup.sh` automatically configures `~/.termux/boot/start-androprint.sh`. Whenever you restart your Android phone, AndroPrint will boot up in the background automatically with Wakelock enabled!
+
 
 ### 2️⃣ Option B: Linux / Windows / macOS (Node.js)
 ```bash
