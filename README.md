@@ -11,6 +11,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Termux%20%7C%20Windows%20%7C%20Linux-10b981?style=for-the-badge&logo=android&logoColor=white)](https://github.com/msamods/androprint)
 [![Cloud](https://img.shields.io/badge/Cloud-Cloudflare%20%7C%20Ngrok%20%7C%20SSL-06b6d4?style=for-the-badge&logo=cloudflare&logoColor=white)](https://github.com/msamods/androprint)
 [![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)](LICENSE)
+[![GitHub Wiki](https://img.shields.io/badge/Docs-Live%20GitHub%20Wiki-blue?style=for-the-badge&logo=github&logoColor=white)](https://github.com/msamods/androprint/wiki)
 
 [![Download Android APK](https://img.shields.io/badge/Download-Android%20APK%20(v2.0.0)-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/msamods/androprint/releases/download/v2.0.0/AndroPrint-v2.0.0-release.apk)
 [![Download Windows EXE](https://img.shields.io/badge/Download-Windows%20EXE%20(v2.0.0)-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/msamods/androprint/releases/download/v2.0.0/AndroPrint-Windows.exe)
@@ -23,7 +24,7 @@
 
 <br/>
 
-[✨ Features](#-key-features) • [🌐 Web Direct Print](#-web-direct-printing) • [📱 Native APK](#-native-android-print-agent-apk) • [🪟 Windows Exe](#-windows-standalone-exe) • [🔒 Localhost SSL](#-localhost-https--ssl-support) • [🔌 API Docs](#-rest-api-documentation)
+[✨ Latest Features](#-latest-features-v20) • [🌐 Webhook Printing](#-automated-e-commerce-webhooks) • [✂️ Auto Cut](#️-smart-auto-cut-full--partial) • [📱 Native APK](#-native-android-print-agent-apk) • [🪟 Windows Exe](#-windows-standalone-exe) • [🔌 API Docs](#-rest-api-documentation) • [📖 Official Wiki](https://github.com/msamods/androprint/wiki)
 
 ---
 
@@ -42,14 +43,14 @@
     </td>
     <td width="50%" align="center">
       <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" width="100%" />
-      <h3>☁️ Cloud Connected Relay</h3>
-      <p>Print from remote Web Apps, Shopify, WooCommerce, or AWS directly to physical kitchen/cashier printers worldwide.</p>
+      <h3>☁️ Cloud Connected Webhooks</h3>
+      <p>Instant auto-printing for WooCommerce, Shopify, Foodomaa, Telegram bots, or custom POS via webhooks.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
-      <h3>📶 Web Bluetooth & USB</h3>
-      <p>Connect and print directly inside Chromium web browsers using Web Bluetooth (BLE) or WebUSB OTG cables.</p>
+      <h3>📲 UPI QR & Hardware Control</h3>
+      <p>Native dynamic UPI payment QR codes (GPay/PhonePe), 1-bit receipt logos, buzzer alarms, and cash drawer kicks.</p>
     </td>
     <td width="50%" align="center">
       <h3>🌐 Any-Language UTF-8</h3>
@@ -62,35 +63,62 @@
 
 ---
 
-## ⚡ Key Features
+## 🚀 Latest Features (v2.0)
 
 ```mermaid
 graph TD
-    A[Cloud & POS Apps] -->|HTTPS / WSS / API| B(AndroPrint Gateway v2.0)
-    B -->|Zero Driver LAN Socket| C[Kitchen Thermal Printer]
-    B -->|Direct Web Bluetooth| D[Portable BLE Belt Printer]
-    B -->|Direct WebUSB OTG| E[Counter POS USB Printer]
-    B -->|SSE Live Stream| F[Real-Time Web Dashboard]
+    A[WooCommerce / Shopify / Cloud POS] -->|HTTPS Webhooks / REST API| B(AndroPrint Gateway v2.0)
+    B -->|Rasterizer Engine| C[1-bit Store Branding Logo]
+    B -->|Dynamic UPI Engine| D[GPay / PhonePe QR Code]
+    B -->|Code128 / EAN13| E[Product & Parcel Barcode]
+    B -->|RJ11 Pulse 24V| F[Cash Drawer Kick]
+    B -->|ESC B Acoustic Alarm| G[Kitchen Order Buzzer]
+    B -->|GS V Mechanical Blade| H[Auto Cut: Full / Partial]
 ```
 
-- 🚀 **Zero-Driver ESC/POS Engine**: Communicates over RAW TCP socket (Port 9100) directly to thermal receipt printers.
-- 🎨 **Futuristic Glassmorphic Web Dashboard**: Dark-mode operations terminal with live telemetry, stat counters, and quick-actions.
-- 📡 **Real-Time SSE Streaming**: Server-Sent Events (`/api/events`) push real-time printer status, job results, and tunnel events.
-- 📶 **Web Bluetooth (BLE) & WebUSB Direct Print**: Pair & print straight from web browser tabs with zero desktop spoolers.
-- 🌍 **Cloudflare Tunnel Auto-Manager**: Instant public HTTPS tunnel without static IP addresses or complex router port forwarding.
-- 🔒 **Enterprise-Grade Client Auth**: Generate client credentials with instant copy headers (`x-client-id`, `x-print-key`).
-- 📜 **Audited Print Job Queue**: Complete print history logged and persisted to `jobs.json` with retry capability.
-- 🛡️ **Localhost HTTPS / WSS**: Built-in SSL cert auto-detection solving browser mixed-content restrictions on local agents.
+### 1. 📲 Dynamic UPI & Payment QR Code Engine
+* **Instant Scan-to-Pay**: Generates dynamic UPI payment QR codes (`upi://pay?pa=merchant@upi&pn=Store&am=450.00`) directly on the bottom of the bill.
+* **Universal Compatibility**: Works out of the box with **Google Pay, PhonePe, Paytm, BHIM, Cred**, and international payment URLs.
+* High-contrast raster QR ensures instantaneous scanning by phone cameras under low-light restaurant counters.
+
+### 2. 🖼️ Receipt Store Logo Rasterizer
+* Automatically converts PNG, JPG, or WebP logos into 1-bit monochrome thermal raster bitmaps using Floyd-Steinberg dithering.
+* Supports persistent branding stored on the server via `POST /api/printer/logo` or per-ticket embedded logos in `POST /print`.
+
+### 3. 💵 Cash Drawer Kick (RJ11/RJ12 Pin 2 / Pin 5)
+* Sends standard high-current 24V solenoid pulse (`ESC p 0 25 250`) to instantly pop open the cash register drawer upon cash sale prints.
+* Dedicated trigger endpoint: `POST /api/printer/drawer-kick`.
+
+### 4. 🔔 Kitchen Buzzer / Order Alert Beep
+* Emits acoustic alerts (`ESC B 2 2`) on thermal printers in noisy restaurant kitchens whenever a new Kitchen Order Ticket (KOT) arrives.
+* Dedicated alert endpoint: `POST /api/printer/buzzer`.
+
+### 5. ✂️ Smart Auto Cut (Full & Partial Cut with Offset Protection)
+* **Full Cut (`mode: "full"`)**: Cuts cleanly across the paper roll for checkout counters.
+* **Partial Cut (`mode: "partial"`)**: Cuts ~95% across the paper, leaving a small center tab so orders don't blow away or fall on the kitchen floor.
+* **Printhead-to-Cutter Offset Protection**: Automatically injects configurable line feeds (`feedLines: 3`) before firing the blade, preventing bills and QR codes from being chopped in half.
+* Dedicated manual cut endpoint: `POST /api/printer/cut`.
+
+### 6. 🛒 Automated E-Commerce & POS Webhooks
+* Built-in webhook receivers for instant physical ticket printing whenever an online order is placed:
+  - 🛍️ **WooCommerce**: `/webhook/woocommerce` (Order Created / Order Updated)
+  - 🏬 **Shopify**: `/webhook/shopify` (`orders/create` topics)
+  - 🤖 **Telegram**: `/webhook/telegram` (Direct bot order notifications)
+  - ⚡ **Generic POS / ERP**: `/webhook/print`
+* Includes an interactive Webhook Testing Dashboard with an order simulator: [`webhook.html`](public/webhook.html).
 
 <br/>
 
 ---
 
-## 🏗️ Interactive Web Dashboard
+## 🏗️ Interactive Web Interfaces
+
+All administrative dashboards are accessible directly from your browser:
 
 | Interface | Description | Live Route |
 | :--- | :--- | :--- |
-| **🖨️ Operations Terminal** | Telemetry, device health, quick print, and live printer cards | [`dashboard.html`](public/dashboard.html) |
+| **🖨️ Operations Terminal** | Live printer cards, quick print, server telemetry, and status counters | [`dashboard.html`](public/dashboard.html) |
+| **🌐 Webhook Simulator** | Live webhook endpoint copier and interactive order dispatcher | [`webhook.html`](public/webhook.html) |
 | **📶 Web Direct Print** | Browser-to-Printer Bluetooth & USB OTG direct controller | [`webprint.html`](public/webprint.html) |
 | **⚙️ Hardware Config** | Network printer management, test print dispatch, paper sizes | [`printer.html`](public/printer.html) |
 | **👥 POS Clients** | API keys, secret tokens, granular client permission toggles | [`clients.html`](public/clients.html) |
@@ -113,8 +141,7 @@ bash setup.sh
 # Run Server manually
 node server.js
 ```
-> 💡 **Auto-Start on Phone Boot**: `setup.sh` automatically configures `~/.termux/boot/start-androprint.sh`. Whenever you restart your Android phone, AndroPrint will boot up in the background automatically with Wakelock enabled!
-
+> 💡 **Auto-Start on Boot**: `setup.sh` automatically configures `~/.termux/boot/start-androprint.sh`. Whenever you restart your Android phone, AndroPrint boots up automatically in the background with Wakelock enabled!
 
 ### 2️⃣ Option B: Linux / Windows / macOS (Node.js)
 ```bash
@@ -125,11 +152,12 @@ npm start
 ```
 
 ### 3️⃣ Option C: Windows Standalone (`.exe`)
-No Node.js or npm needed on client PCs! Build or run the standalone Windows binary:
+No Node.js or npm needed on client PCs! Download or build the standalone Windows binary:
 ```bash
 npm run build:exe
 ```
-Generates `dist/androprint-windows.exe`. Double-click to launch the print agent as a background Windows service.
+Or download the pre-packaged executable directly:  
+👉 **[Download AndroPrint-Windows.exe (v2.0.0)](https://github.com/msamods/androprint/releases/download/v2.0.0/AndroPrint-Windows.exe)**
 
 ---
 
@@ -140,28 +168,60 @@ A complete native Android application project with **Background Foreground Servi
 - **One-Touch Start / Stop**: Toggle the print engine with a single button.
 - **Doze Mode Immunity**: Runs 24/7 without being stopped by Android battery managers.
 - **Auto Wi-Fi IP Detection**: Instantly shows your phone's LAN IP address on the screen.
-- **Build APK**: Open `androprint/android-app` in Android Studio and click **Build > Build APK(s)**.
+- 👉 **[Download AndroPrint-v2.0.0-release.apk](https://github.com/msamods/androprint/releases/download/v2.0.0/AndroPrint-v2.0.0-release.apk)**
 
 <br/>
 
 ---
 
-## 🔒 Localhost HTTPS & SSL Configuration
+## 🔌 REST API Quick Reference
 
-When your web app is hosted on an HTTPS domain (e.g. `https://pos.myrestaurant.com`), modern browsers block calls to insecure `http://localhost:3000` (Mixed Content).
+> 📖 **Full Interactive API Wiki & Payload Schema**: [**Read the Live GitHub Wiki →**](https://github.com/msamods/androprint/wiki)
 
-AndroPrint includes native SSL support:
+### All-in-One Print (`POST /print`)
 
 ```bash
-# Generate trusted localhost certificates
-npm run ssl
-# OR using mkcert
-mkcert -key-file server.key -cert-file server.cert localhost 127.0.0.1 ::1
-
-# Start server with SSL enabled
-USE_SSL=true node server.js
+curl -X POST http://localhost:3000/print \
+  -H "Content-Type: application/json" \
+  -H "x-client-id: pos_register_01" \
+  -H "x-print-key: 9842" \
+  -d '{
+    "printerId": "printer_counter_1",
+    "text": "      MY RESTAURANT\n--------------------------------\nToken #42 - Table 4\nChicken Biryani x 2    ₹360.00\nLime Juice x 1          ₹40.00\n--------------------------------\nTOTAL:                 ₹400.00\n",
+    "align": "left",
+    "bold": false,
+    "drawerKick": true,
+    "buzzer": true,
+    "cut": true,
+    "cutMode": "partial",
+    "feedLines": 3,
+    "qr": {
+      "upi": {
+        "pa": "merchant@okaxis",
+        "pn": "My Restaurant",
+        "am": "400.00",
+        "cu": "INR",
+        "tn": "Order #42"
+      }
+    },
+    "barcode": {
+      "data": "ORD-2026-0042",
+      "type": "CODE128"
+    }
+  }'
 ```
-The server will now automatically bind to **`https://localhost:3000`** with zero mixed-content warnings!
+
+### Dedicated Hardware Control Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/printer/cut` | `POST` | Fire paper cutter (`mode: "full"` or `"partial"`, `feed: 3`) |
+| `/api/printer/drawer-kick` | `POST` | Pulse RJ11/RJ12 24V solenoid to open cash drawer |
+| `/api/printer/buzzer` | `POST` | Trigger acoustic alert beep (`count: 2`) |
+| `/api/printer/qr` | `POST` | Direct dynamic UPI / payment QR ticket |
+| `/api/printer/barcode` | `POST` | Direct Code128 / EAN13 barcode ticket |
+| `/api/printer/logo` | `POST` | Upload and rasterize store branding logo |
+| `/api/printer/test` | `POST` | Send diagnostic hardware test print |
 
 <br/>
 
@@ -201,99 +261,6 @@ AndroPrint supports raw UTF-8 multi-byte encoding for printing receipts in any i
   "printerId": "Cashier1",
   "text": "*** أندروبرينت كلاود ***\nطاولة رقم: ٠٤\n--------------------------------\n١x شاورما دجاج             ٣٥.٠٠ ر.س\n١x بطاطس مقلية            ١٥.٠٠ ر.س\n--------------------------------\nالمجموع الكلي:            ٥٠.٠٠ ر.س\n--------------------------------\n        شكراً لزيارتكم!\n"
 }
-```
-</details>
-
-<br/>
-
----
-
-## 🔌 REST API Documentation
-
-> 📖 **Full Interactive API Wiki & Payload Schema**: [**Read the Complete API Reference Wiki →**](wiki/API-Reference.md)  
-> 🏠 **Wiki Home**: [**AndroPrint Documentation Wiki →**](wiki/Home.md)
-
-### Authentication Headers
-For secure endpoints, pass your client credentials:
-```http
-x-client-id: clt-admin
-x-print-key: 123456
-```
-
-### Endpoints Table
-
-| Method | Endpoint | Description | Auth Required |
-|:--- |:--- |:--- |:---:|
-| `POST` | `/print` | Dispatch standard ESC/POS ticket | **Yes** |
-| `POST` | `/api/quickprint` | Send fast raw text directly to printer | No |
-| `GET` | `/api/printers` | List all configured printers & TCP online state | **Yes** |
-| `POST` | `/api/printer/save` | Add or update printer configuration | **Yes** |
-| `POST` | `/api/printer/test` | Dispatch diagnostic hardware test ticket | **Yes** |
-| `POST` | `/api/printer/delete` | Remove printer by ID | **Yes** |
-| `GET` | `/api/jobs` | Retrieve print job queue history | No |
-| `POST` | `/api/jobs/clear` | Clear print job history | No |
-| `GET` | `/api/events` | Server-Sent Events (SSE) live push stream | No |
-| `GET` | `/api/clients` | List all POS API clients | No |
-| `POST` | `/api/client/create` | Generate new API client & key | No |
-| `POST` | `/api/client/toggle` | Enable or disable client access | No |
-| `POST` | `/api/client/delete` | Delete an API client | No |
-| `GET` | `/api/cloud` | Query active Cloudflare tunnel status | No |
-| `POST` | `/api/cloud/register` | Register active cloud tunnel URL | No |
-| `POST` | `/api/cloud/disconnect`| Disconnect cloud tunnel | No |
-
-<br/>
-
----
-
-## 💻 Integration Code Snippets
-
-<details>
-<summary><b>Kotlin (Android App)</b></summary>
-
-```kotlin
-val client = OkHttpClient()
-val json = JSONObject().apply {
-    put("printerId", "Cashier1")
-    put("text", "Receipt Text Here\n")
-}
-val body = json.toString().toRequestBody("application/json".toMediaType())
-val request = Request.Builder()
-    .url("https://print.yourdomain.com/print")
-    .addHeader("x-client-id", "clt-admin")
-    .addHeader("x-print-key", "123456")
-    .post(body)
-    .build()
-
-client.newCall(request).enqueue(callback)
-```
-</details>
-
-<details>
-<summary><b>C# / .NET (Windows Desktop .exe)</b></summary>
-
-```csharp
-using var client = new HttpClient();
-var payload = new { printerId = "Cashier1", text = "Invoice #1024\n" };
-var request = new HttpRequestMessage(HttpMethod.Post, "https://localhost:3000/print") {
-    Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
-};
-request.Headers.Add("x-client-id", "clt-admin");
-request.Headers.Add("x-print-key", "123456");
-await client.SendAsync(request);
-```
-</details>
-
-<details>
-<summary><b>Python (Backend / Microservice)</b></summary>
-
-```python
-import requests
-
-requests.post(
-    "https://your-tunnel.trycloudflare.com/print",
-    headers={"x-client-id": "clt-admin", "x-print-key": "123456"},
-    json={"printerId": "Cashier1", "text": "Order #42\nTotal: Rs. 250\n"}
-)
 ```
 </details>
 
