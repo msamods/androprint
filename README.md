@@ -118,6 +118,33 @@ graph TD
   - ⚡ **Generic POS / ERP**: `/webhook/print`
 * Includes an interactive Webhook Testing Dashboard with an order simulator: [`webhook.html`](public/webhook.html).
 
+### 7. 🔍 Auto Network Printer Discovery
+* **LAN Subnet Radar**: Scans your local `/24` subnet (e.g. `192.168.1.1` to `192.168.1.254`) on Port 9100 in 3-4 seconds with high-concurrency non-blocking sockets.
+* **Model Identification**: Transmits `GS I 67` hardware probes to automatically read manufacturer model numbers (e.g., Epson, Xprinter, Rongta).
+* **1-Click Setup**: Auto-detects subnet and lets you pre-fill and save printers with a single click in [`printer.html`](public/printer.html) or via `GET /api/printers/discover`.
+
+### 8. 🍳 Multi-Printer Smart Routing & Role Split
+* **Automatic KOT / BOT / Bill Split**: Dispatch an entire restaurant order to `POST /api/print/route`:
+  - 🍗 **Kitchen Items** (`category: "kitchen"`) -> Routes to `KITCHEN` printer as formatted KOT with large table number, item notes, buzzer beep, and partial cut.
+  - 🍹 **Beverages** (`category: "bar"`) -> Routes to `BAR` printer as BOT ticket.
+  - 🧾 **Customer Bill** -> Routes to `CASHIER` printer with full itemization, taxes, grand total, dynamic UPI payment QR, drawer kick, and auto-cut.
+* **Intelligent Failover**: If the `KITCHEN` or `BAR` printer goes offline, tickets automatically reroute to the `CASHIER` printer with a high-visibility `[FAILOVER ROUTED]` header so no order is ever missed!
+
+### 9. 🧾 Visual Receipt Template Designer (WYSIWYG)
+* **Interactive Drag-and-Drop Builder**: Design custom receipts directly in [`designer.html`](public/designer.html).
+* **Live 58mm / 80mm Roll Preview**: Features realistic thermal paper roll rendering with jagged serrated bottom tear edge and monospace font simulation.
+* **Rich Component Library**: Headers, logos, key-value meta grids, tabular line items, totals blocks, dynamic UPI QR codes, Code128 barcodes, and custom dividers.
+* **API Template Engine**: Save templates to `templates.json` and print them dynamically via `POST /api/template/render-and-print`.
+
+### 10. 📄 HTML & PDF-to-Receipt Auto-Converters
+* **HTML to Receipt (`POST /api/print/html`)**: Automatically translates HTML headings, `<table>` grids, columns, bullet points, and styling into perfectly aligned ESC/POS thermal text.
+* **PDF to Receipt (`POST /api/print/pdf`)**: Accepts PDF documents or base64 streams, parses layouts and columns via `pdf-parse`, wraps lines to receipt width, and prints cleanly with auto-cut.
+
+### 11. ⚡ MQTT Cloud Pub/Sub Instant Printing (Zero Tunnels)
+* **No Open Ports / No Tunnels Required**: AndroPrint maintains a persistent outbound connection to any MQTT broker (`mqtt://broker.hivemq.com` or custom).
+* **Sub-100ms Global Printing**: Any remote web app, cloud store, or mobile phone can publish a JSON payload to `androprint/{SERVER_ID}/print` to print tickets instantaneously across firewalls, NAT, and 4G/5G mobile carriers.
+* **Status Heartbeat**: Automatically broadcasts live printer status and availability to `androprint/{SERVER_ID}/status`.
+
 <br/>
 
 ---
@@ -129,12 +156,16 @@ All administrative dashboards are accessible directly from your browser:
 | Interface | Description | Live Route |
 | :--- | :--- | :--- |
 | **🖨️ Operations Terminal** | Live printer cards, quick print, server telemetry, and status counters | [`dashboard.html`](public/dashboard.html) |
+| **🧾 Template Designer** | Visual WYSIWYG receipt layout builder with 58mm/80mm live paper roll preview | [`designer.html`](public/designer.html) |
+| **🔍 Network Discovery** | Subnet scanner radar to discover network thermal printers on Port 9100 | [`printer.html`](public/printer.html) |
 | **🌐 Webhook Simulator** | Live webhook endpoint copier and interactive order dispatcher | [`webhook.html`](public/webhook.html) |
 | **📶 Web Direct Print** | Browser-to-Printer Bluetooth & USB OTG direct controller | [`webprint.html`](public/webprint.html) |
-| **⚙️ Hardware Config** | Network printer management, test print dispatch, paper sizes | [`printer.html`](public/printer.html) |
+| **⚙️ Hardware Config** | Network printer management, test print dispatch, paper sizes, roles | [`printer.html`](public/printer.html) |
 | **👥 POS Clients** | API keys, secret tokens, granular client permission toggles | [`clients.html`](public/clients.html) |
-| **☁️ Cloud Connect** | Cloudflare & Ngrok tunnel registration and cURL generators | [`cloud.html`](public/cloud.html) |
+| **☁️ Cloud Connect** | Cloudflare Tunnel registration + MQTT Cloud Pub/Sub gateway | [`cloud.html`](public/cloud.html) |
 | **📋 Queue Telemetry** | Historical logs, success/failure analytics, and job inspector | [`jobs.html`](public/jobs.html) |
+
+<br/>
 
 <br/>
 

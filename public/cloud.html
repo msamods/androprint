@@ -156,6 +156,89 @@
                         <div style="font-size:0.78rem;margin-top:4px;">Register a tunnel URL to enable cloud printing</div>
                     </div>
                 </div>
+        </div>
+
+        <!-- MQTT CLOUD PUB/SUB GATEWAY -->
+        <div class="card" style="border-color: rgba(6, 182, 212, 0.3); margin-bottom:24px;">
+            <div class="card-header" style="background: rgba(6, 182, 212, 0.08);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg, #06b6d4, #3b82f6); display:flex; align-items:center; justify-content:center; font-size:1.1rem;">⚡</div>
+                    <div>
+                        <h3 style="font-size:1rem; margin-bottom:2px;">MQTT Cloud Pub/Sub Gateway</h3>
+                        <span style="font-size:0.75rem; color:var(--text-dim); display:block;">Instant Cloud Printing with ZERO tunnels, NO port-forwarding, and sub-100ms latency</span>
+                    </div>
+                </div>
+                <div class="tunnel-status inactive" id="mqttStatusBadge" style="margin:0; padding:6px 14px; font-size:0.78rem;">
+                    <span class="dot"></span>
+                    <span id="mqttStatusText">Checking...</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="grid-2">
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label">MQTT Broker URL (TCP or TLS/WSS)</label>
+                            <input class="form-input" id="mqttBrokerInput" placeholder="mqtt://broker.hivemq.com:1883" value="mqtt://broker.hivemq.com:1883">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Topic Prefix</label>
+                            <input class="form-input" id="mqttTopicPrefixInput" placeholder="androprint" value="androprint">
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div class="form-group">
+                                <label class="form-label">Username (Optional)</label>
+                                <input class="form-input" id="mqttUsernameInput" placeholder="Leave empty if public">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Password (Optional)</label>
+                                <input type="password" class="form-input" id="mqttPasswordInput" placeholder="••••••••">
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:6px; margin-bottom:16px;">
+                            <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; cursor:pointer;">
+                                <input type="checkbox" id="mqttEnabledInput" style="width:18px; height:18px; accent-color:var(--accent);">
+                                <span>Enable MQTT Cloud Listener</span>
+                            </label>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-primary" onclick="saveMqttConfig()" style="background:linear-gradient(135deg, var(--accent), #3b82f6); flex:1; justify-content:center;">
+                                💾 Save & Connect
+                            </button>
+                            <button class="btn btn-glass" onclick="sendMqttTestPrint()" style="border-color:rgba(6,182,212,0.3); color:var(--accent);">
+                                ⚡ Send Test Print
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.78rem; color:var(--text-dim); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.04em; font-weight:600;">Subscribed MQTT Topics</div>
+                        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+                            <div class="url-display" style="padding:10px 14px; margin-bottom:0;">
+                                <div style="display:flex; flex-direction:column; flex:1; min-width:0;">
+                                    <span style="font-size:0.7rem; color:var(--text-dim);">PRINT TOPIC (Publish JSON here)</span>
+                                    <code id="mqttPrintTopicDisplay" style="font-size:0.78rem;">androprint/.../print</code>
+                                </div>
+                                <button class="copy-btn" onclick="copyMqttTopic('print')">Copy</button>
+                            </div>
+                            <div class="url-display" style="padding:10px 14px; margin-bottom:0;">
+                                <div style="display:flex; flex-direction:column; flex:1; min-width:0;">
+                                    <span style="font-size:0.7rem; color:var(--text-dim);">SMART ROUTE TOPIC</span>
+                                    <code id="mqttRouteTopicDisplay" style="font-size:0.78rem;">androprint/.../route</code>
+                                </div>
+                                <button class="copy-btn" onclick="copyMqttTopic('route')">Copy</button>
+                            </div>
+                            <div class="url-display" style="padding:10px 14px; margin-bottom:0;">
+                                <div style="display:flex; flex-direction:column; flex:1; min-width:0;">
+                                    <span style="font-size:0.7rem; color:var(--text-dim);">SERVER STATUS HEARTBEAT</span>
+                                    <code id="mqttStatusTopicDisplay" style="font-size:0.78rem;">androprint/.../status</code>
+                                </div>
+                                <button class="copy-btn" onclick="copyMqttTopic('status')">Copy</button>
+                            </div>
+                        </div>
+                        <div style="font-size:0.75rem; color:var(--text-dim); line-height:1.5; background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:10px; border:1px solid var(--glass-border);">
+                            💡 <strong>How it works:</strong> Any web app (Shopify, WooCommerce, React POS, Flutter app) can publish to the print topic on this broker. AndroPrint prints it in &lt;100ms with zero router configuration.
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -370,7 +453,102 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
+        /* ============ MQTT CLIENT SCRIPTS ============ */
+
+        let cachedMqttTopics = {};
+
+        async function loadMqttInfo() {
+            try {
+                const res = await fetch('/api/mqtt/config');
+                const data = await res.json();
+
+                document.getElementById('mqttBrokerInput').value = data.broker || 'mqtt://broker.hivemq.com:1883';
+                document.getElementById('mqttTopicPrefixInput').value = data.topicPrefix || 'androprint';
+                document.getElementById('mqttUsernameInput').value = data.username || '';
+                document.getElementById('mqttPasswordInput').value = data.password || '';
+                document.getElementById('mqttEnabledInput').checked = !!data.enabled;
+
+                cachedMqttTopics = data.topics || {};
+                document.getElementById('mqttPrintTopicDisplay').textContent = cachedMqttTopics.print || `androprint/${data.serverId}/print`;
+                document.getElementById('mqttRouteTopicDisplay').textContent = cachedMqttTopics.route || `androprint/${data.serverId}/route`;
+                document.getElementById('mqttStatusTopicDisplay').textContent = cachedMqttTopics.status || `androprint/${data.serverId}/status`;
+
+                const badge = document.getElementById('mqttStatusBadge');
+                const text = document.getElementById('mqttStatusText');
+
+                if (data.status === 'connected') {
+                    badge.className = 'tunnel-status active';
+                    text.textContent = 'Connected (Live Pub/Sub)';
+                } else if (data.enabled) {
+                    badge.className = 'tunnel-status inactive';
+                    text.textContent = data.status === 'connecting' ? 'Connecting...' : 'Reconnecting';
+                } else {
+                    badge.className = 'tunnel-status inactive';
+                    text.textContent = 'Disabled';
+                }
+            } catch (err) {
+                console.warn('Failed to load MQTT info:', err);
+            }
+        }
+
+        async function saveMqttConfig() {
+            const broker = document.getElementById('mqttBrokerInput').value.trim();
+            const topicPrefix = document.getElementById('mqttTopicPrefixInput').value.trim() || 'androprint';
+            const username = document.getElementById('mqttUsernameInput').value.trim();
+            const password = document.getElementById('mqttPasswordInput').value.trim();
+            const enabled = document.getElementById('mqttEnabledInput').checked;
+
+            if (!broker) {
+                showToast('Please enter an MQTT broker URL', 'error');
+                return;
+            }
+
+            try {
+                showToast('Updating MQTT Configuration...', 'info');
+                const res = await fetch('/api/mqtt/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ broker, topicPrefix, username, password, enabled })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('MQTT settings saved!', 'success');
+                    setTimeout(loadMqttInfo, 1000);
+                } else {
+                    showToast(data.error || 'Failed to save MQTT config', 'error');
+                }
+            } catch (e) {
+                showToast('MQTT error: ' + e.message, 'error');
+            }
+        }
+
+        async function sendMqttTestPrint() {
+            try {
+                showToast('Publishing test message via MQTT...', 'info');
+                const res = await fetch('/api/mqtt/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('⚡ Test message published successfully!', 'success');
+                } else {
+                    showToast(data.error || 'Test publish failed', 'error');
+                }
+            } catch (e) {
+                showToast('Test error: ' + e.message, 'error');
+            }
+        }
+
+        function copyMqttTopic(type) {
+            const topic = cachedMqttTopics[type] || document.getElementById(`mqtt${type.charAt(0).toUpperCase() + type.slice(1)}TopicDisplay`).textContent;
+            navigator.clipboard.writeText(topic);
+            showToast(`Copied ${type.toUpperCase()} topic to clipboard!`, 'success');
+        }
+
         loadCloudInfo();
+        loadMqttInfo();
+        setInterval(loadMqttInfo, 10000);
     </script>
 </body>
 </html>

@@ -620,4 +620,89 @@ Future<void> sendPrintJob() async {
 ```
 
 ---
+
+## 🍳 Smart Multi-Printer Routing API
+
+### `POST /api/print/route`
+Intelligently separates restaurant/retail orders into Kitchen Order Tickets (KOT), Bar Order Tickets (BOT), and Cashier Customer Bills. If a target role printer is offline, it automatically fails over to the primary cashier printer with a high-visibility failover warning banner.
+
+#### Request Body (Structured Order):
+```json
+{
+  "orderId": "ORD-501",
+  "table": "Table 12",
+  "serverName": "Waiter Sam",
+  "customer": "Rahul",
+  "items": [
+    { "name": "Butter Chicken", "qty": 1, "price": 280, "category": "kitchen", "notes": "Medium spicy" },
+    { "name": "Garlic Naan", "qty": 2, "price": 40, "category": "kitchen" },
+    { "name": "Virgin Mojito", "qty": 2, "price": 120, "category": "bar" }
+  ],
+  "subtotal": 480,
+  "tax": 24,
+  "total": 504,
+  "upi": { "pa": "msamods@okaxis", "pn": "AndroPrint Diner" },
+  "drawerKick": true,
+  "buzzer": true,
+  "printKOT": true,
+  "printBOT": true,
+  "printBill": true
+}
+```
+
+---
+
+## 🔍 Network Printer Auto-Discovery API
+
+### `GET /api/printers/discover` / `POST /api/printers/discover`
+Scans the local `/24` Wi-Fi/LAN subnet on Port 9100 using non-blocking parallel sockets and probes device models with ESC/POS `GS I 67`.
+
+#### Response:
+```json
+{
+  "success": true,
+  "scannedSubnets": ["192.168.1"],
+  "count": 1,
+  "printers": [
+    {
+      "ip": "192.168.1.4",
+      "port": 9100,
+      "online": true,
+      "model": "EPSON TM-T82II"
+    }
+  ]
+}
+```
+
+---
+
+## 📄 HTML & PDF Auto-Converter APIs
+
+### `POST /api/print/html`
+Parses HTML tags (`<table>`, `<tr>`, `<td>`, `<h1>`, `<hr>`, `<p>`, `<b>`) into formatted monospace ESC/POS lines and prints immediately.
+
+```bash
+curl -X POST "http://localhost:3000/api/print/html" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "html": "<h1>STORE BILL</h1><hr><table><tr><td>Coffee</td><td>x2</td><td>$8.00</td></tr></table>",
+    "role": "CASHIER",
+    "cut": true
+  }'
+```
+
+### `POST /api/print/pdf`
+Accepts `multipart/form-data` with a PDF file or `{ "pdfBase64": "..." }`, extracts text and columnar layouts using `pdf-parse`, and formats it to 58mm/80mm roll width with auto-cut.
+
+---
+
+## ⚡ MQTT Cloud Pub/Sub Instant Printing
+
+### Topics
+* **Print Topic**: `androprint/{SERVER_ID}/print` — Publish JSON print jobs from any cloud server or web app.
+* **Route Topic**: `androprint/{SERVER_ID}/route` — Publish multi-printer orders.
+* **Status Topic**: `androprint/{SERVER_ID}/status` — Retained status heartbeat.
+* **Ack Topic**: `androprint/{SERVER_ID}/ack` — Print acknowledgment.
+
+---
 *Developed By : MSA MODS x WhatYouWantKerala*

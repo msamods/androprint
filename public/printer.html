@@ -560,6 +560,12 @@
                 <a href="webhook.html" class="btn btn-glass" style="color:#a855f7; border-color:rgba(168,85,247,0.3);">
                     <span>⚡</span> Webhooks
                 </a>
+                <a href="designer.html" class="btn btn-glass" style="color:#ec4899; border-color:rgba(236,72,153,0.3);">
+                    <span>🧾</span> Template Designer
+                </a>
+                <button class="btn btn-glass" onclick="openDiscoveryModal()" style="color:#10b981; border-color:rgba(16,185,129,0.3);">
+                    <span>🔍</span> Scan Network
+                </button>
                 <input type="file" id="logoFileInput" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleLogoUpload(event)">
                 <button class="btn btn-primary" onclick="openPrinterModal()">
                     <span>＋</span> Add Printer
@@ -665,6 +671,45 @@
             <div class="modal-footer" style="justify-content: center;">
                 <button type="button" class="btn btn-glass" onclick="closeConfirmModal()">Cancel</button>
                 <button type="button" class="btn btn-action danger" id="btnExecuteDelete" style="padding: 10px 20px; font-size: 0.85rem;">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Auto-Discovery Modal -->
+    <div class="modal-overlay" id="discoveryModal" style="display:none;">
+        <div class="modal-card" style="max-width: 580px;">
+            <div class="modal-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:32px; height:32px; border-radius:8px; background:rgba(16,185,129,0.15); color:var(--success); display:flex; align-items:center; justify-content:center; font-size:1.1rem;">🔍</div>
+                    <div>
+                        <h3 style="font-size:1.05rem;">Auto-Discover ESC/POS Printers</h3>
+                        <span style="font-size:0.72rem; color:var(--text-dim); display:block;">Scan local Wi-Fi / LAN subnet for network thermal printers (Port 9100)</span>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="closeDiscoveryModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <div style="display:flex; gap:10px; margin-bottom:16px;">
+                    <input type="text" class="form-input" id="scanSubnetInput" placeholder="Auto-detecting subnet..." style="font-family:'JetBrains Mono',monospace;">
+                    <button type="button" class="btn btn-primary" id="btnStartScan" onclick="runNetworkScan()" style="background:linear-gradient(135deg, var(--success), #059669); box-shadow:0 4px 16px rgba(16,185,129,0.3); white-space:nowrap;">
+                        <span>⚡</span> Start Scan
+                    </button>
+                </div>
+
+                <div id="scanStatusArea" style="display:none; text-align:center; padding:24px 10px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--glass-border); margin-bottom:16px;">
+                    <div style="width:48px; height:48px; border-radius:50%; border:3px solid rgba(16,185,129,0.2); border-top-color:var(--success); animation:spin 1s linear infinite; margin:0 auto 12px;"></div>
+                    <div style="font-weight:600; color:var(--text); font-size:0.9rem;" id="scanStatusTitle">Probing 254 IP addresses on Port 9100...</div>
+                    <div style="font-size:0.75rem; color:var(--text-dim); margin-top:4px;">Please wait 3-5 seconds while checking printer responses</div>
+                </div>
+
+                <div id="scanResultsArea">
+                    <div style="text-align:center; padding:30px 10px; color:var(--text-dim); font-size:0.85rem;">
+                        Click <b>Start Scan</b> to automatically discover any Epson, TVS, Munbyn, Xprinter or Star thermal printers on your Wi-Fi network.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: flex-end;">
+                <button type="button" class="btn btn-glass" onclick="closeDiscoveryModal()">Close</button>
             </div>
         </div>
     </div>
@@ -1135,6 +1180,104 @@
             } catch (err) {
                 showToast('Failed to delete printer', 'error');
             }
+        }
+
+        // ============ NETWORK AUTO-DISCOVERY FLOW ============
+        function openDiscoveryModal() {
+            document.getElementById('discoveryModal').style.display = 'flex';
+            let defaultSubnet = '192.168.1';
+            if (printersData.printers && printersData.printers.length > 0) {
+                const firstIp = printersData.printers[0].connection?.ip;
+                if (firstIp) {
+                    defaultSubnet = firstIp.split('.').slice(0, 3).join('.');
+                }
+            }
+            document.getElementById('scanSubnetInput').value = defaultSubnet;
+        }
+
+        function closeDiscoveryModal() {
+            document.getElementById('discoveryModal').style.display = 'none';
+        }
+
+        async function runNetworkScan() {
+            const subnet = document.getElementById('scanSubnetInput').value.trim();
+            const btn = document.getElementById('btnStartScan');
+            const statusArea = document.getElementById('scanStatusArea');
+            const resultsArea = document.getElementById('scanResultsArea');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> Scanning...';
+            statusArea.style.display = 'block';
+            document.getElementById('scanStatusTitle').textContent = `Probing ${subnet}.1 to ${subnet}.254 on Port 9100...`;
+            resultsArea.innerHTML = '';
+
+            try {
+                const res = await fetch('/api/printers/discover', {
+                    method: 'POST',
+                    headers: { ...AUTH, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subnet })
+                });
+                const data = await res.json();
+                statusArea.style.display = 'none';
+                btn.disabled = false;
+                btn.innerHTML = '<span>⚡</span> Start Scan';
+
+                if (data.success && data.printers && data.printers.length > 0) {
+                    resultsArea.innerHTML = `
+                        <div style="font-size:0.85rem; font-weight:700; color:var(--success); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                            <span>🎉</span> Discovered ${data.printers.length} Thermal Printer(s) Online!
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            ${data.printers.map(p => `
+                                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); padding:14px; border-radius:12px;">
+                                    <div>
+                                        <div style="font-weight:700; color:var(--text); font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+                                            <span>🖨️</span> ${escapeHtml(p.model || 'ESC/POS Printer')}
+                                        </div>
+                                        <div style="font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--accent); margin-top:3px;">
+                                            ${p.ip}:${p.port}
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary" onclick="useDiscoveredPrinter('${p.ip}', ${p.port}, '${escapeHtml(p.model || '')}')" style="background:linear-gradient(135deg, var(--primary), var(--accent)); padding:8px 14px; font-size:0.8rem;">
+                                        ＋ Add Printer
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    showToast(`Found ${data.printers.length} printer(s)!`, 'success');
+                } else {
+                    resultsArea.innerHTML = `
+                        <div style="text-align:center; padding:30px 10px; color:var(--text-dim);">
+                            <div style="font-size:2rem; margin-bottom:8px;">📡</div>
+                            <h4 style="color:var(--text); margin-bottom:4px;">No printers found on ${subnet}.0/24</h4>
+                            <p style="font-size:0.78rem;">Make sure the thermal printer is powered on and connected to the same Wi-Fi router / Ethernet switch.</p>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                statusArea.style.display = 'none';
+                btn.disabled = false;
+                btn.innerHTML = '<span>⚡</span> Start Scan';
+                resultsArea.innerHTML = `
+                    <div style="text-align:center; padding:20px 10px; color:var(--danger); font-size:0.85rem;">
+                        ⚠️ Scan failed: ${err.message}
+                    </div>
+                `;
+            }
+        }
+
+        function useDiscoveredPrinter(ip, port, model) {
+            closeDiscoveryModal();
+            openPrinterModal();
+            document.getElementById('printerIp').value = ip;
+            document.getElementById('printerPort').value = port || 9100;
+            if (model && model !== 'ESC/POS Thermal Printer') {
+                document.getElementById('printerName').value = model;
+            } else {
+                document.getElementById('printerName').value = `Thermal Printer (${ip.split('.').pop()})`;
+            }
+            showToast(`Pre-filled ${ip}:${port}`, 'success');
         }
 
         // Helpers

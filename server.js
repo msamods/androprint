@@ -17,14 +17,27 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const net = require("net");
+const os = require("os");
 const cors = require("cors");
 const crypto = require("crypto");
 const http = require("http");
 const https = require("https");
+const multer = require("multer");
 const { ThermalPrinter, PrinterTypes } = require("node-thermal-printer");
 const QRCode = require("qrcode");
 const { Jimp } = require("jimp");
 const { PNG } = require("pngjs");
+
+let mqtt = null;
+try { mqtt = require("mqtt"); } catch (e) { console.warn("MQTT library not loaded:", e.message); }
+
+let pdfParse = null;
+try { pdfParse = require("pdf-parse"); } catch (e) { console.warn("PDF-parse library not loaded:", e.message); }
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 }
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -58,9 +71,12 @@ const SERVER_ID_FILE = path.join(DATA_DIR, "server.id");
 const JOBS_FILE = path.join(DATA_DIR, "jobs.json");
 const STORE_LOGO_PATH = path.join(DATA_DIR, "uploads", "store_logo.png");
 const WEBHOOK_FILE = path.join(DATA_DIR, "webhooks.json");
+const TEMPLATES_FILE = path.join(DATA_DIR, "templates.json");
+const MQTT_CONFIG_FILE = path.join(DATA_DIR, "mqtt-config.json");
 
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 app.use(express.static("public"));
 
 /* ============ SERVER START TIME ============ */
@@ -214,6 +230,109 @@ function isPrinterOnline(ip, port, timeout = 1500) {
     socket.on("timeout", () => socket.destroy());
     socket.on("close", () => resolve(online));
   });
+}
+
+/* ============ NETWORK PRINTER AUTO-DISCOVERY ============ */
+
+function getLocalSubnets() {
+  const interfaces = os.networkInterfaces();
+  const subnets = [];
+  for (const name in interfaces) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        const parts = iface.address.split(".");
+        // Exclude link-local APIPA 169.254.x.x
+        if (parts[0] !== "169" || parts[1] !== "254") {
+          subnets.push({
+            subnet: parts.slice(0, 3).join("."),
+            localIp: iface.address,
+            interface: name
+          });
+        }
+      }
+    }
+  }
+  return subnets;
+}
+
+async function probePrinter(ip, port = 9100, timeout = 700) {
+  return new Promise(resolve => {
+    const socket = new net.Socket();
+    let modelName = "";
+    let answered = false;
+
+    socket.setTimeout(timeout);
+
+    socket.connect(port, ip, () => {
+      answered = true;
+      // Send ESC/POS Transmit Printer ID: GS I 67 (0x1D 0x49 0x43)
+      try {
+        socket.write(Buffer.from([0x1D, 0x49, 0x43]));
+      } catch (e) {}
+
+      setTimeout(() => {
+        socket.destroy();
+      }, 150);
+    });
+
+    socket.on("data", chunk => {
+      const text = chunk.toString("ascii").replace(/[^\x20-\x7E]/g, "").trim();
+      if (text) modelName = text;
+    });
+
+    socket.on("error", () => {});
+    socket.on("timeout", () => socket.destroy());
+    socket.on("close", () => {
+      if (answered) {
+        resolve({
+          ip,
+          port,
+          online: true,
+          model: modelName || "ESC/POS Thermal Printer"
+        });
+      } else {
+        resolve(null);
+      }
+    });
+  });
+}
+
+async function discoverNetworkPrinters(targetSubnet = null) {
+  const localSubnets = getLocalSubnets();
+  let subnetsToScan = [];
+  if (targetSubnet) {
+    subnetsToScan = [targetSubnet];
+  } else if (localSubnets.length > 0) {
+    subnetsToScan = Array.from(new Set(localSubnets.map(s => s.subnet)));
+  } else {
+    subnetsToScan = ["192.168.1"];
+  }
+
+  const discovered = [];
+
+  for (const subnet of subnetsToScan) {
+    const ips = [];
+    for (let i = 1; i <= 254; i++) {
+      ips.push(`${subnet}.${i}`);
+    }
+
+    const concurrency = 32;
+    for (let i = 0; i < ips.length; i += concurrency) {
+      const chunk = ips.slice(i, i + concurrency);
+      const batchResults = await Promise.all(
+        chunk.map(ip => probePrinter(ip, 9100, 600))
+      );
+      for (const res of batchResults) {
+        if (res) discovered.push(res);
+      }
+    }
+  }
+
+  return {
+    scannedSubnets: subnetsToScan,
+    count: discovered.length,
+    printers: discovered
+  };
 }
 
 /* ============ IMAGE RASTERIZER (Monochrome ESC/POS) ============ */
@@ -549,6 +668,26 @@ app.get("/api/printers", async (req, res) => {
   res.json({ printers: enriched });
 });
 
+app.get("/api/printers/discover", authRequired, async (req, res) => {
+  try {
+    const subnet = req.query.subnet || null;
+    const result = await discoverNetworkPrinters(subnet);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/printers/discover", authRequired, async (req, res) => {
+  try {
+    const subnet = req.body.subnet || null;
+    const result = await discoverNetworkPrinters(subnet);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post("/api/printer/save", authRequired, (req, res) => {
   const printers = loadPrinters();
   const p = req.body;
@@ -646,11 +785,51 @@ app.post("/api/printer/test", authRequired, async (req, res) => {
   }
 });
 
+/* ============ SMART PRINTER RESOLUTION & ROUTING ============ */
+
+async function resolvePrinterForJob(targetId = null, role = null) {
+  const printers = loadPrinters().filter(p => p.enabled !== false);
+  if (!printers || printers.length === 0) return null;
+
+  // 1. Direct match by ID if provided and not "auto"
+  if (targetId && targetId !== "auto") {
+    const direct = printers.find(p => p.id === targetId);
+    if (direct) return direct;
+  }
+
+  // 2. Role-based routing (e.g. KITCHEN, BAR, CASHIER, PARCEL)
+  if (role) {
+    const rolePrinters = printers.filter(p => (p.role || "CASHIER").toUpperCase() === role.toUpperCase());
+    for (const p of rolePrinters) {
+      if (await isPrinterOnline(p.connection.ip, p.connection.port)) {
+        return p;
+      }
+    }
+    if (rolePrinters.length > 0) return rolePrinters[0];
+  }
+
+  // 3. Fallback: Find Cashier or any online printer
+  const cashier = printers.find(p => (p.role || "").toUpperCase() === "CASHIER");
+  if (cashier && (await isPrinterOnline(cashier.connection.ip, cashier.connection.port))) {
+    return cashier;
+  }
+
+  for (const p of printers) {
+    if (await isPrinterOnline(p.connection.ip, p.connection.port)) {
+      return p;
+    }
+  }
+
+  return cashier || printers[0];
+}
+
 /* ============ PRINT ENDPOINT ============ */
 
 app.post("/print", authRequired, async (req, res) => {
   try {
-    const printerId = req.headers["x-printer-id"] || req.body.printerId;
+    const targetRole = req.headers["x-printer-role"] || req.body.role || req.body.target;
+    const rawPrinterId = req.headers["x-printer-id"] || req.body.printerId;
+
     const {
       text = "",
       logo = null,
@@ -667,29 +846,26 @@ app.post("/print", authRequired, async (req, res) => {
       underline = false
     } = req.body;
 
-    if (!printerId) {
-      return res.status(400).json({ error: "printerId missing" });
-    }
-
     if (!text && !logo && !qr && !barcode && !drawerKick && !buzzer && !beep) {
       return res.status(400).json({
         error: "At least one print action (text, logo, qr, barcode, drawerKick, buzzer) required"
       });
     }
 
-    const printers = loadPrinters();
-    const printer = printers.find(p => p.id === printerId && p.enabled);
+    const printer = await resolvePrinterForJob(rawPrinterId, targetRole);
 
     if (!printer) {
       addJob({
-        printerId,
+        printerId: rawPrinterId || "auto",
         type: "print",
         status: "failed",
-        error: "Printer not found or disabled",
+        error: "No active printer found or all printers disabled",
         textPreview: (text || "Rich Receipt").substring(0, 100)
       });
-      return res.status(404).json({ error: "Printer not found or disabled" });
+      return res.status(404).json({ error: "No active printer found or all printers disabled" });
     }
+
+    const printerId = printer.id;
 
     await printReceipt(printer, {
       text,
@@ -733,6 +909,1042 @@ app.post("/print", authRequired, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+/* ============ SMART MULTI-PRINTER ROUTING ENGINE ============ */
+
+function padReceiptLine(left = "", right = "", width = 42) {
+  const l = String(left);
+  const r = String(right);
+  if (l.length + r.length >= width) {
+    const truncatedLeft = l.substring(0, Math.max(0, width - r.length - 2)) + "..";
+    const spaces = Math.max(1, width - truncatedLeft.length - r.length);
+    return truncatedLeft + " ".repeat(spaces) + r;
+  }
+  const spaces = Math.max(1, width - l.length - r.length);
+  return l + " ".repeat(spaces) + r;
+}
+
+function buildKotTicket(order, width = 42) {
+  const lineChar = "=";
+  const divider = lineChar.repeat(width);
+  const dashDivider = "-".repeat(width);
+  const lines = [];
+
+  lines.push(divider);
+  lines.push("       *** KITCHEN ORDER TICKET (KOT) ***");
+  lines.push(divider);
+  lines.push(padReceiptLine(`Order: #${order.orderId || "NEW"}`, `Table: ${order.table || "Dine-In"}`, width));
+  if (order.serverName || order.waiter) {
+    lines.push(padReceiptLine(`Server: ${order.serverName || order.waiter}`, `Time: ${new Date().toLocaleTimeString()}`, width));
+  } else {
+    lines.push(`Time: ${new Date().toLocaleString()}`);
+  }
+  if (order.customer) lines.push(`Customer: ${order.customer}`);
+  lines.push(dashDivider);
+  lines.push(padReceiptLine("QTY  ITEM DESCRIPTION", "NOTES", width));
+  lines.push(dashDivider);
+
+  for (const item of (order.items || [])) {
+    const qtyStr = `[${item.qty || 1}x]`;
+    lines.push(`${qtyStr} ${item.name}`);
+    if (item.notes) {
+      lines.push(`     >> NOTE: ${item.notes}`);
+    }
+  }
+
+  lines.push(divider);
+  lines.push(`Total Kitchen Items: ${(order.items || []).reduce((acc, i) => acc + (parseInt(i.qty, 10) || 1), 0)}`);
+  lines.push(divider);
+  lines.push("");
+
+  return lines.join("\n");
+}
+
+function buildBotTicket(order, width = 42) {
+  const divider = "=".repeat(width);
+  const dashDivider = "-".repeat(width);
+  const lines = [];
+
+  lines.push(divider);
+  lines.push("          *** BAR ORDER TICKET (BOT) ***");
+  lines.push(divider);
+  lines.push(padReceiptLine(`Order: #${order.orderId || "NEW"}`, `Table: ${order.table || "Bar Counter"}`, width));
+  lines.push(`Time: ${new Date().toLocaleTimeString()} • ${new Date().toLocaleDateString()}`);
+  lines.push(dashDivider);
+  lines.push(padReceiptLine("QTY  BEVERAGE ITEM", "STATUS", width));
+  lines.push(dashDivider);
+
+  for (const item of (order.items || [])) {
+    lines.push(padReceiptLine(`[${item.qty || 1}x] ${item.name}`, item.notes || "READY", width));
+  }
+
+  lines.push(divider);
+  lines.push("");
+
+  return lines.join("\n");
+}
+
+function buildBillReceipt(order, width = 42) {
+  const divider = "=".repeat(width);
+  const dashDivider = "-".repeat(width);
+  const lines = [];
+
+  lines.push(divider);
+  lines.push("             TAX INVOICE / CASH BILL");
+  lines.push(divider);
+  lines.push(padReceiptLine(`Bill No: #${order.orderId || "INV-" + Date.now().toString().slice(-4)}`, `Table: ${order.table || "POS"}`, width));
+  lines.push(`Date: ${new Date().toLocaleString()}`);
+  if (order.customer) lines.push(`Customer: ${order.customer}`);
+  lines.push(dashDivider);
+  lines.push(padReceiptLine("ITEM", "QTY x PRICE    TOTAL", width));
+  lines.push(dashDivider);
+
+  let calcSubtotal = 0;
+  for (const item of (order.items || [])) {
+    const qty = parseFloat(item.qty) || 1;
+    const price = parseFloat(item.price) || 0;
+    const itemTotal = parseFloat(item.total) || (qty * price);
+    calcSubtotal += itemTotal;
+
+    const itemDetail = `${qty}x${price.toFixed(0)}`;
+    const lineRight = `${itemDetail.padStart(8)} ${itemTotal.toFixed(2).padStart(8)}`;
+    lines.push(padReceiptLine(item.name, lineRight, width));
+  }
+
+  lines.push(dashDivider);
+  const subtotal = parseFloat(order.subtotal) || calcSubtotal;
+  lines.push(padReceiptLine("Subtotal:", subtotal.toFixed(2), width));
+
+  if (order.discount && parseFloat(order.discount) > 0) {
+    lines.push(padReceiptLine("Discount:", `-${parseFloat(order.discount).toFixed(2)}`, width));
+  }
+
+  if (order.tax && parseFloat(order.tax) > 0) {
+    lines.push(padReceiptLine("Taxes / GST:", parseFloat(order.tax).toFixed(2), width));
+  }
+
+  lines.push(divider);
+  const grandTotal = parseFloat(order.total) || (subtotal + (parseFloat(order.tax) || 0) - (parseFloat(order.discount) || 0));
+  lines.push(padReceiptLine("*** GRAND TOTAL: ***", `Rs. ${grandTotal.toFixed(2)}`, width));
+  lines.push(divider);
+
+  if (order.paymentMethod) {
+    lines.push(`Payment: ${order.paymentMethod}`);
+  }
+  lines.push("\n      Thank you for your visit! Please come again.\n");
+
+  return { text: lines.join("\n"), grandTotal };
+}
+
+app.post("/api/print/route", authRequired, async (req, res) => {
+  try {
+    const {
+      splits = null,
+      order = null,
+      orderId = null,
+      table = null,
+      serverName = null,
+      customer = null,
+      items = [],
+      subtotal = null,
+      tax = null,
+      discount = null,
+      total = null,
+      upi = null,
+      drawerKick = true,
+      buzzer = true,
+      printKOT = true,
+      printBOT = true,
+      printBill = true
+    } = req.body;
+
+    const results = [];
+
+    // Mode A: Custom manual splits provided
+    if (splits && Array.isArray(splits) && splits.length > 0) {
+      for (const split of splits) {
+        const targetPrinter = await resolvePrinterForJob(split.printerId, split.role);
+        if (!targetPrinter) {
+          results.push({ role: split.role, status: "failed", error: "No available printer" });
+          continue;
+        }
+
+        const isFailover = split.role && targetPrinter.role && (split.role.toUpperCase() !== targetPrinter.role.toUpperCase());
+        const printPayload = {
+          text: (isFailover ? `[ROUTED VIA ${targetPrinter.role} - ${split.role} OFFLINE]\n` : "") + (split.text || ""),
+          logo: split.logo !== undefined ? split.logo : false,
+          qr: split.qr || null,
+          barcode: split.barcode || null,
+          drawerKick: !!split.drawerKick,
+          buzzer: !!split.buzzer,
+          cut: split.cut !== false
+        };
+
+        await printReceipt(targetPrinter, printPayload);
+        addJob({
+          printerId: targetPrinter.id,
+          printerName: targetPrinter.name,
+          type: "smart_route",
+          status: "success",
+          textPreview: `[Role: ${split.role} -> ${targetPrinter.id}] ${String(split.text || "").substring(0, 60)}`
+        });
+
+        results.push({
+          role: split.role,
+          printerId: targetPrinter.id,
+          printerName: targetPrinter.name,
+          failover: isFailover,
+          status: "success"
+        });
+      }
+
+      return res.json({ success: true, mode: "custom_splits", results });
+    }
+
+    // Mode B: Structured Restaurant / Retail POS Order
+    const fullOrder = order || {
+      orderId: orderId || `ORD-${Date.now().toString().slice(-4)}`,
+      table: table || "Walk-in",
+      serverName,
+      customer,
+      items,
+      subtotal,
+      tax,
+      discount,
+      total,
+      upi
+    };
+
+    if (!fullOrder.items || fullOrder.items.length === 0) {
+      return res.status(400).json({ error: "Order must contain an items array" });
+    }
+
+    // 1. Filter Kitchen Items
+    const kitchenItems = fullOrder.items.filter(i => {
+      const cat = (i.category || i.type || "").toLowerCase();
+      return cat === "kitchen" || cat === "food" || cat === "main" || cat === "starter" || (!i.category && cat !== "bar" && cat !== "drinks");
+    });
+
+    // 2. Filter Bar / Drinks Items
+    const barItems = fullOrder.items.filter(i => {
+      const cat = (i.category || i.type || "").toLowerCase();
+      return cat === "bar" || cat === "drinks" || cat === "beverage" || cat === "juice";
+    });
+
+    // Dispatch KOT
+    if (printKOT && kitchenItems.length > 0) {
+      const targetPrinter = await resolvePrinterForJob(null, "KITCHEN");
+      if (targetPrinter) {
+        const isFailover = targetPrinter.role && targetPrinter.role.toUpperCase() !== "KITCHEN";
+        const width = targetPrinter.paperWidth === 58 ? 32 : 42;
+        let kotText = buildKotTicket({ ...fullOrder, items: kitchenItems }, width);
+        if (isFailover) kotText = `[ROUTED VIA ${targetPrinter.role} - KITCHEN PRINTER OFFLINE]\n` + kotText;
+
+        await printReceipt(targetPrinter, {
+          text: kotText,
+          buzzer: !!buzzer,
+          cut: true
+        });
+
+        addJob({
+          printerId: targetPrinter.id,
+          printerName: targetPrinter.name,
+          type: "kot_ticket",
+          status: "success",
+          textPreview: `[KOT Ticket #${fullOrder.orderId} Table ${fullOrder.table}]`
+        });
+
+        results.push({
+          role: "KITCHEN",
+          ticket: "KOT",
+          printerId: targetPrinter.id,
+          failover: isFailover,
+          itemsCount: kitchenItems.length,
+          status: "success"
+        });
+      }
+    }
+
+    // Dispatch BOT (Bar)
+    if (printBOT && barItems.length > 0) {
+      const targetPrinter = await resolvePrinterForJob(null, "BAR");
+      if (targetPrinter) {
+        const isFailover = targetPrinter.role && targetPrinter.role.toUpperCase() !== "BAR";
+        const width = targetPrinter.paperWidth === 58 ? 32 : 42;
+        let botText = buildBotTicket({ ...fullOrder, items: barItems }, width);
+        if (isFailover) botText = `[ROUTED VIA ${targetPrinter.role} - BAR PRINTER OFFLINE]\n` + botText;
+
+        await printReceipt(targetPrinter, {
+          text: botText,
+          cut: true
+        });
+
+        addJob({
+          printerId: targetPrinter.id,
+          printerName: targetPrinter.name,
+          type: "bot_ticket",
+          status: "success",
+          textPreview: `[BOT Ticket #${fullOrder.orderId} Table ${fullOrder.table}]`
+        });
+
+        results.push({
+          role: "BAR",
+          ticket: "BOT",
+          printerId: targetPrinter.id,
+          failover: isFailover,
+          itemsCount: barItems.length,
+          status: "success"
+        });
+      }
+    }
+
+    // Dispatch Customer Bill to Cashier
+    if (printBill) {
+      const cashierPrinter = await resolvePrinterForJob(null, "CASHIER");
+      if (cashierPrinter) {
+        const width = cashierPrinter.paperWidth === 58 ? 32 : 42;
+        const { text: billText, grandTotal } = buildBillReceipt(fullOrder, width);
+
+        let upiQrPayload = null;
+        if (fullOrder.upi && fullOrder.upi.pa) {
+          upiQrPayload = {
+            upi: {
+              pa: fullOrder.upi.pa,
+              pn: fullOrder.upi.pn || "Restaurant Store",
+              am: fullOrder.upi.am || grandTotal.toFixed(2),
+              cu: "INR",
+              tn: `Bill #${fullOrder.orderId}`
+            }
+          };
+        }
+
+        await printReceipt(cashierPrinter, {
+          text: billText,
+          qr: upiQrPayload,
+          drawerKick: !!drawerKick,
+          cut: true
+        });
+
+        addJob({
+          printerId: cashierPrinter.id,
+          printerName: cashierPrinter.name,
+          type: "bill_ticket",
+          status: "success",
+          textPreview: `[Cashier Bill #${fullOrder.orderId} Total Rs.${grandTotal.toFixed(2)}]`
+        });
+
+        results.push({
+          role: "CASHIER",
+          ticket: "BILL",
+          printerId: cashierPrinter.id,
+          total: grandTotal,
+          status: "success"
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      orderId: fullOrder.orderId,
+      dispatched: results
+    });
+
+  } catch (err) {
+    console.error("Smart Routing Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ============ HTML TO RECEIPT AUTO CONVERTER ============ */
+
+function parseHtmlToEscPos(htmlString, width = 42) {
+  if (!htmlString) return "";
+  let text = htmlString;
+
+  // 1. Remove script, style, comments
+  text = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+  text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
+  text = text.replace(/<!--[\s\S]*?-->/g, "");
+
+  // 2. Parse HTML Tables into aligned receipt columns
+  text = text.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (match, tableBody) => {
+    const rows = [];
+    const rowMatches = tableBody.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
+
+    for (const r of rowMatches) {
+      const cells = [];
+      const cellMatches = r.match(/<(td|th)[^>]*>([\s\S]*?)<\/\1>/gi) || [];
+      for (const c of cellMatches) {
+        const rawContent = c.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
+        cells.push(rawContent);
+      }
+      if (cells.length > 0) rows.push(cells);
+    }
+
+    if (rows.length === 0) return "";
+
+    const formattedRows = [];
+    formattedRows.push("-".repeat(width));
+
+    for (const row of rows) {
+      if (row.length === 1) {
+        formattedRows.push(row[0]);
+      } else if (row.length === 2) {
+        formattedRows.push(padReceiptLine(row[0], row[1], width));
+      } else if (row.length === 3) {
+        // e.g. Item (col1 55%), Qty (col2 20%), Amt (col3 25%)
+        const c1w = Math.floor(width * 0.52);
+        const c2w = Math.floor(width * 0.20);
+        const c3w = width - c1w - c2w;
+        const c1 = row[0].padEnd(c1w).substring(0, c1w);
+        const c2 = row[1].padStart(c2w).substring(0, c2w);
+        const c3 = row[2].padStart(c3w).substring(0, c3w);
+        formattedRows.push(`${c1}${c2}${c3}`);
+      } else if (row.length >= 4) {
+        // e.g. Item, Qty, Rate, Total
+        const c1w = Math.floor(width * 0.44);
+        const c2w = Math.floor(width * 0.16);
+        const c3w = Math.floor(width * 0.18);
+        const c4w = width - c1w - c2w - c3w;
+        const c1 = row[0].padEnd(c1w).substring(0, c1w);
+        const c2 = row[1].padStart(c2w).substring(0, c2w);
+        const c3 = row[2].padStart(c3w).substring(0, c3w);
+        const c4 = row[3].padStart(c4w).substring(0, c4w);
+        formattedRows.push(`${c1}${c2}${c3}${c4}`);
+      }
+    }
+
+    formattedRows.push("-".repeat(width));
+    return "\n" + formattedRows.join("\n") + "\n";
+  });
+
+  // 3. Structural & Block elements
+  text = text.replace(/<hr[^>]*>/gi, "\n" + "-".repeat(width) + "\n");
+  text = text.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (m, c) => `\n\n${c.replace(/<[^>]+>/g, "").trim().toUpperCase()}\n${"=".repeat(width)}\n`);
+  text = text.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (m, c) => `\n\n${c.replace(/<[^>]+>/g, "").trim().toUpperCase()}\n${"-".repeat(width)}\n`);
+  text = text.replace(/<h[3-6][^>]*>([\s\S]*?)<\/h[3-6]>/gi, (m, c) => `\n${c.replace(/<[^>]+>/g, "").trim()}\n`);
+  text = text.replace(/<br\s*[\/]?>/gi, "\n");
+  text = text.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (m, c) => `\n${c}\n`);
+  text = text.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (m, c) => ` • ${c}\n`);
+
+  // Strip remaining HTML tags
+  text = text.replace(/<[^>]+>/g, "");
+
+  // Decode common HTML entities
+  text = text.replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&bull;/g, "•");
+
+  // Clean excessive blank lines
+  return text.split("\n").map(l => l.trimEnd()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+app.post("/api/print/html", authRequired, async (req, res) => {
+  try {
+    const {
+      html = "",
+      printerId = null,
+      role = null,
+      cut = true,
+      drawerKick = false,
+      buzzer = false,
+      title = null
+    } = req.body;
+
+    if (!html) return res.status(400).json({ error: "html content string required" });
+
+    const printer = await resolvePrinterForJob(printerId, role);
+    if (!printer) return res.status(404).json({ error: "No active printer found" });
+
+    const width = printer.paperWidth === 58 ? 32 : 42;
+    const formattedText = parseHtmlToEscPos(html, width);
+
+    await printReceipt(printer, {
+      text: (title ? `${title}\n${"=".repeat(width)}\n` : "") + formattedText + "\n\n",
+      cut: cut !== false,
+      drawerKick: !!drawerKick,
+      buzzer: !!buzzer
+    });
+
+    addJob({
+      printerId: printer.id,
+      printerName: printer.name,
+      type: "html_print",
+      status: "success",
+      textPreview: formattedText.substring(0, 100)
+    });
+
+    res.json({
+      success: true,
+      message: `HTML receipt printed on ${printer.name}`,
+      printer: printer.name,
+      printerId: printer.id,
+      preview: formattedText
+    });
+
+  } catch (err) {
+    console.error("HTML Print error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ============ PDF TO RECEIPT AUTO CONVERTER ============ */
+
+app.post("/api/print/pdf", upload.single("pdf"), authRequired, async (req, res) => {
+  try {
+    if (!pdfParse) {
+      return res.status(500).json({ error: "pdf-parse library is not loaded" });
+    }
+
+    let pdfBuffer = null;
+    if (req.file && req.file.buffer) {
+      pdfBuffer = req.file.buffer;
+    } else if (req.body && req.body.pdfBase64) {
+      const cleanB64 = req.body.pdfBase64.replace(/^data:application\/pdf;base64,/, "");
+      pdfBuffer = Buffer.from(cleanB64, "base64");
+    }
+
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      return res.status(400).json({ error: "PDF file upload or pdfBase64 required" });
+    }
+
+    const printerId = req.headers["x-printer-id"] || req.body.printerId;
+    const role = req.headers["x-printer-role"] || req.body.role;
+    const cut = req.body.cut !== "false" && req.body.cut !== false;
+
+    const printer = await resolvePrinterForJob(printerId, role);
+    if (!printer) return res.status(404).json({ error: "No active printer found" });
+
+    // Parse PDF
+    const pdfData = await pdfParse(pdfBuffer);
+    const width = printer.paperWidth === 58 ? 32 : 42;
+
+    const rawLines = (pdfData.text || "").split("\n");
+    const cleanedLines = [];
+
+    for (const raw of rawLines) {
+      const line = raw.trim();
+      if (!line) continue;
+      // Word wrap lines exceeding receipt width
+      if (line.length <= width) {
+        cleanedLines.push(line);
+      } else {
+        const words = line.split(" ");
+        let current = "";
+        for (const w of words) {
+          if ((current + " " + w).trim().length <= width) {
+            current = (current + " " + w).trim();
+          } else {
+            cleanedLines.push(current);
+            current = w;
+          }
+        }
+        if (current) cleanedLines.push(current);
+      }
+    }
+
+    const receiptBody = cleanedLines.join("\n");
+
+    await printReceipt(printer, {
+      text: receiptBody + "\n\n",
+      cut
+    });
+
+    addJob({
+      printerId: printer.id,
+      printerName: printer.name,
+      type: "pdf_print",
+      status: "success",
+      textPreview: `[PDF: ${pdfData.numpages || 1} page(s)] ${receiptBody.substring(0, 80)}`
+    });
+
+    res.json({
+      success: true,
+      pages: pdfData.numpages,
+      printer: printer.name,
+      preview: receiptBody.substring(0, 500)
+    });
+
+  } catch (err) {
+    console.error("PDF Print error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ============ VISUAL RECEIPT TEMPLATE DESIGNER APIS ============ */
+
+function getDefaultTemplates() {
+  return [
+    {
+      id: "restaurant-dinein",
+      name: "Restaurant Dine-In Bill",
+      description: "Itemized restaurant bill with UPI QR & cash drawer kick",
+      paperWidth: 80,
+      elements: [
+        { type: "header", text: "SPICE GARDEN RESTAURANT", subtitle: "Authentic Kerala Cuisine\nMG Road, Kochi • Ph: 0484-2345678\nGSTIN: 32ABCDE1234F1Z5", align: "center", bold: true },
+        { type: "divider", style: "double" },
+        { type: "meta", rows: [{ key: "Invoice No", val: "#INV-9281" }, { key: "Date & Time", val: "{DATE_TIME}" }, { key: "Table / Server", val: "Table 6 • Waiter Anoop" }] },
+        { type: "divider", style: "single" },
+        { type: "items", headers: ["ITEM", "QTY", "RATE", "TOTAL"], rows: [
+          { name: "Malabar Biryani", qty: "2", rate: "240", total: "480.00" },
+          { name: "Kerala Parotta", qty: "4", rate: "25", total: "100.00" },
+          { name: "Chicken Roast", qty: "1", rate: "280", total: "280.00" },
+          { name: "Fresh Lime Soda", qty: "2", rate: "40", total: "80.00" }
+        ]},
+        { type: "divider", style: "single" },
+        { type: "totals", rows: [
+          { label: "Subtotal", val: "Rs. 940.00" },
+          { label: "CGST (2.5%)", val: "Rs. 23.50" },
+          { label: "SGST (2.5%)", val: "Rs. 23.50" },
+          { label: "*** NET AMOUNT ***", val: "Rs. 987.00", bold: true }
+        ]},
+        { type: "divider", style: "double" },
+        { type: "qr", pa: "msamods@okaxis", pn: "Spice Garden", am: "987.00", label: "SCAN TO PAY WITH ANY UPI APP" },
+        { type: "footer", text: "Thank you for dining with us!\nVisit again soon • Follow us @spicegarden", align: "center" }
+      ],
+      actions: { cut: true, drawerKick: true, buzzer: false }
+    },
+    {
+      id: "kitchen-kot",
+      name: "Kitchen Order Ticket (KOT)",
+      description: "High-contrast chef ticket with buzzer alert",
+      paperWidth: 80,
+      elements: [
+        { type: "header", text: "*** KITCHEN ORDER TICKET (KOT) ***", subtitle: "Order #804 • Table: 12", align: "center", bold: true },
+        { type: "divider", style: "double" },
+        { type: "meta", rows: [{ key: "Server", val: "Captain Rahul" }, { key: "Placed At", val: "{TIME}" }] },
+        { type: "divider", style: "single" },
+        { type: "items", headers: ["QTY", "ITEM", "SPECIAL INSTRUCTIONS"], rows: [
+          { qty: "2", name: "Butter Chicken", note: "EXTRA SPICY, NO CORIANDER" },
+          { qty: "3", name: "Butter Naan", note: "CRISPY WELL DONE" },
+          { qty: "1", name: "Veg Fried Rice", note: "LESS OIL" }
+        ]},
+        { type: "divider", style: "double" },
+        { type: "footer", text: "TOTAL ITEMS: 6 • PRIORITY: HIGH", align: "center" }
+      ],
+      actions: { cut: true, drawerKick: false, buzzer: true }
+    },
+    {
+      id: "retail-invoice",
+      name: "Retail & Supermarket Invoice",
+      description: "Supermarket cash bill with barcode & savings summary",
+      paperWidth: 80,
+      elements: [
+        { type: "header", text: "ANDROPRINT SUPERMARKET", subtitle: "Smart Hypermarket Solutions\nOpen 8 AM - 10 PM Everyday", align: "center", bold: true },
+        { type: "divider", style: "double" },
+        { type: "meta", rows: [{ key: "Bill No", val: "POS-1049" }, { key: "Cashier", val: "Counter 2" }, { key: "Date", val: "{DATE}" }] },
+        { type: "divider", style: "single" },
+        { type: "items", headers: ["ITEM", "QTY", "RATE", "AMOUNT"], rows: [
+          { name: "Almond Milk 1L", qty: "1", rate: "290", total: "290.00" },
+          { name: "Organic Oats 1kg", qty: "2", rate: "180", total: "360.00" },
+          { name: "Dark Chocolate 100g", qty: "3", rate: "150", total: "450.00" }
+        ]},
+        { type: "divider", style: "single" },
+        { type: "totals", rows: [
+          { label: "Items Total", val: "Rs. 1,100.00" },
+          { label: "Membership Discount", val: "-Rs. 110.00" },
+          { label: "*** TOTAL PAYABLE ***", val: "Rs. 990.00", bold: true }
+        ]},
+        { type: "divider", style: "double" },
+        { type: "barcode", value: "POS1049990", type: "CODE128" },
+        { type: "footer", text: "Goods once sold can be exchanged within 7 days.\nSave Paper • Live Green", align: "center" }
+      ],
+      actions: { cut: true, drawerKick: true, buzzer: false }
+    }
+  ];
+}
+
+function loadTemplates() {
+  try {
+    if (fs.existsSync(TEMPLATES_FILE)) {
+      const raw = fs.readFileSync(TEMPLATES_FILE, "utf8").trim();
+      if (raw) return JSON.parse(raw);
+    }
+  } catch (e) {
+    console.warn("Failed to load templates:", e.message);
+  }
+  const defaults = getDefaultTemplates();
+  saveTemplates(defaults);
+  return defaults;
+}
+
+function saveTemplates(templates) {
+  try {
+    fs.writeFileSync(TEMPLATES_FILE, JSON.stringify(templates, null, 2), "utf8");
+    return true;
+  } catch (e) {
+    console.error("Save templates error:", e);
+    return false;
+  }
+}
+
+app.get("/api/templates", (req, res) => {
+  res.json({ templates: loadTemplates() });
+});
+
+app.post("/api/template/save", authRequired, (req, res) => {
+  try {
+    const template = req.body;
+    if (!template || !template.name) {
+      return res.status(400).json({ error: "Template must have a name" });
+    }
+
+    const templates = loadTemplates();
+    const id = template.id || "tpl-" + crypto.randomBytes(4).toString("hex");
+    const existingIdx = templates.findIndex(t => t.id === id);
+
+    const fullTemplate = {
+      ...template,
+      id,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (existingIdx >= 0) {
+      templates[existingIdx] = fullTemplate;
+    } else {
+      templates.push(fullTemplate);
+    }
+
+    saveTemplates(templates);
+    res.json({ success: true, template: fullTemplate });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete("/api/template/:id", authRequired, (req, res) => {
+  try {
+    const templates = loadTemplates();
+    const filtered = templates.filter(t => t.id !== req.params.id);
+    saveTemplates(filtered);
+    res.json({ success: true, remaining: filtered.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/template/render-and-print", authRequired, async (req, res) => {
+  try {
+    const { template, templateId, printerId, role, variables = {} } = req.body;
+    let tpl = template;
+
+    if (!tpl && templateId) {
+      tpl = loadTemplates().find(t => t.id === templateId);
+    }
+
+    if (!tpl || !tpl.elements) {
+      return res.status(400).json({ error: "Valid template with elements required" });
+    }
+
+    const printer = await resolvePrinterForJob(printerId, role);
+    if (!printer) return res.status(404).json({ error: "No active printer found" });
+
+    const width = printer.paperWidth === 58 ? 32 : (tpl.paperWidth === 58 ? 32 : 42);
+    const lines = [];
+    let upiQrPayload = null;
+    let barcodePayload = null;
+
+    for (const el of tpl.elements) {
+      if (el.type === "header") {
+        lines.push(el.text.toUpperCase());
+        if (el.subtitle) lines.push(el.subtitle);
+      } else if (el.type === "divider") {
+        const char = el.style === "double" ? "=" : (el.style === "dots" ? "." : "-");
+        lines.push(char.repeat(width));
+      } else if (el.type === "meta" && Array.isArray(el.rows)) {
+        for (const row of el.rows) {
+          let val = row.val || "";
+          val = val.replace("{DATE_TIME}", new Date().toLocaleString())
+                   .replace("{DATE}", new Date().toLocaleDateString())
+                   .replace("{TIME}", new Date().toLocaleTimeString());
+          for (const [k, v] of Object.entries(variables)) {
+            val = val.replace(new RegExp(`{${k}}`, "g"), v);
+          }
+          lines.push(padReceiptLine(row.key + ":", val, width));
+        }
+      } else if (el.type === "items" && Array.isArray(el.rows)) {
+        for (const row of el.rows) {
+          if (row.total) {
+            lines.push(padReceiptLine(`${row.qty || 1}x ${row.name}`, row.total, width));
+          } else if (row.note) {
+            lines.push(`[${row.qty || 1}x] ${row.name}`);
+            lines.push(`     >> ${row.note}`);
+          } else {
+            lines.push(`[${row.qty || 1}x] ${row.name}`);
+          }
+        }
+      } else if (el.type === "totals" && Array.isArray(el.rows)) {
+        for (const r of el.rows) {
+          lines.push(padReceiptLine(r.label, r.val, width));
+        }
+      } else if (el.type === "qr") {
+        upiQrPayload = {
+          upi: {
+            pa: el.pa || "msamods@okaxis",
+            pn: el.pn || "AndroPrint Store",
+            am: el.am || "",
+            cu: "INR",
+            tn: "Store Payment"
+          }
+        };
+        if (el.label) lines.push(el.label);
+      } else if (el.type === "barcode") {
+        barcodePayload = { data: el.value || "12345678", type: el.type || "CODE128" };
+      } else if (el.type === "footer") {
+        lines.push("\n" + el.text + "\n");
+      }
+    }
+
+    const renderedText = lines.join("\n");
+
+    await printReceipt(printer, {
+      text: renderedText,
+      qr: upiQrPayload,
+      barcode: barcodePayload,
+      drawerKick: !!tpl.actions?.drawerKick,
+      buzzer: !!tpl.actions?.buzzer,
+      cut: tpl.actions?.cut !== false
+    });
+
+    addJob({
+      printerId: printer.id,
+      printerName: printer.name,
+      type: "template_print",
+      status: "success",
+      textPreview: `[Template: ${tpl.name}] ${renderedText.substring(0, 80)}`
+    });
+
+    res.json({
+      success: true,
+      message: `Template "${tpl.name}" printed successfully on ${printer.name}`,
+      preview: renderedText
+    });
+
+  } catch (e) {
+    console.error("Template Print Error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* ============ MQTT CLOUD PUB/SUB INSTANT PRINTING ============ */
+
+let mqttClient = null;
+let mqttStatus = "disconnected";
+
+function loadMqttConfig() {
+  const defaultCfg = {
+    enabled: false,
+    broker: "mqtt://broker.hivemq.com:1883",
+    topicPrefix: "androprint",
+    qos: 1,
+    username: "",
+    password: "",
+    status: mqttStatus,
+    lastConnected: null
+  };
+  try {
+    if (fs.existsSync(MQTT_CONFIG_FILE)) {
+      const raw = fs.readFileSync(MQTT_CONFIG_FILE, "utf8").trim();
+      if (raw) return { ...defaultCfg, ...JSON.parse(raw), status: mqttStatus };
+    }
+  } catch (e) {}
+  return defaultCfg;
+}
+
+function saveMqttConfig(cfg) {
+  try {
+    fs.writeFileSync(MQTT_CONFIG_FILE, JSON.stringify(cfg, null, 2), "utf8");
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function initMqttClient() {
+  if (!mqtt) {
+    console.warn("⚠️ MQTT package not installed. MQTT Cloud Printing disabled.");
+    return;
+  }
+
+  const config = loadMqttConfig();
+  if (!config.enabled) {
+    if (mqttClient) {
+      try { mqttClient.end(true); } catch (e) {}
+      mqttClient = null;
+    }
+    mqttStatus = "disabled";
+    return;
+  }
+
+  if (mqttClient) {
+    try { mqttClient.end(true); } catch (e) {}
+    mqttClient = null;
+  }
+
+  const prefix = config.topicPrefix || "androprint";
+  const printTopic = `${prefix}/${SERVER_ID}/print`;
+  const routeTopic = `${prefix}/${SERVER_ID}/route`;
+  const pingTopic = `${prefix}/${SERVER_ID}/ping`;
+  const statusTopic = `${prefix}/${SERVER_ID}/status`;
+  const ackTopic = `${prefix}/${SERVER_ID}/ack`;
+
+  const opts = {
+    clientId: `androprint_${SERVER_ID}_${crypto.randomBytes(3).toString("hex")}`,
+    clean: true,
+    reconnectPeriod: 5000,
+    connectTimeout: 10000
+  };
+
+  if (config.username) opts.username = config.username;
+  if (config.password) opts.password = config.password;
+
+  try {
+    console.log(`🔌 Connecting to MQTT Broker: ${config.broker} ...`);
+    mqttClient = mqtt.connect(config.broker, opts);
+
+    mqttClient.on("connect", () => {
+      mqttStatus = "connected";
+      console.log(`✅ MQTT Connected! Subscribing to: ${printTopic}`);
+
+      // Publish online status (with retain)
+      mqttClient.publish(
+        statusTopic,
+        JSON.stringify({
+          status: "online",
+          serverId: SERVER_ID,
+          serverTime: new Date().toISOString(),
+          printers: loadPrinters().map(p => ({ id: p.id, name: p.name, role: p.role, enabled: p.enabled }))
+        }),
+        { retain: true, qos: 1 }
+      );
+
+      mqttClient.subscribe([printTopic, routeTopic, pingTopic], { qos: config.qos || 1 }, (err) => {
+        if (err) console.error("MQTT Subscribe Error:", err);
+      });
+    });
+
+    mqttClient.on("message", async (topic, payload) => {
+      try {
+        const payloadStr = payload.toString("utf8");
+        console.log(`📥 MQTT Message on [${topic}]:`, payloadStr.substring(0, 100));
+
+        let data = {};
+        try {
+          data = JSON.parse(payloadStr);
+        } catch {
+          data = { text: payloadStr };
+        }
+
+        if (topic === pingTopic) {
+          mqttClient.publish(statusTopic, JSON.stringify({
+            status: "online",
+            serverId: SERVER_ID,
+            pong: Date.now()
+          }));
+          return;
+        }
+
+        if (topic === printTopic) {
+          const printer = await resolvePrinterForJob(data.printerId, data.role || data.target);
+          if (!printer) {
+            mqttClient.publish(ackTopic, JSON.stringify({ success: false, error: "No active printer found" }));
+            return;
+          }
+
+          await printReceipt(printer, data);
+          addJob({
+            printerId: printer.id,
+            printerName: printer.name,
+            type: "mqtt_cloud_print",
+            status: "success",
+            textPreview: (data.text || "MQTT Cloud Receipt").substring(0, 80)
+          });
+
+          mqttClient.publish(ackTopic, JSON.stringify({
+            success: true,
+            message: "Printed via MQTT",
+            printerId: printer.id,
+            timestamp: Date.now()
+          }));
+        }
+      } catch (err) {
+        console.error("MQTT Message Handling Error:", err);
+        mqttClient.publish(ackTopic, JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+
+    mqttClient.on("error", (err) => {
+      console.warn("MQTT Error:", err.message);
+      mqttStatus = "error";
+    });
+
+    mqttClient.on("offline", () => {
+      mqttStatus = "offline";
+    });
+
+    mqttClient.on("close", () => {
+      mqttStatus = "closed";
+    });
+
+  } catch (err) {
+    console.error("MQTT Client Init Failed:", err);
+    mqttStatus = "failed";
+  }
+}
+
+app.get("/api/mqtt/config", (req, res) => {
+  const cfg = loadMqttConfig();
+  res.json({
+    ...cfg,
+    status: mqttStatus,
+    serverId: SERVER_ID,
+    topics: {
+      print: `${cfg.topicPrefix || "androprint"}/${SERVER_ID}/print`,
+      route: `${cfg.topicPrefix || "androprint"}/${SERVER_ID}/route`,
+      status: `${cfg.topicPrefix || "androprint"}/${SERVER_ID}/status`,
+      ack: `${cfg.topicPrefix || "androprint"}/${SERVER_ID}/ack`
+    }
+  });
+});
+
+app.post("/api/mqtt/config", authRequired, (req, res) => {
+  const current = loadMqttConfig();
+  const updated = { ...current, ...req.body };
+  saveMqttConfig(updated);
+  initMqttClient();
+  res.json({ success: true, config: updated, status: mqttStatus });
+});
+
+app.post("/api/mqtt/test", authRequired, async (req, res) => {
+  try {
+    if (!mqttClient || mqttStatus !== "connected") {
+      return res.status(400).json({ success: false, error: "MQTT Client is not connected to a broker" });
+    }
+    const cfg = loadMqttConfig();
+    const testTopic = `${cfg.topicPrefix || "androprint"}/${SERVER_ID}/print`;
+    const payload = JSON.stringify({
+      text: "\n================================\n  ANDROPRINT MQTT CLOUD TEST\n================================\nMQTT Cloud Instant Print Active!\nNo tunnels • Direct Pub/Sub\n" + new Date().toLocaleString() + "\n================================\n\n\n",
+      cut: true,
+      buzzer: true
+    });
+
+    mqttClient.publish(testTopic, payload, { qos: 1 }, (err) => {
+      if (err) return res.status(500).json({ success: false, error: err.message });
+      res.json({ success: true, message: `Test published to ${testTopic}` });
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Auto-start MQTT on server launch if enabled
+setTimeout(() => {
+  initMqttClient();
+}, 2000);
 
 /* ============ DEDICATED HARDWARE CONTROL ENDPOINTS ============ */
 
