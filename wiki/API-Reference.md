@@ -90,7 +90,9 @@ Comprehensive receipt print dispatcher. Supports rich multimedia tickets with st
 | `underline` | Boolean | Enable underline font style |
 | `drawerKick` | Boolean | Triggers RJ11/RJ12 cash drawer kick on print |
 | `buzzer` / `beep` | Boolean | Triggers acoustic buzzer alert on thermal printer |
-| `cut` | Boolean | Automatically feeds and cuts paper (default: `true`) |
+| `cut` | Boolean / String | Automatically feeds and cuts paper: `true`, `false`, or `"partial"` (default: `true`) |
+| `cutMode` | String | Cut mode: `"full"` (clean cut) or `"partial"` (leaves a small center tab) |
+| `feedLines` | Number | Blank lines to feed forward before cutting (default: `2`) |
 | `qr` | Object / String | QR payload. Supports `{ upi: { pa, pn, am, cu, tn } }` for Google Pay / PhonePe / Paytm dynamic QR |
 | `barcode` | Object / String | Barcode payload. String or `{ data: "...", type: "CODE128" }` |
 | `logo` | String | Base64 PNG/JPG/WebP data URL or server file path |
@@ -276,6 +278,113 @@ Sends a standardized ESC/POS diagnostic test receipt directly to the printer. Ve
 {
   "success": true,
   "printed": true
+}
+```
+
+---
+
+## ✂️ Hardware Control Endpoints
+
+### `POST /api/printer/cut`
+Feeds paper forward and fires the motorized auto cutter blade.
+
+#### Request Body
+```json
+{
+  "printerId": "printer_main_01",
+  "mode": "full",
+  "feed": 3
+}
+```
+
+| Parameter | Type | Description | Default |
+|---|---|---|---|
+| `printerId` | String | Target printer ID (**Required**) | - |
+| `mode` | String | `"full"` (clean cut) or `"partial"` (leaves small center tab) | `"full"` |
+| `feed` | Number | Blank lines to feed before cutting | `3` |
+
+#### Response (`200 OK`)
+```json
+{
+  "success": true,
+  "message": "Paper full cut executed successfully",
+  "mode": "full",
+  "feed": 3
+}
+```
+
+---
+
+### `POST /api/printer/drawer-kick`
+Sends high-current 24V pulse to the RJ11/RJ12 drawer connector (Pin 2 / Pin 5) to pop open the cash register.
+
+#### Request Body
+```json
+{
+  "printerId": "printer_main_01"
+}
+```
+
+---
+
+### `POST /api/printer/buzzer`
+Emits an acoustic beep tone for kitchen order tickets (KOT) or waiter alerts.
+
+#### Request Body
+```json
+{
+  "printerId": "printer_kitchen",
+  "count": 2
+}
+```
+
+---
+
+### `POST /api/printer/qr`
+Prints a high-contrast dynamic UPI payment QR code or web URL with automatic centering.
+
+#### Request Body
+```json
+{
+  "printerId": "printer_counter",
+  "qr": {
+    "upi": {
+      "pa": "merchant@okaxis",
+      "pn": "Restaurant Name",
+      "am": "350.00",
+      "cu": "INR",
+      "tn": "Bill #892"
+    }
+  },
+  "title": "SCAN & PAY VIA GPAY / PHONEPE",
+  "footer": "Thank you!"
+}
+```
+
+---
+
+### `POST /api/printer/barcode`
+Generates a crisp Code128 / EAN13 barcode ticket for parcel tracking, receipts, or queue tokens.
+
+#### Request Body
+```json
+{
+  "printerId": "printer_counter",
+  "barcode": "ORD-92019-X",
+  "type": "CODE128",
+  "label": "ORDER #92019-X"
+}
+```
+
+---
+
+### `POST /api/printer/logo`
+Uploads and saves a store branding logo (automatically rasterized to 1-bit monochrome ESC/POS format).
+
+#### Request Body
+```json
+{
+  "imageBase64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
 }
 ```
 

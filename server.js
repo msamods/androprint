@@ -305,6 +305,8 @@ async function printReceipt(printer, options = {}) {
     buzzer = false,
     beep = false,
     cut = true,
+    cutMode = "full",
+    feedLines = 2,
     align = "left",
     bold = false,
     underline = false
@@ -415,8 +417,16 @@ async function printReceipt(printer, options = {}) {
   }
 
   // 7. PAPER CUT
-  if (cut) {
-    device.cut();
+  if (cut !== false && cut !== "none") {
+    const lines = typeof feedLines === "number" ? feedLines : (parseInt(feedLines, 10) || 2);
+    for (let i = 0; i < lines; i++) {
+      device.newLine();
+    }
+    if (cut === "partial" || cutMode === "partial") {
+      device.partialCut();
+    } else {
+      device.cut();
+    }
   }
 
   const ok = await device.execute();
@@ -650,6 +660,8 @@ app.post("/print", authRequired, async (req, res) => {
       buzzer = false,
       beep = false,
       cut = true,
+      cutMode = "full",
+      feedLines = 2,
       align = "left",
       bold = false,
       underline = false
@@ -688,6 +700,8 @@ app.post("/print", authRequired, async (req, res) => {
       buzzer,
       beep,
       cut,
+      cutMode,
+      feedLines,
       align,
       bold,
       underline
@@ -865,6 +879,53 @@ app.delete("/api/printer/logo", authRequired, (req, res) => {
     fs.unlinkSync(STORE_LOGO_PATH);
   }
   res.json({ success: true, message: "Store logo removed" });
+});
+
+// 6. Paper Feed & Auto Cut Endpoint
+app.post("/api/printer/cut", authRequired, async (req, res) => {
+  try {
+    const { printerId, mode = "full", feed = 3 } = req.body;
+    if (!printerId) return res.status(400).json({ error: "printerId required" });
+
+    const printer = loadPrinters().find(p => p.id === printerId && p.enabled);
+    if (!printer) return res.status(404).json({ error: "Printer not found" });
+
+    const device = new ThermalPrinter({
+      type: PrinterTypes.EPSON,
+      interface: `tcp://${printer.connection.ip}:${printer.connection.port}`,
+      timeout: 3000
+    });
+
+    const feedCount = typeof feed === "number" ? feed : (parseInt(feed, 10) || 3);
+    for (let i = 0; i < feedCount; i++) {
+      device.newLine();
+    }
+
+    if (mode === "partial") {
+      device.partialCut();
+    } else {
+      device.cut();
+    }
+
+    await device.execute();
+
+    addJob({
+      printerId,
+      printerName: printer.name,
+      type: "paper_cut",
+      status: "success",
+      textPreview: `[Paper Cut: ${mode.toUpperCase()} (feed: ${feedCount})]`
+    });
+
+    res.json({
+      success: true,
+      message: `Paper ${mode} cut executed successfully`,
+      mode,
+      feed: feedCount
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 /* ============ API: PRINT JOBS ============ */
