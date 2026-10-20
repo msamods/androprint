@@ -47,6 +47,8 @@ try {
     console.log(` -> Copied ${file}`);
   }
 
+  execSync('git config user.name "MSA MODS"', { cwd: TEMP_CLONE });
+  execSync('git config user.email "msamods.org@gmail.com"', { cwd: TEMP_CLONE });
   execSync('git add .', { cwd: TEMP_CLONE });
   execSync('git commit -m "docs: sync wiki pages from repo"', { cwd: TEMP_CLONE });
   execSync('git push origin master', { cwd: TEMP_CLONE, stdio: 'inherit' });
