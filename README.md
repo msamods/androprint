@@ -24,7 +24,15 @@
 
 <br/>
 
-[✨ Latest Features](#-latest-features-v20) • [🌐 Webhook Printing](#-automated-e-commerce-webhooks) • [✂️ Auto Cut](#️-smart-auto-cut-full--partial) • [📱 Native APK](#-native-android-print-agent-apk) • [🪟 Windows Exe](#-windows-standalone-exe) • [🔌 API Docs](#-rest-api-documentation) • [📖 Official Wiki](https://github.com/msamods/androprint/wiki)
+<p align="center">
+  <a href="#features"><img src="https://img.shields.io/badge/✨_Features-6366f1?style=for-the-badge" alt="Features" /></a>&nbsp;
+  <a href="#webhooks"><img src="https://img.shields.io/badge/🌐_Webhooks-06b6d4?style=for-the-badge" alt="Webhooks" /></a>&nbsp;
+  <a href="#autocut"><img src="https://img.shields.io/badge/✂️_Auto_Cut-ec4899?style=for-the-badge" alt="Auto Cut" /></a>&nbsp;
+  <a href="#android-apk"><img src="https://img.shields.io/badge/📱_Native_APK-10b981?style=for-the-badge&logo=android&logoColor=white" alt="Android APK" /></a>&nbsp;
+  <a href="#windows-exe"><img src="https://img.shields.io/badge/🪟_Windows_EXE-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows EXE" /></a>&nbsp;
+  <a href="#api-docs"><img src="https://img.shields.io/badge/🔌_REST_API-8b5cf6?style=for-the-badge" alt="API Docs" /></a>&nbsp;
+  <a href="https://github.com/msamods/androprint/wiki"><img src="https://img.shields.io/badge/📖_Official_Wiki-f59e0b?style=for-the-badge&logo=github&logoColor=white" alt="Official Wiki" /></a>
+</p>
 
 ---
 
@@ -63,6 +71,7 @@
 
 ---
 
+<span id="features"></span>
 ## 🚀 Latest Features (v2.0)
 
 ```mermaid
@@ -93,12 +102,14 @@ graph TD
 * Emits acoustic alerts (`ESC B 2 2`) on thermal printers in noisy restaurant kitchens whenever a new Kitchen Order Ticket (KOT) arrives.
 * Dedicated alert endpoint: `POST /api/printer/buzzer`.
 
+<span id="autocut"></span>
 ### 5. ✂️ Smart Auto Cut (Full & Partial Cut with Offset Protection)
 * **Full Cut (`mode: "full"`)**: Cuts cleanly across the paper roll for checkout counters.
 * **Partial Cut (`mode: "partial"`)**: Cuts ~95% across the paper, leaving a small center tab so orders don't blow away or fall on the kitchen floor.
 * **Printhead-to-Cutter Offset Protection**: Automatically injects configurable line feeds (`feedLines: 3`) before firing the blade, preventing bills and QR codes from being chopped in half.
 * Dedicated manual cut endpoint: `POST /api/printer/cut`.
 
+<span id="webhooks"></span>
 ### 6. 🛒 Automated E-Commerce & POS Webhooks
 * Built-in webhook receivers for instant physical ticket printing whenever an online order is placed:
   - 🛍️ **WooCommerce**: `/webhook/woocommerce` (Order Created / Order Updated)
@@ -151,6 +162,7 @@ npm install
 npm start
 ```
 
+<span id="windows-exe"></span>
 ### 3️⃣ Option C: Windows Standalone (`.exe`)
 No Node.js or npm needed on client PCs! Download or build the standalone Windows binary:
 ```bash
@@ -161,6 +173,7 @@ Or download the pre-packaged executable directly:
 
 ---
 
+<span id="android-apk"></span>
 ## 📱 Native Android Print Agent (APK)
 
 A complete native Android application project with **Background Foreground Service** and **WakeLock** is available in [`android-app/`](android-app/):
@@ -174,6 +187,7 @@ A complete native Android application project with **Background Foreground Servi
 
 ---
 
+<span id="api-docs"></span>
 ## 🔌 REST API Quick Reference
 
 > 📖 **Full Interactive API Wiki & Payload Schema**: [**Read the Live GitHub Wiki →**](https://github.com/msamods/androprint/wiki)
