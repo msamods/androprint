@@ -26,11 +26,12 @@
 
 <p align="center">
   <a href="#features"><img src="https://img.shields.io/badge/✨_Features-6366f1?style=for-the-badge" alt="Features" /></a>&nbsp;
+  <a href="#sdk"><img src="https://img.shields.io/badge/📦_Developer_SDK-8b5cf6?style=for-the-badge&logo=javascript&logoColor=white" alt="Developer SDK" /></a>&nbsp;
   <a href="#webhooks"><img src="https://img.shields.io/badge/🌐_Webhooks-06b6d4?style=for-the-badge" alt="Webhooks" /></a>&nbsp;
   <a href="#autocut"><img src="https://img.shields.io/badge/✂️_Auto_Cut-ec4899?style=for-the-badge" alt="Auto Cut" /></a>&nbsp;
   <a href="#android-apk"><img src="https://img.shields.io/badge/📱_Native_APK-10b981?style=for-the-badge&logo=android&logoColor=white" alt="Android APK" /></a>&nbsp;
   <a href="#windows-exe"><img src="https://img.shields.io/badge/🪟_Windows_EXE-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows EXE" /></a>&nbsp;
-  <a href="#api-docs"><img src="https://img.shields.io/badge/🔌_REST_API-8b5cf6?style=for-the-badge" alt="API Docs" /></a>&nbsp;
+  <a href="#api-docs"><img src="https://img.shields.io/badge/🔌_REST_API-6366f1?style=for-the-badge" alt="API Docs" /></a>&nbsp;
   <a href="https://github.com/msamods/androprint/wiki"><img src="https://img.shields.io/badge/📖_Official_Wiki-f59e0b?style=for-the-badge&logo=github&logoColor=white" alt="Official Wiki" /></a>
 </p>
 
@@ -267,6 +268,47 @@ curl -X POST http://localhost:3000/print \
 | `/api/printer/barcode` | `POST` | Direct Code128 / EAN13 barcode ticket |
 | `/api/printer/logo` | `POST` | Upload and rasterize store branding logo |
 | `/api/printer/test` | `POST` | Send diagnostic hardware test print |
+
+<br/>
+
+---
+
+<span id="sdk"></span>
+## 📦 Official Developer Client SDK
+
+Integrate thermal printing directly into your own Web App, Point-of-Sale (POS), Python backend, or Flutter app using the official [**AndroPrint SDK**](sdk/):
+
+### JavaScript / Node.js
+```javascript
+const AndroPrint = require('./sdk/androprint.js');
+
+// Connect via Pair Code (Zero Tunnels / MQTT)
+const printer = new AndroPrint({
+  mode: 'mqtt',
+  pairCode: 'srv-0f6fecb2' // Displayed on AndroPrint APK / EXE screen
+});
+
+// Print instant receipt from any cloud server!
+await printer.print({
+  text: "ANDROPRINT COFFEE\nOrder #101\nTotal: Rs. 150.00\n",
+  qr: { upi: { pa: "merchant@okaxis", am: "150.00", pn: "Cafe" } },
+  drawerKick: true,
+  cut: true
+});
+
+// Multi-Printer Smart Routing (Kitchen KOT + Bar BOT + Cashier Bill)
+await printer.routeOrder({
+  orderId: "ORD-501",
+  table: "Table 12",
+  items: [
+    { name: "Butter Chicken", qty: 1, price: 280, category: "kitchen" },
+    { name: "Fresh Mojito", qty: 2, price: 90, category: "bar" }
+  ],
+  total: 460
+});
+```
+
+👉 See the complete [**Developer SDK Integration Guide & Multi-Language Examples**](sdk/README.md) for Python, Flutter, Dart, and PHP.
 
 <br/>
 

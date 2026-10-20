@@ -11,6 +11,7 @@ Welcome to the **AndroPrint v2.0** official technical documentation and wiki.
 
 ### 🔌 API Documentation
 - [**API Reference**](API-Reference) — Complete REST API reference for all endpoints (`/print`, `/api/print/route`, `/api/print/html`, `/api/print/pdf`, `/api/printers/discover`)
+- [**Developer Client SDK**](Developer-SDK-Guide) — Official JavaScript, Node.js, Python, Flutter, and PHP integration library with Pair Code support
 - [**Webhook Printing Engine**](Webhook-Integration) — Automated receipt printing from WooCommerce, Shopify, Telegram bots & Custom Webhooks
 - [**Authentication & Security**](Authentication) — API Client Keys, Header signatures (`x-client-id`, `x-print-key`), and `ENABLE_AUTH` mode
 - [**Real-time Streaming (SSE)**](WebSocket-and-SSE) — Live Server-Sent Events stream (`/api/events`) for monitoring logs, jobs, and printer status

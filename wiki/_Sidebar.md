@@ -5,6 +5,7 @@
 
 ### 🔌 API Documentation
 - [⚡ API Reference](API-Reference)
+- [📦 Developer SDK Guide](Developer-SDK-Guide)
 - [🌐 Webhook Printing](Webhook-Integration)
 - [🔑 Authentication](Authentication)
 - [📡 Real-time SSE Stream](WebSocket-and-SSE)
