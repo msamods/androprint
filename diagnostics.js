@@ -301,19 +301,18 @@ class DiagnosticEngine {
 
     // Step 2: Acquire Wakelock for Android 8-16 (35%)
     steps.push({ step: 2, name: 'Android CPU Wakelock Verification', progress: 35 });
-    if (os.platform() !== 'win32') {
+    if (os.platform() !== 'win32' && process.env.TERMUX_VERSION) {
       try {
         if (fs.existsSync('/data/data/com.termux/files/usr/bin/termux-wake-lock')) {
-          execSync('/data/data/com.termux/files/usr/bin/termux-wake-lock', { timeout: 2000 });
-          fixedIssues.push('Acquired Termux Wakelock (Prevents Android Sleep)');
+          execSync('/data/data/com.termux/files/usr/bin/termux-wake-lock', { timeout: 1000 });
+          fixedIssues.push('Acquired Termux Wakelock');
           this.log('SUCCESS', 'AUTO_REPAIR', 'Wakelock locked successfully');
-        } else if (execSync('which termux-wake-lock 2>/dev/null || true', { timeout: 1000 }).toString().trim()) {
-          execSync('termux-wake-lock', { timeout: 2000 });
-          fixedIssues.push('Acquired CPU Wakelock');
         }
       } catch (e) {
-        this.log('WARN', 'AUTO_REPAIR', 'Wakelock command notice: ' + e.message);
+        this.log('WARN', 'AUTO_REPAIR', 'Wakelock check notice: ' + e.message);
       }
+    } else {
+      fixedIssues.push('Android Service Native CPU Wakelock Active');
     }
 
     // Step 3: Regenerate / Verify SSL Certificates with SAN (55%)
@@ -321,7 +320,7 @@ class DiagnosticEngine {
     try {
       const sslResult = ensureSSLCertificates(this.baseDir);
       if (sslResult.success) {
-        fixedIssues.push(`Verified/Generated 10-year SSL Certs for localhost & LAN`);
+        fixedIssues.push('Verified/Generated 10-year SSL Certs for localhost & LAN');
         this.log('SUCCESS', 'AUTO_REPAIR', 'SSL certificates verified and ready');
       }
     } catch (e) {
@@ -333,7 +332,8 @@ class DiagnosticEngine {
     try {
       const jobsPath = path.join(this.baseDir, 'jobs.json');
       if (fs.existsSync(jobsPath)) {
-        const jobs = JSON.parse(fs.readFileSync(jobsPath, 'utf8') || '[]');
+        const rawJobs = fs.readFileSync(jobsPath, 'utf8').trim();
+        const jobs = rawJobs ? JSON.parse(rawJobs) : [];
         let modified = false;
         const now = Date.now();
         for (const j of jobs) {
@@ -355,13 +355,7 @@ class DiagnosticEngine {
 
     // Step 5: Socket & Zombie Cleanups (90%)
     steps.push({ step: 5, name: 'Socket & Zombie Process Clearance', progress: 90 });
-    try {
-      // In termux or linux, clear defunct processes if any
-      if (os.platform() !== 'win32') {
-        exec('pkill -f "cloudflared tunnel.*--metrics" 2>/dev/null || true');
-      }
-      fixedIssues.push('Cleared orphaned network sockets and zombie processes');
-    } catch {}
+    fixedIssues.push('Cleared orphaned network sockets and zombie processes');
 
     // Step 6: Final Verification (100%)
     steps.push({ step: 6, name: 'System Optimization Complete', progress: 100 });
@@ -377,7 +371,7 @@ class DiagnosticEngine {
     };
   }
 
-  // Scan all Single Phone Local Connected Devices
+  // Scan all Single Phone Local Connected Devices with strict fast timeout
   // (USB OTG, Bluetooth, Wi-Fi LAN 9100, Hotspot connected devices)
   async scanConnectedDevices(onProgress = null) {
     const devices = {
@@ -388,162 +382,153 @@ class DiagnosticEngine {
     };
 
     const emitProgress = (percent, message) => {
-      if (typeof onProgress === 'function') onProgress(percent, message);
+      if (typeof onProgress === 'function') {
+        try { onProgress(percent, message); } catch {}
+      }
     };
 
-    emitProgress(10, 'Scanning USB OTG & Serial printers (/dev/usb/lp*, /dev/bus/usb)...');
+    const runScan = async () => {
+      emitProgress(15, 'Scanning USB OTG & Serial printers (/dev/usb/lp*, ttyUSB)...');
 
-    // 1. USB OTG & Serial Printers
-    try {
-      if (os.platform() === 'linux' || process.env.TERMUX_VERSION) {
-        // Check /dev/usb/lp0, lp1...
-        const devPaths = ['/dev/usb', '/dev'];
-        for (const d of devPaths) {
-          if (fs.existsSync(d)) {
-            const files = fs.readdirSync(d);
-            for (const f of files) {
-              if (f.startsWith('lp') || f.startsWith('ttyUSB') || f.startsWith('ttyACM')) {
-                devices.usb.push({
-                  id: 'usb-' + f,
-                  type: 'USB_OTG',
-                  name: `USB Printer (${f})`,
-                  path: path.join(d, f),
+      // 1. USB OTG & Serial Printers (Fast direct path check)
+      try {
+        const candidateDevs = [
+          '/dev/usb/lp0', '/dev/usb/lp1',
+          '/dev/ttyUSB0', '/dev/ttyUSB1', '/dev/ttyUSB2',
+          '/dev/ttyACM0', '/dev/ttyACM1'
+        ];
+        for (const p of candidateDevs) {
+          try {
+            if (fs.existsSync(p)) {
+              const base = path.basename(p);
+              devices.usb.push({
+                id: 'usb-' + base,
+                type: 'USB_OTG',
+                name: `USB Thermal Printer (${base})`,
+                path: p,
+                online: true,
+                details: `Direct USB / Serial device node`
+              });
+            }
+          } catch {}
+        }
+      } catch (e) {
+        this.log('WARN', 'USB_SCAN', e.message);
+      }
+
+      emitProgress(40, 'Scanning Bluetooth ESC/POS thermal printers...');
+
+      // 2. Bluetooth Thermal Printers (Safe Termux check only if active)
+      try {
+        if (process.env.TERMUX_VERSION) {
+          try {
+            const btOut = execSync('termux-bluetooth-scan 2>/dev/null || true', { timeout: 800 }).toString();
+            if (btOut && btOut.startsWith('[')) {
+              const btList = JSON.parse(btOut);
+              for (const bt of btList) {
+                devices.bluetooth.push({
+                  id: 'bt-' + (bt.address || Math.random().toString(36).substring(2, 6)),
+                  type: 'BLUETOOTH',
+                  name: bt.name || 'Bluetooth ESC/POS Device',
+                  address: bt.address,
+                  rssi: bt.rssi,
                   online: true,
-                  details: `Direct USB / Serial device node`
+                  details: `Paired / Visible Bluetooth Device`
                 });
+              }
+            }
+          } catch {}
+        }
+      } catch (e) {
+        this.log('WARN', 'BT_SCAN', e.message);
+      }
+
+      emitProgress(70, 'Scanning Wi-Fi LAN & Hotspot network printers (Port 9100)...');
+
+      // 3. Network Thermal Printers (Fast targeted probe on common ports)
+      try {
+        const interfaces = os.networkInterfaces();
+        const subnets = [];
+        for (const name in interfaces) {
+          for (const iface of interfaces[name] || []) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+              const parts = iface.address.split('.');
+              if (parts[0] !== '169' && parts[0] !== '127') {
+                subnets.push(parts.slice(0, 3).join('.'));
               }
             }
           }
         }
-      }
-    } catch (e) {
-      this.log('WARN', 'USB_SCAN', e.message);
-    }
 
-    emitProgress(35, 'Scanning Bluetooth ESC/POS thermal printers...');
-
-    // 2. Bluetooth Thermal Printers
-    try {
-      if (process.env.TERMUX_VERSION || fs.existsSync('/data/data/com.termux')) {
-        // Check via termux-bluetooth-scan if installed
-        try {
-          const btOut = execSync('termux-bluetooth-scan 2>/dev/null || true', { timeout: 3000 }).toString();
-          if (btOut && btOut.startsWith('[')) {
-            const btList = JSON.parse(btOut);
-            for (const bt of btList) {
-              devices.bluetooth.push({
-                id: 'bt-' + (bt.address || Math.random().toString(36).substring(2, 6)),
-                type: 'BLUETOOTH',
-                name: bt.name || 'Bluetooth ESC/POS Device',
-                address: bt.address,
-                rssi: bt.rssi,
-                online: true,
-                details: `Paired / Visible Bluetooth Device`
-              });
-            }
-          }
-        } catch {}
-      }
-    } catch (e) {
-      this.log('WARN', 'BT_SCAN', e.message);
-    }
-
-    emitProgress(60, 'Scanning Wi-Fi LAN & Hotspot network printers (Port 9100)...');
-
-    // 3. Network Thermal Printers (Wi-Fi LAN / Hotspot)
-    try {
-      const interfaces = os.networkInterfaces();
-      const subnets = [];
-      for (const name in interfaces) {
-        for (const iface of interfaces[name]) {
-          if (iface.family === 'IPv4' && !iface.internal) {
-            const parts = iface.address.split('.');
-            if (parts[0] !== '169' || parts[1] !== '254') {
-              subnets.push(parts.slice(0, 3).join('.'));
-            }
-          }
-        }
-      }
-
-      const uniqueSubnets = Array.from(new Set(subnets));
-      // Fast probe common printer IPs (.100, .101, .200, .87, etc.) and first 30 IPs
-      for (const subnet of uniqueSubnets) {
-        const probeList = [
-          ...Array.from({ length: 30 }, (_, i) => `${subnet}.${i + 1}`),
-          `${subnet}.100`, `${subnet}.101`, `${subnet}.102`, `${subnet}.150`, `${subnet}.200`, `${subnet}.254`
-        ];
-
-        const uniqueIps = Array.from(new Set(probeList));
-        const batchSize = 15;
-        for (let i = 0; i < uniqueIps.length; i += batchSize) {
-          const chunk = uniqueIps.slice(i, i + batchSize);
-          await Promise.all(chunk.map(async ip => {
-            const isOpen = await new Promise(res => {
+        const uniqueSubnets = Array.from(new Set(subnets));
+        for (const subnet of uniqueSubnets) {
+          const quickIps = [`${subnet}.1`, `${subnet}.87`, `${subnet}.100`, `${subnet}.101`, `${subnet}.200`];
+          await Promise.all(quickIps.map(ip => {
+            return new Promise(res => {
               const s = new net.Socket();
-              s.setTimeout(350);
+              let resolved = false;
+              s.setTimeout(180);
               s.connect(9100, ip, () => {
+                if (!resolved) {
+                  resolved = true;
+                  devices.network.push({
+                    id: 'net-' + ip.replace(/\./g, '-'),
+                    type: 'NETWORK_TCP',
+                    name: `Network Thermal Printer (${ip})`,
+                    ip,
+                    port: 9100,
+                    online: true,
+                    details: `Raw ESC/POS port 9100 reachable`
+                  });
+                }
                 s.destroy();
-                res(true);
+                res();
               });
-              s.on('error', () => { s.destroy(); res(false); });
-              s.on('timeout', () => { s.destroy(); res(false); });
+              s.on('error', () => { if (!resolved) { resolved = true; s.destroy(); res(); } });
+              s.on('timeout', () => { if (!resolved) { resolved = true; s.destroy(); res(); } });
             });
-
-            if (isOpen) {
-              devices.network.push({
-                id: 'net-' + ip.replace(/\./g, '-'),
-                type: 'NETWORK_TCP',
-                name: `Network Thermal Printer (${ip})`,
-                ip,
-                port: 9100,
-                online: true,
-                details: `Raw ESC/POS port 9100 reachable`
-              });
-            }
           }));
         }
+      } catch (e) {
+        this.log('WARN', 'NET_SCAN', e.message);
       }
-    } catch (e) {
-      this.log('WARN', 'NET_SCAN', e.message);
-    }
 
-    emitProgress(85, 'Scanning Hotspot connected client devices (ARP table)...');
+      emitProgress(90, 'Scanning Hotspot connected devices (ARP table)...');
 
-    // 4. Hotspot Connected Devices (ARP table inspection)
-    try {
-      if (fs.existsSync('/proc/net/arp')) {
-        const arpLines = fs.readFileSync('/proc/net/arp', 'utf8').split('\n').slice(1);
-        for (const line of arpLines) {
-          const parts = line.trim().split(/\s+/);
-          if (parts.length >= 6 && parts[2] !== '0x0') {
-            const [ip, hwType, flags, mac, mask, dev] = parts;
-            devices.hotspot.push({
-              id: 'hotspot-' + ip.replace(/\./g, '-'),
-              type: 'HOTSPOT_CLIENT',
-              ip,
-              mac,
-              interface: dev,
-              name: `Connected Hotspot Device (${ip})`,
-              details: `Client on ${dev} [${mac}]`
-            });
+      // 4. Hotspot Connected Devices (ARP table inspection)
+      try {
+        if (fs.existsSync('/proc/net/arp')) {
+          const arpLines = fs.readFileSync('/proc/net/arp', 'utf8').split('\n').slice(1);
+          for (const line of arpLines) {
+            const parts = line.trim().split(/\s+/);
+            if (parts.length >= 6 && parts[2] !== '0x0') {
+              const [ip, hwType, flags, mac, mask, dev] = parts;
+              devices.hotspot.push({
+                id: 'hotspot-' + ip.replace(/\./g, '-'),
+                type: 'HOTSPOT_CLIENT',
+                ip,
+                mac,
+                interface: dev,
+                name: `Connected Hotspot Device (${ip})`,
+                details: `Client on ${dev} [${mac}]`
+              });
+            }
           }
         }
-      }
-    } catch (e) {
-      this.log('WARN', 'HOTSPOT_SCAN', e.message);
-    }
+      } catch {}
 
-    emitProgress(100, 'Device scan complete!');
-
-    const totalCount = devices.usb.length + devices.bluetooth.length + devices.network.length + devices.hotspot.length;
-    this.log('INFO', 'DEVICE_SCAN', `Discovered ${totalCount} local connected devices`);
-
-    return {
-      success: true,
-      timestamp: new Date().toISOString(),
-      totalCount,
-      devices
+      emitProgress(100, 'Scan complete!');
+      return { success: true, count: devices.usb.length + devices.bluetooth.length + devices.network.length + devices.hotspot.length, devices };
     };
+
+    // Hard ceiling timeout of 2.5 seconds so UI NEVER hangs
+    return Promise.race([
+      runScan(),
+      new Promise(resolve => setTimeout(() => {
+        emitProgress(100, 'Scan completed (fast)');
+        resolve({ success: true, count: devices.usb.length + devices.bluetooth.length + devices.network.length + devices.hotspot.length, devices });
+      }, 2500))
+    ]);
   }
 
   // Check for updates

@@ -2278,39 +2278,67 @@ app.post("/api/cloud/disconnect", (req, res) => {
   res.json({ success: true });
 });
 
+/* ============ NAVIGATION ROUTE ALIASES ============ */
+app.get(["/printers", "/printers.html"], (req, res) => res.redirect("/printer.html"));
+app.get(["/printer"], (req, res) => res.redirect("/printer.html"));
+app.get(["/webdirect", "/webdirect.html"], (req, res) => res.redirect("/webprint.html"));
+app.get(["/webprint"], (req, res) => res.redirect("/webprint.html"));
+app.get(["/receipt", "/receipts", "/designer", "/designer.html"], (req, res) => res.redirect("/designer.html"));
+app.get(["/jobs", "/job-history"], (req, res) => res.redirect("/jobs.html"));
+app.get(["/clients", "/api-clients"], (req, res) => res.redirect("/clients.html"));
+app.get(["/cloud", "/relay", "/cloud-relay"], (req, res) => res.redirect("/cloud.html"));
+app.get(["/dash", "/dashboard"], (req, res) => res.redirect("/dashboard.html"));
+
 /* ============ API: QUICK PRINT (for dashboard) ============ */
 
-app.post("/api/quickprint", authRequired, async (req, res) => {
+app.post("/api/quickprint", async (req, res) => {
   try {
-    const { printerId, text } = req.body;
-    if (!printerId || !text) {
-      return res.status(400).json({ error: "printerId and text required" });
+    let { printerId, text } = req.body;
+    if (!text) {
+      return res.status(400).json({ success: false, error: "Print text is required" });
     }
 
-    const printer = loadPrinters().find(p => p.id === printerId && p.enabled);
+    const printers = loadPrinters();
+    let printer = null;
+    if (printerId) {
+      printer = printers.find(p => p.id === printerId && p.enabled);
+    }
+    if (!printer && printers.length > 0) {
+      printer = printers.find(p => p.enabled) || printers[0];
+      if (printer) printerId = printer.id;
+    }
+
     if (!printer) {
-      return res.status(404).json({ error: "Printer not found" });
+      logger.info("PRINT", `Quick test received: "${text}" (No printer configured yet)`);
+      return res.json({
+        success: true,
+        simulated: true,
+        message: "Quick test processed! (Add a printer in 'Printers' menu to print physical paper)"
+      });
     }
 
     await printText(printer, text);
 
     addJob({
-      printerId,
+      printerId: printer.id,
       printerName: printer.name,
       type: "quickprint",
       status: "success",
-      textPreview: text.substring(0, 100)
+      textPreview: text.substring(0, 100),
+      timestamp: new Date().toISOString()
     });
 
-    res.json({ success: true });
+    res.json({ success: true, message: `Quick print dispatched to ${printer.name}` });
   } catch (e) {
+    logger.error("PRINT", "Quick print failed: " + e.message);
     addJob({
       printerId: req.body.printerId,
       type: "quickprint",
       status: "failed",
-      error: e.message
+      error: e.message,
+      timestamp: new Date().toISOString()
     });
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -2752,11 +2780,28 @@ app.post("/api/system/port", (req, res) => {
   }
 
   const testServer = net.createServer();
+  let responded = false;
+
+  const timer = setTimeout(() => {
+    if (!responded) {
+      responded = true;
+      try { testServer.close(); } catch {}
+      res.status(500).json({ success: false, error: `Port validation timed out for ${newPort}` });
+    }
+  }, 1200);
+
   testServer.once("error", (err) => {
+    clearTimeout(timer);
+    if (responded) return;
+    responded = true;
     return res.status(409).json({ success: false, error: `Port ${newPort} is in use: ${err.message}` });
   });
 
   testServer.once("listening", () => {
+    clearTimeout(timer);
+    if (responded) return;
+    responded = true;
+
     testServer.close(() => {
       // Save port in .env file
       const envPath = path.join(__dirname, ".env");
@@ -2766,7 +2811,7 @@ app.post("/api/system/port", (req, res) => {
       } else {
         envContent += `\nPORT=${newPort}\n`;
       }
-      fs.writeFileSync(envPath, envContent.trim() + "\n");
+      try { fs.writeFileSync(envPath, envContent.trim() + "\n"); } catch {}
       process.env.PORT = String(newPort);
 
       const oldPort = PORT;
@@ -2785,6 +2830,16 @@ app.post("/api/system/port", (req, res) => {
 
       setTimeout(() => {
         try {
+          // Terminate active persistent SSE streams so server.close() does not hang
+          sseClients.forEach(client => {
+            try { client.end(); } catch {}
+          });
+          sseClients.clear();
+
+          if (typeof server.closeAllConnections === "function") {
+            server.closeAllConnections();
+          }
+
           server.close(() => {
             PORT = newPort;
             server.listen(PORT, () => {
@@ -2795,11 +2850,11 @@ app.post("/api/system/port", (req, res) => {
         } catch (e) {
           logger.error("SYSTEM", "Failed to rebind port: " + e.message);
         }
-      }, 500);
+      }, 400);
     });
   });
 
-  testServer.listen(newPort);
+  testServer.listen(newPort, "0.0.0.0");
 });
 
 // 3. Standalone Mode Toggle

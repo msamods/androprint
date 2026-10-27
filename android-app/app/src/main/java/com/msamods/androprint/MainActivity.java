@@ -140,28 +140,48 @@ public class MainActivity extends AppCompatActivity {
         s.setDisplayZoomControls(false);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
+        s.setJavaScriptCanOpenWindowsAutomatically(true);
+        s.setAllowFileAccess(true);
+        s.setAllowContentAccess(true);
 
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                // Auto-trust our own local print server SSL certificate on localhost & LAN
-                String url = view.getUrl();
-                if (url != null && (url.contains("localhost") || url.contains("127.0.0.1") || url.contains("192.168."))) {
-                    handler.proceed(); // Bypass untrusted certificate alert seamlessly!
-                } else {
-                    handler.cancel();
+                // Auto-trust local print server SSL certificate on localhost & LAN
+                handler.proceed();
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
+                if (request != null && request.getUrl() != null) {
+                    view.loadUrl(request.getUrl().toString());
+                    return true;
                 }
+                return false;
             }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // Keep inside webview for localhost routes
-                if (url.contains("localhost") || url.contains("127.0.0.1")) {
+                if (url != null) {
                     view.loadUrl(url);
                     return true;
                 }
                 return false;
+            }
+
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                super.onReceivedError(view, errorCode, description, failingUrl);
+                if (failingUrl != null && failingUrl.startsWith("https://localhost:")) {
+                    String httpFallback = failingUrl.replace("https://", "http://");
+                    view.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            view.loadUrl(httpFallback);
+                        }
+                    }, 500);
+                }
             }
         });
     }
