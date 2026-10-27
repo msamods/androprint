@@ -259,6 +259,54 @@ public class MainActivity extends AppCompatActivity {
         tvLogConsole.append(message + "\n");
     }
 
+    private android.os.Handler statusCheckHandler = new android.os.Handler();
+    private Runnable statusCheckRunnable = new Runnable() {
+        @Override
+        public void run() {
+            checkLivePortStatus();
+            statusCheckHandler.postDelayed(this, 3000);
+        }
+    };
+
+    private void checkLivePortStatus() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                boolean running = false;
+                try {
+                    java.net.Socket socket = new java.net.Socket();
+                    socket.connect(new java.net.InetSocketAddress("127.0.0.1", 3000), 400);
+                    socket.close();
+                    running = true;
+                } catch (Exception ignored) {
+                    running = PrintServerService.isServerRunning();
+                }
+
+                final boolean isAlive = running;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        isServerRunning = isAlive;
+                        updateServerUiState(isAlive);
+                    }
+                });
+            }
+        }).start();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        checkLivePortStatus();
+        statusCheckHandler.postDelayed(statusCheckRunnable, 3000);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        statusCheckHandler.removeCallbacks(statusCheckRunnable);
+    }
+
     @Override
     public void onBackPressed() {
         if (webView.getVisibility() == View.VISIBLE) {
