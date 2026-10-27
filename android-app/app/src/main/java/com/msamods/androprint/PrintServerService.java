@@ -69,14 +69,24 @@ public class PrintServerService extends Service {
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0
             );
 
-            Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+            android.graphics.Bitmap largeLogo = null;
+            try {
+                largeLogo = android.graphics.BitmapFactory.decodeResource(getResources(), R.drawable.app_logo);
+            } catch (Throwable ignored) {}
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                     .setContentTitle("AndroPrint Active")
                     .setContentText("ESC/POS Thermal Print Gateway is running (Port 3000)")
-                    .setSmallIcon(android.R.drawable.ic_menu_agenda)
+                    .setSmallIcon(R.mipmap.ic_launcher)
                     .setContentIntent(pendingIntent)
                     .setOngoing(true)
-                    .setPriority(NotificationCompat.PRIORITY_LOW)
-                    .build();
+                    .setPriority(NotificationCompat.PRIORITY_LOW);
+
+            if (largeLogo != null) {
+                builder.setLargeIcon(largeLogo);
+            }
+
+            Notification notification = builder.build();
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE | ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
