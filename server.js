@@ -12,6 +12,23 @@
  * ✔ Safe JSON handling
  */
 
+try {
+  process.chdir(__dirname);
+} catch (e) {}
+
+// Prevent uncaught errors from killing Android host process
+process.on("uncaughtException", (err) => {
+  console.error("[CRITICAL] Uncaught exception in Node:", err && err.stack ? err.stack : err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[CRITICAL] Unhandled rejection in Node:", reason);
+});
+
+// Guard process.exit so node::Start never terminates the Android process
+process.exit = function(code) {
+  console.warn(`[PROTECTION] Intercepted process.exit(${code}) to keep Android app running.`);
+};
+
 require("dotenv").config();
 const express = require("express");
 const fs = require("fs");
@@ -2886,6 +2903,20 @@ app.post("/api/system/update", async (req, res) => {
 });
 
 /* ============ START ============ */
+
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.warn(`[WARN] Port ${PORT} in use, attempting ${PORT + 1}...`);
+    PORT++;
+    try {
+      server.listen(PORT, "0.0.0.0");
+    } catch (e) {
+      console.error("[ERROR] Failed to retry listen:", e.message);
+    }
+  } else {
+    console.error("[ERROR] Server listen error:", err.message);
+  }
+});
 
 server.listen(PORT, () => {
   const protocol = USE_SSL ? "https" : "http";

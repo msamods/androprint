@@ -13,12 +13,15 @@ public class NodeRunner {
 
     static {
         try {
+            System.loadLibrary("c++_shared");
+        } catch (Throwable ignored) {}
+        try {
             System.loadLibrary("node");
             System.loadLibrary("androprint-native");
             isNativeLibraryLoaded = true;
             Log.i(TAG, "libnode.so and libandroprint-native.so loaded successfully");
-        } catch (UnsatisfiedLinkError e) {
-            Log.w(TAG, "Native library load issue: " + e.getMessage());
+        } catch (Throwable e) {
+            Log.e(TAG, "Native library load issue: " + e.getMessage(), e);
             isNativeLibraryLoaded = false;
         }
     }
@@ -31,5 +34,5 @@ public class NodeRunner {
      * Starts Node.js runtime with arguments on the calling thread.
      * This call blocks until Node.js exits, so run it on a background worker thread.
      */
-    public static native Integer startNodeWithArguments(String[] arguments);
+    public static native Integer startNodeWithArguments(String[] arguments, String projectDir);
 }

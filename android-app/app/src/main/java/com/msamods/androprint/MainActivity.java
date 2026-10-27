@@ -64,6 +64,13 @@ public class MainActivity extends AppCompatActivity {
         detectWifiIp();
         setupWebView();
 
+        // Request Notification permission for Android 13+ (API 33+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 101);
+            }
+        }
+
         // Check if service is already running
         isServerRunning = PrintServerService.isServerRunning();
         updateServerUiState(isServerRunning);
@@ -180,22 +187,33 @@ public class MainActivity extends AppCompatActivity {
         Intent serviceIntent = new Intent(this, PrintServerService.class);
 
         if (!isServerRunning) {
-            startService(serviceIntent);
-            isServerRunning = true;
-            updateServerUiState(true);
-            appendLog("[INFO] Node.js Native Print Gateway started on port 3000");
-            appendLog("[INFO] Auto-SSL (https://localhost:3000) active with WakeLock");
-            Toast.makeText(this, "Print Server Started!", Toast.LENGTH_SHORT).show();
-
-            // Refresh webview after delay to allow server listen
-            webView.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    webView.loadUrl(localDashboardUrl);
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent);
+                } else {
+                    startService(serviceIntent);
                 }
-            }, 1500);
+                isServerRunning = true;
+                updateServerUiState(true);
+                appendLog("[INFO] Node.js Native Print Gateway starting on port 3000...");
+                appendLog("[INFO] Auto-SSL (https://localhost:3000) active with WakeLock");
+                Toast.makeText(this, "Print Server Started!", Toast.LENGTH_SHORT).show();
+
+                // Refresh webview after delay to allow server listen
+                webView.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        webView.loadUrl(localDashboardUrl);
+                    }
+                }, 2000);
+            } catch (Throwable t) {
+                appendLog("[ERROR] Failed to start service: " + t.getMessage());
+                Toast.makeText(this, "Failed to start service: " + t.getMessage(), Toast.LENGTH_LONG).show();
+            }
         } else {
-            stopService(serviceIntent);
+            try {
+                stopService(serviceIntent);
+            } catch (Throwable ignored) {}
             isServerRunning = false;
             updateServerUiState(false);
             appendLog("[INFO] Print Gateway stopped.");
