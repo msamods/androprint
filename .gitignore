@@ -36,3 +36,10 @@ jobs.json
 webhooks.json
 androprint.log
 openssl_temp.cnf
+.cxx/
+android-app/app/.cxx/
+android-app/app/src/main/jniLibs/
+dist-bundle/
+*.tgz
+*.zip
+package/

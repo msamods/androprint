@@ -3,7 +3,7 @@ package com.msamods.androprint;
 import android.util.Log;
 
 /**
- * JNI Native Bridge to embedded Node.js C++ runtime (libnode.so).
+ * JNI Native Bridge to embedded Node.js C++ runtime (libnode.so & androprint-native).
  * Developed By : MSA MODS x WhatYouWantKerala
  */
 public class NodeRunner {
@@ -14,10 +14,11 @@ public class NodeRunner {
     static {
         try {
             System.loadLibrary("node");
+            System.loadLibrary("androprint-native");
             isNativeLibraryLoaded = true;
-            Log.i(TAG, "libnode.so native runtime loaded successfully");
+            Log.i(TAG, "libnode.so and libandroprint-native.so loaded successfully");
         } catch (UnsatisfiedLinkError e) {
-            Log.w(TAG, "libnode.so native library not present in jniLibs: " + e.getMessage());
+            Log.w(TAG, "Native library load issue: " + e.getMessage());
             isNativeLibraryLoaded = false;
         }
     }

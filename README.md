@@ -441,11 +441,18 @@ AndroPrint supports raw UTF-8 multi-byte encoding for printing receipts in any i
 
 <div align="center">
 
-## 📄 License & Credits
+## ⚖️ License, Copyright & Strict Anti-Piracy Policy
 
-Developed with ❤️ By **[MSA MODS](https://github.com/msamods)** × **WhatYouWantKerala**
+Copyright (c) 2026 **[MSA MODS](https://github.com/msamods)** × **WhatYouWantKerala**. All Rights Reserved.  
+Released under the **[MSA MODS Source-Available Strict License](LICENSE.md)**.
 
-Released under the **[MIT License](LICENSE)**.
+> ### 🚨 STRICT DMCA COPYRIGHT ENFORCEMENT NOTICE
+> - **No Unauthorized Duplicate Forks:** Creating public forks, mirrors, or clone repositories without express prior written consent from MSA MODS is strictly prohibited.
+> - **Mandatory Attribution:** If authorized, full original credits to **MSA MODS x WhatYouWantKerala** must remain prominently visible in all documentation and UI interfaces.
+> - **No Rebranding or Resale:** You may not modify branding, remove watermarks, or distribute/sell AndroPrint APKs on Google Play Store, third-party APK platforms, or Telegram.
+> - **Zero Tolerance for Infringement:** Any unauthorized clone or fork will face an **immediate DMCA Copyright Strike** and legal takedown on GitHub and hosting providers.
+
+For permissions or enterprise white-label licensing: **`msamods.org@gmail.com`**
 
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,18,24&height=100&section=footer" width="100%" />

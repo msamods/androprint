@@ -1,21 +1,73 @@
-MIT License
+MSA MODS SOURCE-AVAILABLE STRICT LICENSE & TERMS OF USE
+========================================================================
+Project: AndroPrint (ESC/POS Thermal Print Gateway & Mobile Controller)
+Copyright (c) 2026 MSA MODS & WhatYouWantKerala. All Rights Reserved.
+Official Contact: msamods.org@gmail.com
+GitHub: https://github.com/msamods/androprint
 
-Copyright (c) 2026 MSA MODS x WhatYouWantKerala
+========================================================================
+1. GRANT OF LICENSE & PERMITTED USE
+========================================================================
+Subject to the terms and conditions of this Agreement, MSA MODS & WhatYouWantKerala 
+grant you a limited, non-exclusive, non-transferable, revocable license to:
+- Download, install, and execute the official AndroPrint Android APK and Node.js 
+  runtime for personal use or internal business receipt/ticket printing operations.
+- Inspect the source code strictly for educational, security audit, and personal 
+  configuration purposes.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+========================================================================
+2. STRICT PROHIBITIONS & RESTRICTIONS (ANTI-PIRACY & ANTI-CLONE)
+========================================================================
+Under NO circumstances are you permitted to:
+a. CREATE DUPLICATE FORKS OR CLONES:
+   You shall NOT create public forks, mirrors, or duplicate repositories of this 
+   codebase without express prior written consent from MSA MODS.
+b. REBRAND OR WHITE-LABEL:
+   You shall NOT modify the application name, remove the "MSA MODS x WhatYouWantKerala" 
+   branding, replace logos, alter author credits, or disguise the software as your own.
+c. REDISTRIBUTE OR RE-UPLOAD APKs:
+   You shall NOT upload or distribute AndroPrint APKs or derivative binaries on 
+   Google Play Store, Amazon Appstore, APKPure, Telegram channels, websites, or any 
+   third-party distribution platforms.
+d. COMMERCIAL RESALE:
+   You shall NOT sell, rent, lease, sub-license, or monetize this software, source code, 
+   or pre-built packages as a paid product or paid service.
+e. REMOVE COPYRIGHT NOTICES:
+   All copyright headers, license texts, and UI credit badges must remain completely intact.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+========================================================================
+3. MANDATORY ATTRIBUTION & CREDITS
+========================================================================
+In the event that MSA MODS grants explicit written authorization for an exception, 
+fork, or integration:
+- Prominent, clickable, and indelible credit must be visibly maintained in the user 
+  interface and repository documentation pointing directly to:
+  "Developed by MSA MODS & WhatYouWantKerala (https://github.com/msamods/androprint)".
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+========================================================================
+4. COPYRIGHT STRIKE & DMCA ENFORCEMENT POLICY
+========================================================================
+MSA MODS actively monitors public GitHub repositories, code registries, Telegram channels, 
+and Android app stores for unauthorized clones, stripped attributions, and illicit forks.
+
+ANY VIOLATION OF THESE TERMS WILL RESULT IN:
+1. Immediate submission of an official DMCA Takedown Notice to GitHub, host providers, 
+   and app stores.
+2. Formal Copyright Strikes logged against the offending developer/organization account, 
+   which may lead to permanent account termination.
+3. Legal injunction and claims for statutory copyright infringement damages under 
+   applicable intellectual property law.
+
+========================================================================
+5. DISCLAIMER OF WARRANTIES & LIABILITY
+========================================================================
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS "AS IS" AND ANY EXPRESS OR IMPLIED 
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL MSA MODS OR 
+WHATYOUWANTKERALA BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, 
+OR CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE.
+
+========================================================================
+For commercial licensing, enterprise white-labeling, or permissions:
+Email: msamods.org@gmail.com
+========================================================================

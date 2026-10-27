@@ -24,7 +24,18 @@ const FILES_TO_COPY = [
   'package.json'
 ];
 
+// Use compiled self-contained bundle for standalone APK execution
+const bundledServer = path.join(ROOT_DIR, 'dist-bundle', 'index.js');
+if (fs.existsSync(bundledServer)) {
+  fs.copyFileSync(bundledServer, path.join(ASSETS_PROJECT_DIR, 'server.js'));
+  console.log("  ✓ Bundled standalone server.js (with all embedded dependencies)");
+} else {
+  fs.copyFileSync(path.join(ROOT_DIR, 'server.js'), path.join(ASSETS_PROJECT_DIR, 'server.js'));
+  console.log("  ✓ Copied server.js");
+}
+
 for (const file of FILES_TO_COPY) {
+  if (file === 'server.js') continue;
   const src = path.join(ROOT_DIR, file);
   const dest = path.join(ASSETS_PROJECT_DIR, file);
   if (fs.existsSync(src)) {
