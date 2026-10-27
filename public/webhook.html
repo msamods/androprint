@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+    <link rel="icon" type="image/png" href="favicon.png">
     <title>Webhook Auto-Print Hub – AndroPrint Cloud</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -232,18 +233,18 @@
 
     <!-- TOPBAR -->
     <header class="topbar">
-        <div class="topbar-logo">⚡</div>
+        <div class="topbar-logo" style="padding:0;overflow:hidden;background:transparent;"><img src="logo.png" alt="AndroPrint" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></div>
         <div class="topbar-title">
             <h1>Webhook Auto-Print Hub</h1>
             <p>Direct Order Printing from WooCommerce, Shopify, Telegram & Zapier</p>
         </div>
         <nav class="nav-links">
-            <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
-            <a href="printer.html" class="nav-link">🖨️ Printers</a>
-            <a href="webprint.html" class="nav-link">📶 Web Print</a>
-            <a href="clients.html" class="nav-link">👥 Clients</a>
-            <a href="cloud.html" class="nav-link">☁️ Cloud</a>
-            <a href="jobs.html" class="nav-link">📋 Jobs</a>
+            <a href="dashboard.html" class="nav-link"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Dashboard</a>
+            <a href="printer.html" class="nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Printers</a>
+            <a href="webprint.html" class="nav-link"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline></svg> Web Print</a>
+            <a href="clients.html" class="nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> Clients</a>
+            <a href="cloud.html" class="nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg> Cloud</a>
+            <a href="jobs.html" class="nav-link"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Jobs</a>
         </nav>
     </header>
 
@@ -252,7 +253,7 @@
         <!-- WEBHOOK URLS CARD -->
         <div class="card">
             <div class="card-header">
-                <div class="card-title">📡 Active Webhook Endpoints</div>
+                <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg> Active Webhook Endpoints</div>
                 <span style="font-size:0.75rem; color:var(--success); background:rgba(16,185,129,0.1); padding:4px 10px; border-radius:100px; border:1px solid rgba(16,185,129,0.2);">
                     ● Ready for Inbound Orders
                 </span>
@@ -290,7 +291,7 @@
             <!-- WEBHOOK SETTINGS -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">⚙️ Webhook Automation Rules</div>
+                    <div class="card-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Webhook Automation Rules</div>
                 </div>
                 <form id="webhookForm" onsubmit="event.preventDefault(); saveSettings();">
                     <div class="form-group">
@@ -317,7 +318,7 @@
 
                     <div class="toggle-row">
                         <div>
-                            <div class="toggle-label">🔔 Kitchen Buzzer Alert</div>
+                            <div class="toggle-label">Kitchen Buzzer Alert</div>
                             <div class="toggle-desc">Beep printer head when an online order arrives</div>
                         </div>
                         <input type="checkbox" id="soundBuzzer" checked>
@@ -325,7 +326,7 @@
 
                     <div class="toggle-row">
                         <div>
-                            <div class="toggle-label">📲 Print Dynamic UPI QR</div>
+                            <div class="toggle-label">Print Dynamic UPI QR</div>
                             <div class="toggle-desc">Include Google Pay/PhonePe QR on bill</div>
                         </div>
                         <input type="checkbox" id="printUpiQr" checked>
@@ -333,7 +334,7 @@
 
                     <div class="toggle-row">
                         <div>
-                            <div class="toggle-label">💵 Kick Cash Drawer</div>
+                            <div class="toggle-label">Kick Cash Drawer</div>
                             <div class="toggle-desc">Trigger cash drawer kick on print</div>
                         </div>
                         <input type="checkbox" id="drawerKick">
@@ -341,14 +342,14 @@
 
                     <div class="toggle-row">
                         <div>
-                            <div class="toggle-label">✂️ Auto Paper Cut</div>
+                            <div class="toggle-label">Auto Paper Cut</div>
                             <div class="toggle-desc">Cut receipt after order summary</div>
                         </div>
                         <input type="checkbox" id="autoCut" checked>
                     </div>
 
                     <button type="submit" class="btn btn-primary" style="margin-top:16px; width:100%; justify-content:center;">
-                        💾 Save Webhook Rules
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Save Webhook Rules
                     </button>
                 </form>
             </div>
@@ -356,29 +357,29 @@
             <!-- SIMULATOR & TESTER -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">🧪 Instant Webhook Simulator</div>
+                    <div class="card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Instant Webhook Simulator</div>
                 </div>
                 <p style="font-size:0.82rem; color:var(--text-dim); margin-bottom:16px;">
                     Test your thermal printer by simulating instant online order webhooks without placing real orders:
                 </p>
 
                 <button class="btn-sim" onclick="simulateOrder('woocommerce')">
-                    <strong>🛍️ Simulate WooCommerce Order</strong>
+                    <strong>Simulate WooCommerce Order</strong>
                     <div style="font-size:0.75rem; color:var(--text-dim); margin-top:2px;">Malabar Dum Biryani x2, Lime Juice, COD ₹420</div>
                 </button>
 
                 <button class="btn-sim" onclick="simulateOrder('shopify')">
-                    <strong>🛒 Simulate Shopify Order</strong>
+                    <strong>Simulate Shopify Order</strong>
                     <div style="font-size:0.75rem; color:var(--text-dim); margin-top:2px;">Casual Kurti + Scarf, Paid Online ₹850</div>
                 </button>
 
                 <button class="btn-sim" onclick="simulateOrder('generic')">
-                    <strong>🍔 Simulate Restaurant Food Order</strong>
+                    <strong>Simulate Restaurant Food Order</strong>
                     <div style="font-size:0.75rem; color:var(--text-dim); margin-top:2px;">Kozhikodan Halwa, Banana Chips, UPI Scan ₹283.50</div>
                 </button>
 
                 <div style="margin-top:20px;">
-                    <div class="card-title" style="font-size:0.85rem; margin-bottom:8px;">📡 Live Inbound Activity Log</div>
+                    <div class="card-title" style="font-size:0.85rem; margin-bottom:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg> Live Inbound Activity Log</div>
                     <div class="console-box" id="eventConsole">[AndroPrint Webhook Monitor Initialized]
 Waiting for incoming orders...
 </div>
@@ -481,7 +482,7 @@ Waiting for incoming orders...
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast(`✅ ${type.toUpperCase()} order printed on ${data.printer}!`);
+                    showToast(`${type.toUpperCase()} order printed on ${data.printer}`);
                     appendLog(`[SUCCESS] Webhook: ${type.toUpperCase()} -> Printed on ${data.printer}`);
                 } else {
                     showToast(data.error || 'Simulation failed', 'error');

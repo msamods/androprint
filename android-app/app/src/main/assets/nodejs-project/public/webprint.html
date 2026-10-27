@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <title>Web Direct Print – AndroPrint Cloud</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --accent: #06b6d4;
+            --bg: #0f0f23;
+            --bg-surface: #161637;
+            --bg-card: rgba(255,255,255,0.04);
+            --glass: rgba(255,255,255,0.06);
+            --glass-border: rgba(255,255,255,0.08);
+            --text: #e2e8f0;
+            --text-dim: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --radius: 16px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* Topbar */
+        .topbar {
+            background: rgba(15,15,35,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 12px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-logo {
+            width: 38px; height: 38px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .topbar-title { flex: 1; }
+        .topbar-title h1 { font-size: 1.15rem; font-weight: 700; }
+        .topbar-title span { font-size: 0.72rem; color: var(--text-dim); display: block; }
+
+        .back-btn {
+            width: 38px; height: 38px;
+            border-radius: 12px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        .main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Hero banner */
+        .hero-banner {
+            background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(6,182,212,0.12));
+            border: 1px solid rgba(99,102,241,0.25);
+            border-radius: 20px;
+            padding: 28px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .hero-icon {
+            width: 64px; height: 64px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem;
+            flex-shrink: 0;
+            box-shadow: 0 8px 24px rgba(99,102,241,0.3);
+        }
+        .hero-info h2 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
+        .hero-info p { color: var(--text-dim); font-size: 0.85rem; margin-top: 4px; }
+
+        /* Mode Selector Tabs */
+        .tabs-header {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text);
+            text-align: left;
+        }
+        .tab-btn:hover {
+            border-color: rgba(99,102,241,0.4);
+            transform: translateY(-2px);
+        }
+        .tab-btn.active {
+            background: rgba(99,102,241,0.15);
+            border-color: var(--primary);
+            box-shadow: 0 4px 20px rgba(99,102,241,0.25);
+        }
+        .tab-icon {
+            width: 40px; height: 40px;
+            border-radius: 12px;
+            background: var(--glass);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+        .tab-title { font-size: 0.95rem; font-weight: 700; }
+        .tab-desc { font-size: 0.72rem; color: var(--text-dim); margin-top: 2px; }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .card-header h3 { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .card-body { padding: 20px; }
+
+        /* Device Status Card */
+        .device-status-box {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .device-info-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .device-avatar {
+            width: 42px; height: 42px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+            background: var(--glass);
+        }
+        .device-name { font-weight: 700; font-size: 0.95rem; }
+        .device-sub { font-size: 0.75rem; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-pill.connected {
+            background: rgba(16,185,129,0.15);
+            color: var(--success);
+            border: 1px solid rgba(16,185,129,0.25);
+        }
+        .status-pill.disconnected {
+            background: rgba(239,68,68,0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239,68,68,0.25);
+        }
+        .dot-sm { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+        /* Form elements */
+        .form-group { margin-bottom: 16px; }
+        .form-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 0.88rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: all 0.25s;
+        }
+        .form-textarea {
+            min-height: 140px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            resize: vertical;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+        }
+
+        .btn {
+            padding: 12px 22px;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s;
+            font-family: 'Inter', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: none;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(99,102,241,0.3);
+        }
+        .btn-primary:hover { box-shadow: 0 6px 20px rgba(99,102,241,0.45); transform: translateY(-1px); }
+
+        .btn-accent {
+            background: linear-gradient(135deg, var(--accent), #0891b2);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(6,182,212,0.3);
+        }
+        .btn-accent:hover { transform: translateY(-1px); }
+
+        .btn-danger {
+            background: rgba(239,68,68,0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239,68,68,0.25);
+        }
+        .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+        .btn-glass {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text);
+        }
+        .btn-glass:hover { background: rgba(255,255,255,0.1); }
+
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+        /* Receipt Preview */
+        .receipt-paper {
+            background: #fff;
+            color: #000;
+            border-radius: 4px;
+            padding: 24px 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 340px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .receipt-paper::before, .receipt-paper::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0;
+            height: 6px;
+            background: radial-gradient(circle, transparent, transparent 50%, #fff 50%, #fff 100%);
+            background-size: 10px 10px;
+        }
+        .receipt-paper::before { top: -6px; }
+        .receipt-paper::after { bottom: -6px; transform: rotate(180deg); }
+
+        .receipt-center { text-align: center; }
+        .receipt-bold { font-weight: bold; }
+        .receipt-divider { border-top: 1px dashed #555; margin: 8px 0; }
+        .receipt-row { display: flex; justify-content: space-between; }
+
+        /* Info box */
+        .browser-compat-banner {
+            background: rgba(99,102,241,0.08);
+            border: 1px solid rgba(99,102,241,0.2);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 0.8rem;
+            color: var(--text);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .browser-compat-banner span.icon { font-size: 1.4rem; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 9999;
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        }
+        .toast.success { background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
+        .toast.error { background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); }
+        .toast.info { background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc; }
+
+        @media (max-width: 600px) {
+            .hero-banner { flex-direction: column; text-align: center; }
+            .tabs-header { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <a href="dashboard.html" class="back-btn" title="Back to Dashboard">←</a>
+        <div class="topbar-logo" style="padding:0;overflow:hidden;background:transparent;"><img src="logo.png" alt="AndroPrint" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></div>
+        <div class="topbar-title">
+            <h1>Web Direct Printing</h1>
+            <span>Client-side Web Bluetooth & WebUSB ESC/POS bridge</span>
+        </div>
+    </div>
+
+    <div class="main">
+        <!-- Hero Header -->
+        <div class="hero-banner">
+            <div class="hero-icon" style="color:var(--primary);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg></div>
+            <div class="hero-info">
+                <h2>Direct Browser-to-Printer Bridge</h2>
+                <p>Connect your thermal receipt printers directly via <b>Web Bluetooth (BLE)</b> or <b>WebUSB</b> right inside Chrome/Edge on Android or PC, with zero drivers or local server required!</p>
+            </div>
+        </div>
+
+        <!-- Browser Support Banner -->
+        <div class="browser-compat-banner">
+            
+            <div>
+                <b>Hardware Requirements:</b> Web Bluetooth and WebUSB are natively supported in Chromium browsers (Chrome, Edge, Opera, Samsung Internet) on Android, Windows, Mac, and Linux. HTTPS or localhost required.
+            </div>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="tabs-header">
+            <div class="tab-btn active" id="tabBluetoothBtn" onclick="switchTab('bluetooth')">
+                <div class="tab-icon" style="color:#38bdf8;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline></svg></div>
+                <div>
+                    <div class="tab-title">Web Bluetooth</div>
+                    <div class="tab-desc">Wireless BLE thermal printers</div>
+                </div>
+            </div>
+            <div class="tab-btn" id="tabUsbBtn" onclick="switchTab('usb')">
+                <div class="tab-icon" style="color:#a855f7;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="19" r="2"></circle><circle cx="6" cy="9" r="1.5"></circle><circle cx="18" cy="13" r="1.5"></circle><path d="M12 17V3"></path><path d="m9 5 3-3 3 3"></path><path d="M6 10.5V13a3 3 0 0 0 3 3h3"></path><path d="M18 14.5V16a3 3 0 0 1-3 3h-3"></path></svg></div>
+                <div>
+                    <div class="tab-title">WebUSB (OTG)</div>
+                    <div class="tab-desc">Direct USB cable / POS thermal</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLUETOOTH PANEL -->
+        <div id="panelBluetooth" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline></svg> Web Bluetooth ESC/POS Device</h3>
+                    <span id="btStatusPill" class="status-pill disconnected"><span class="dot-sm"></span>Disconnected</span>
+                </div>
+                <div class="card-body">
+                    <div class="device-status-box">
+                        <div class="device-info-left">
+                            <div class="device-avatar" style="color:#38bdf8;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline></svg></div>
+                            <div>
+                                <div class="device-name" id="btDeviceName">No Bluetooth Printer Paired</div>
+                                <div class="device-sub" id="btDeviceId">Click 'Pair Bluetooth' to scan nearby BLE printers</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-accent" id="btnPairBT" onclick="connectBluetooth()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline></svg> Pair Bluetooth</button>
+                            <button class="btn btn-danger" id="btnDisconnectBT" onclick="disconnectBluetooth()" style="display:none;">Disconnect</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Multilingual Preset / Character Encoding</label>
+                        <select class="form-select" id="btLangPreset" onchange="applyLanguagePreset('bt', this.value)" style="margin-bottom:10px;">
+                            <option value="en">English / Latin (Default)</option>
+                            <option value="ml">Malayalam (മലയാളം - കേരളം)</option>
+                            <option value="hi">Hindi (हिन्दी / देवनागरी)</option>
+                            <option value="ta">Tamil (தமிழ்)</option>
+                            <option value="ar">Arabic (العربية)</option>
+                            <option value="zh">Chinese (中文 - 繁體/简体)</option>
+                            <option value="ru">Russian (Русский / Cyrillic)</option>
+                        </select>
+                        <label class="form-label">Receipt Content (Unicode / UTF-8 Supported)</label>
+                        <textarea class="form-textarea" id="btPrintText" placeholder="Enter text in any language..."></textarea>
+                    </div>
+
+                    <div class="btn-row">
+                        <button class="btn btn-primary" onclick="printBluetooth()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Send to Bluetooth Printer</button>
+                        <button class="btn btn-glass" onclick="testBluetoothReceipt()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Print Sample Receipt</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WEBUSB PANEL -->
+        <div id="panelUsb" class="tab-panel" style="display:none;">
+            <div class="card">
+                <div class="card-header">
+                    <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="19" r="2"></circle><circle cx="6" cy="9" r="1.5"></circle><circle cx="18" cy="13" r="1.5"></circle><path d="M12 17V3"></path><path d="m9 5 3-3 3 3"></path><path d="M6 10.5V13a3 3 0 0 0 3 3h3"></path><path d="M18 14.5V16a3 3 0 0 1-3 3h-3"></path></svg> WebUSB ESC/POS Printer</h3>
+                    <span id="usbStatusPill" class="status-pill disconnected"><span class="dot-sm"></span>Disconnected</span>
+                </div>
+                <div class="card-body">
+                    <div class="device-status-box">
+                        <div class="device-info-left">
+                            <div class="device-avatar" style="color:#a855f7;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="19" r="2"></circle><circle cx="6" cy="9" r="1.5"></circle><circle cx="18" cy="13" r="1.5"></circle><path d="M12 17V3"></path><path d="m9 5 3-3 3 3"></path><path d="M6 10.5V13a3 3 0 0 0 3 3h3"></path><path d="M18 14.5V16a3 3 0 0 1-3 3h-3"></path></svg></div>
+                            <div>
+                                <div class="device-name" id="usbDeviceName">No USB Printer Connected</div>
+                                <div class="device-sub" id="usbDeviceId">Connect USB cable via OTG and grant browser permission</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-accent" id="btnPairUSB" onclick="connectUsb()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="19" r="2"></circle><circle cx="6" cy="9" r="1.5"></circle><circle cx="18" cy="13" r="1.5"></circle><path d="M12 17V3"></path><path d="m9 5 3-3 3 3"></path><path d="M6 10.5V13a3 3 0 0 0 3 3h3"></path><path d="M18 14.5V16a3 3 0 0 1-3 3h-3"></path></svg> Connect USB</button>
+                            <button class="btn btn-danger" id="btnDisconnectUSB" onclick="disconnectUsb()" style="display:none;">Disconnect</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Multilingual Preset / Character Encoding</label>
+                        <select class="form-select" id="usbLangPreset" onchange="applyLanguagePreset('usb', this.value)" style="margin-bottom:10px;">
+                            <option value="en">English / Latin (Default)</option>
+                            <option value="ml">Malayalam (മലയാളം - കേരളം)</option>
+                            <option value="hi">Hindi (हिन्दी / देवनागरी)</option>
+                            <option value="ta">Tamil (தமிழ்)</option>
+                            <option value="ar">Arabic (العربية)</option>
+                            <option value="zh">Chinese (中文 - 繁體/简体)</option>
+                            <option value="ru">Russian (Русский / Cyrillic)</option>
+                        </select>
+                        <label class="form-label">Receipt Content (Unicode / UTF-8 Supported)</label>
+                        <textarea class="form-textarea" id="usbPrintText" placeholder="Enter text in any language..."></textarea>
+                    </div>
+
+                    <div class="btn-row">
+                        <button class="btn btn-primary" onclick="printUsb()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Send to USB Printer</button>
+                        <button class="btn btn-glass" onclick="testUsbReceipt()">Print Sample Receipt</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER BRANDING -->
+        <footer style="text-align:center; padding:24px 20px 10px; font-size:0.78rem; color:var(--text-dim); border-top:1px solid var(--glass-border); margin-top:30px;">
+            <div>AndroPrint Cloud v2.0 • Web Bluetooth & WebUSB Direct Printing</div>
+            <div style="margin-top:6px; font-weight:600; color:var(--text); letter-spacing:0.02em;">Developed By : MSA MODS x WhatYouWantKerala</div>
+        </footer>
+    </div>
+
+    <script>
+        // Tab switching
+        function switchTab(tab) {
+            document.getElementById('panelBluetooth').style.display = (tab === 'bluetooth') ? 'block' : 'none';
+            document.getElementById('panelUsb').style.display = (tab === 'usb') ? 'block' : 'none';
+
+            document.getElementById('tabBluetoothBtn').classList.toggle('active', tab === 'bluetooth');
+            document.getElementById('tabUsbBtn').classList.toggle('active', tab === 'usb');
+        }
+
+        // Language Presets for multilingual printing
+        const LANGUAGE_PRESETS = {
+            en: `*** ANDROPRINT CLOUD ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+Table: 04          Date: ${new Date().toLocaleDateString()}
+Server: Terminal 1
+--------------------------------
+1x Chicken Biryani         ₹180.00
+1x Fresh Lime Soda          ₹40.00
+--------------------------------
+TOTAL:                     ₹220.00
+--------------------------------
+   Thank You! Visit Again!`,
+
+            ml: `*** ആന്ത്രോപ്രിന്റ് ക്ലൗഡ് ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+മേശ നമ്പർ: 04     തീയതി: ${new Date().toLocaleDateString()}
+കൗണ്ടർ: മെയിൻ കൗണ്ടർ
+--------------------------------
+1x ചിക്കൻ ബിരിയാണി        ₹180.00
+1x മലബാർ പൊറോട്ട (3 എണ്ണം)  ₹45.00
+1x ഫ്രഷ് ലൈം സോഡ          ₹40.00
+--------------------------------
+ആകെ തുക:                   ₹265.00
+--------------------------------
+       നന്ദി! വീണ്ടും വരിക!`,
+
+            hi: `*** एंड्रोप्रिंट क्लाउड ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+मेज संख्या: 04    दिनांक: ${new Date().toLocaleDateString()}
+काउंटर: मुख्य काउंटर
+--------------------------------
+1x पनीर टिक्का मसाला      ₹220.00
+2x तंदूरी रोटी              ₹40.00
+1x मीठी लस्सी               ₹50.00
+--------------------------------
+कुल योग:                  ₹310.00
+--------------------------------
+    धन्यवाद! फिर पधारें!`,
+
+            ta: `*** ஆண்ட்ரோபிரிண்ட் கிளவுட் ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+மேசை எண்: 04      தேதி: ${new Date().toLocaleDateString()}
+--------------------------------
+1x நெய் ரோஸ்ட் தோசை       ₹90.00
+1x மெது வடை (2 துண்டு)     ₹40.00
+1x ஃபில்டர் காபி           ₹30.00
+--------------------------------
+மொத்தம்:                  ₹160.00
+--------------------------------
+   நன்றி! மீண்டும் வருக!`,
+
+            ar: `*** أندروبرينت كلاود ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+طاولة رقم: ٠٤       التاريخ: ${new Date().toLocaleDateString()}
+--------------------------------
+١x شاورما دجاج             ٣٥.٠٠ ر.س
+١x بطاطس مقلية            ١٥.٠٠ ر.س
+١x عصير برتقال طازج       ١٢.٠٠ ر.س
+--------------------------------
+المجموع الكلي:            ٦٢.٠٠ ر.س
+--------------------------------
+        شكراً لزيارتكم!`,
+
+            zh: `*** 雲端智能收銀打印 ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+桌號: 04           日期: ${new Date().toLocaleDateString()}
+--------------------------------
+1x 招牌小籠包 (8隻)       ¥48.00
+1x 揚州炒飯               ¥32.00
+1x 凍頂烏龍茶             ¥15.00
+--------------------------------
+實收金額:                 ¥95.00
+--------------------------------
+      謝謝惠顧，歡迎再次光臨！`,
+
+            ru: `*** АНДРОПРИНТ ОБЛАКО ***
+Developed By: MSA MODS x WYWK
+--------------------------------
+Стол: 04          Дата: ${new Date().toLocaleDateString()}
+--------------------------------
+1x Борщ со сметаной      320.00 ₽
+1x Бефстроганов          580.00 ₽
+1x Морс ягодный          120.00 ₽
+--------------------------------
+ИТОГО К ОПЛАТЕ:         1020.00 ₽
+--------------------------------
+    Спасибо! Ждем вас снова!`
+        };
+
+        function applyLanguagePreset(panel, lang) {
+            const textarea = document.getElementById(panel === 'bt' ? 'btPrintText' : 'usbPrintText');
+            if (LANGUAGE_PRESETS[lang]) {
+                textarea.value = LANGUAGE_PRESETS[lang];
+            }
+        }
+
+        // Initialize default text on load
+        document.addEventListener('DOMContentLoaded', () => {
+            applyLanguagePreset('bt', 'en');
+            applyLanguagePreset('usb', 'en');
+        });
+        let btDevice = null;
+        let btCharacteristic = null;
+
+        // Common ESC/POS Bluetooth GATT Service & Characteristic UUIDs
+        const BT_SERVICES = [
+            '000018f0-0000-1000-8000-00805f9b34fb', // Standard Print Service
+            'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+            '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC transparent UART
+            '0000ae00-0000-1000-8000-00805f9b34fb',
+            '0000ff00-0000-1000-8000-00805f9b34fb'
+        ];
+
+        async function connectBluetooth() {
+            if (!navigator.bluetooth) {
+                showToast('Web Bluetooth is not supported on this browser. Use Chrome/Edge.', 'error');
+                return;
+            }
+
+            try {
+                showToast('Scanning for Bluetooth printers...', 'info');
+                btDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: BT_SERVICES
+                });
+
+                document.getElementById('btDeviceName').textContent = btDevice.name || 'Unnamed Bluetooth Printer';
+                document.getElementById('btDeviceId').textContent = 'Connecting GATT Server...';
+
+                btDevice.addEventListener('gattserverdisconnected', onBluetoothDisconnected);
+                const server = await btDevice.gatt.connect();
+
+                // Find write characteristic
+                let characteristic = null;
+                const services = await server.getPrimaryServices();
+
+                for (const service of services) {
+                    try {
+                        const chars = await service.getCharacteristics();
+                        for (const c of chars) {
+                            if (c.properties.write || c.properties.writeWithoutResponse) {
+                                characteristic = c;
+                                break;
+                            }
+                        }
+                    } catch (e) {}
+                    if (characteristic) break;
+                }
+
+                if (!characteristic) {
+                    throw new Error('Could not find write characteristic on printer');
+                }
+
+                btCharacteristic = characteristic;
+
+                document.getElementById('btStatusPill').className = 'status-pill connected';
+                document.getElementById('btStatusPill').innerHTML = '<span class="dot-sm"></span>Connected';
+                document.getElementById('btDeviceId').textContent = `ID: ${btDevice.id.slice(0, 16)}... | BLE GATT Ready`;
+                document.getElementById('btnPairBT').style.display = 'none';
+                document.getElementById('btnDisconnectBT').style.display = 'inline-flex';
+
+                showToast('Bluetooth printer connected!', 'success');
+            } catch (err) {
+                console.error('Bluetooth connection error:', err);
+                showToast('Bluetooth error: ' + err.message, 'error');
+                onBluetoothDisconnected();
+            }
+        }
+
+        function onBluetoothDisconnected() {
+            btCharacteristic = null;
+            document.getElementById('btStatusPill').className = 'status-pill disconnected';
+            document.getElementById('btStatusPill').innerHTML = '<span class="dot-sm"></span>Disconnected';
+            document.getElementById('btDeviceName').textContent = 'No Bluetooth Printer Paired';
+            document.getElementById('btDeviceId').textContent = 'Click Pair Bluetooth to scan';
+            document.getElementById('btnPairBT').style.display = 'inline-flex';
+            document.getElementById('btnDisconnectBT').style.display = 'none';
+        }
+
+        function disconnectBluetooth() {
+            if (btDevice && btDevice.gatt.connected) {
+                btDevice.gatt.disconnect();
+            }
+            onBluetoothDisconnected();
+            showToast('Bluetooth disconnected', 'info');
+        }
+
+        async function printBluetooth() {
+            const text = document.getElementById('btPrintText').value;
+            if (!text.trim()) {
+                showToast('Please enter text to print', 'error');
+                return;
+            }
+            if (!btCharacteristic) {
+                showToast('No Bluetooth printer connected. Click Pair first.', 'error');
+                return;
+            }
+
+            try {
+                showToast('Sending data to Bluetooth printer...', 'info');
+                // ESC @ (Initialize) + Text + LF + Cut / Feeds
+                const encoder = new TextEncoder();
+                const initCmd = new Uint8Array([0x1B, 0x40]);
+                const cutCmd = new Uint8Array([0x0A, 0x0A, 0x0A, 0x1D, 0x56, 0x00]); // LF x3 + ESC/POS Full Cut
+
+                const textBytes = encoder.encode(text + '\n');
+                const combined = new Uint8Array(initCmd.length + textBytes.length + cutCmd.length);
+                combined.set(initCmd, 0);
+                combined.set(textBytes, initCmd.length);
+                combined.set(cutCmd, initCmd.length + textBytes.length);
+
+                // Send in chunks of 512 bytes (BLE standard chunking)
+                const chunkSize = 512;
+                for (let i = 0; i < combined.length; i += chunkSize) {
+                    const chunk = combined.slice(i, i + chunkSize);
+                    if (btCharacteristic.properties.writeWithoutResponse) {
+                        await btCharacteristic.writeValueWithoutResponse(chunk);
+                    } else {
+                        await btCharacteristic.writeValue(chunk);
+                    }
+                    await new Promise(r => setTimeout(r, 20));
+                }
+
+                showToast('Print command sent successfully!', 'success');
+            } catch (err) {
+                console.error('Print error:', err);
+                showToast('Print failed: ' + err.message, 'error');
+            }
+        }
+
+        function testBluetoothReceipt() {
+            document.getElementById('btPrintText').value = 
+`================================
+      ANDROPRINT BLUETOOTH
+  Developed By: MSA MODS x WYWK
+================================
+Status: OK
+Connection: Web Bluetooth (BLE)
+Date: ${new Date().toLocaleString()}
+--------------------------------
+Test print completed with zero
+drivers from web browser!
+================================\n\n`;
+            printBluetooth();
+        }
+
+        // ==================== WEBUSB ENGINE ====================
+        let usbDevice = null;
+        let usbEndpointOut = null;
+
+        async function connectUsb() {
+            if (!navigator.usb) {
+                showToast('WebUSB is not supported on this browser. Use Chrome/Edge.', 'error');
+                return;
+            }
+
+            try {
+                showToast('Requesting USB printer...', 'info');
+                // Printer USB Class code is 7
+                usbDevice = await navigator.usb.requestDevice({
+                    filters: [
+                        { classCode: 7 } // Standard USB Printer Class
+                    ]
+                }).catch(async () => {
+                    // Fallback to request all USB devices if classCode 7 doesn't match vendor custom descriptors
+                    return await navigator.usb.requestDevice({ filters: [] });
+                });
+
+                if (!usbDevice) return;
+
+                await usbDevice.open();
+                await usbDevice.selectConfiguration(1);
+
+                // Locate printer interface & out endpoint
+                let printerInterface = null;
+                for (const iface of usbDevice.configuration.interfaces) {
+                    for (const alt of iface.alternates) {
+                        for (const ep of alt.endpoints) {
+                            if (ep.direction === 'out') {
+                                printerInterface = iface;
+                                usbEndpointOut = ep;
+                                break;
+                            }
+                        }
+                        if (usbEndpointOut) break;
+                    }
+                    if (usbEndpointOut) break;
+                }
+
+                if (!printerInterface || !usbEndpointOut) {
+                    throw new Error('Unable to find an OUT endpoint for USB printer');
+                }
+
+                await usbDevice.claimInterface(printerInterface.interfaceNumber);
+
+                document.getElementById('usbStatusPill').className = 'status-pill connected';
+                document.getElementById('usbStatusPill').innerHTML = '<span class="dot-sm"></span>Connected';
+                document.getElementById('usbDeviceName').textContent = usbDevice.productName || 'USB Thermal Printer';
+                document.getElementById('usbDeviceId').textContent = `Vendor: 0x${usbDevice.vendorId.toString(16)} | Product: 0x${usbDevice.productId.toString(16)}`;
+                document.getElementById('btnPairUSB').style.display = 'none';
+                document.getElementById('btnDisconnectUSB').style.display = 'inline-flex';
+
+                showToast('USB Printer connected!', 'success');
+            } catch (err) {
+                console.error('USB Connection error:', err);
+                showToast('USB Error: ' + err.message, 'error');
+                onUsbDisconnected();
+            }
+        }
+
+        function onUsbDisconnected() {
+            usbDevice = null;
+            usbEndpointOut = null;
+            document.getElementById('usbStatusPill').className = 'status-pill disconnected';
+            document.getElementById('usbStatusPill').innerHTML = '<span class="dot-sm"></span>Disconnected';
+            document.getElementById('usbDeviceName').textContent = 'No USB Printer Connected';
+            document.getElementById('usbDeviceId').textContent = 'Connect USB cable via OTG and grant browser permission';
+            document.getElementById('btnPairUSB').style.display = 'inline-flex';
+            document.getElementById('btnDisconnectUSB').style.display = 'none';
+        }
+
+        async function disconnectUsb() {
+            if (usbDevice) {
+                try { await usbDevice.close(); } catch(e) {}
+            }
+            onUsbDisconnected();
+            showToast('USB disconnected', 'info');
+        }
+
+        async function printUsb() {
+            const text = document.getElementById('usbPrintText').value;
+            if (!text.trim()) {
+                showToast('Please enter text to print', 'error');
+                return;
+            }
+            if (!usbDevice || !usbEndpointOut) {
+                showToast('No USB printer connected. Click Connect USB first.', 'error');
+                return;
+            }
+
+            try {
+                showToast('Sending data to USB printer...', 'info');
+                const encoder = new TextEncoder();
+                const initCmd = new Uint8Array([0x1B, 0x40]);
+                const cutCmd = new Uint8Array([0x0A, 0x0A, 0x0A, 0x1D, 0x56, 0x00]);
+
+                const textBytes = encoder.encode(text + '\n');
+                const combined = new Uint8Array(initCmd.length + textBytes.length + cutCmd.length);
+                combined.set(initCmd, 0);
+                combined.set(textBytes, initCmd.length);
+                combined.set(cutCmd, initCmd.length + textBytes.length);
+
+                await usbDevice.transferOut(usbEndpointOut.endpointNumber, combined);
+                showToast('USB Print dispatched successfully!', 'success');
+            } catch (err) {
+                console.error('USB print error:', err);
+                showToast('USB Print failed: ' + err.message, 'error');
+            }
+        }
+
+        function testUsbReceipt() {
+            document.getElementById('usbPrintText').value = 
+`================================
+       ANDROPRINT WEBUSB
+  Developed By: MSA MODS x WYWK
+================================
+Status: OK
+Interface: WebUSB (OTG Direct)
+Date: ${new Date().toLocaleString()}
+--------------------------------
+High-speed hardware-direct print
+bypassing all spoolers!
+================================\n\n`;
+            printUsb();
+        }
+
+        // Toast Helper
+        function showToast(msg, type = 'success') {
+            document.querySelectorAll('.toast').forEach(t => t.remove());
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            const icon = type === 'success' ? 'SUCCESS' : (type === 'error' ? 'ERROR' : 'INFO');
+            t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+            document.body.appendChild(t);
+            setTimeout(() => {
+                t.style.opacity = '0';
+                t.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => t.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

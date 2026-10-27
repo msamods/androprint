@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <title>Receipt Template Designer • AndroPrint Cloud</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0c16;
+            --bg-surface: #121324;
+            --bg-card: rgba(22, 22, 45, 0.7);
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --glass: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --radius: 14px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Top Bar */
+        .topbar {
+            background: rgba(18, 19, 36, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            gap: 16px;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .back-btn {
+            width: 38px; height: 38px;
+            border-radius: 12px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            font-size: 1.1rem;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        .topbar-title h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .topbar-title span {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            display: block;
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 9px 16px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(99,102,241,0.3);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(99,102,241,0.45); }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(16,185,129,0.3);
+        }
+        .btn-success:hover { transform: translateY(-1px); }
+
+        .btn-glass {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text);
+        }
+        .btn-glass:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--danger);
+        }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+
+        .select-input {
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 0.82rem;
+            outline: none;
+            cursor: pointer;
+        }
+        .select-input option { background: #161637; color: #fff; }
+
+        /* Workspace Grid */
+        .workspace {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            flex: 1;
+            height: calc(100vh - 65px);
+            overflow: hidden;
+        }
+
+        @media (max-width: 960px) {
+            .workspace {
+                grid-template-columns: 1fr;
+                height: auto;
+                overflow: visible;
+            }
+        }
+
+        /* Sidebar Panels */
+        .sidebar {
+            background: rgba(18, 19, 36, 0.6);
+            border-right: 1px solid var(--glass-border);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-section {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .section-header {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Components Palette */
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .palette-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: var(--text);
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .palette-btn:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* Form Inputs */
+        .form-group { margin-bottom: 12px; }
+        .form-label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 9px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 0.82rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+        }
+        .form-textarea { resize: vertical; min-height: 60px; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            user-select: none;
+            margin-top: 6px;
+        }
+        .checkbox-row input { accent-color: var(--primary); width: 16px; height: 16px; }
+
+        /* Elements List (Sortable) */
+        .elements-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .element-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .element-item:hover { background: rgba(255, 255, 255, 0.06); }
+        .element-item.active {
+            background: rgba(99, 102, 241, 0.18);
+            border-color: var(--primary);
+        }
+
+        .element-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .element-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .ctrl-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            transition: all 0.15s;
+        }
+        .ctrl-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        .ctrl-btn.danger:hover { color: var(--danger); background: rgba(239, 68, 68, 0.2); }
+
+        /* Preview Stage */
+        .stage {
+            background: #080911;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .stage-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 520px;
+            margin-bottom: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 8px 14px;
+        }
+
+        .roll-width-tabs {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 3px;
+        }
+        .width-tab {
+            padding: 5px 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .width-tab.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Thermal Paper Simulation */
+        .receipt-paper {
+            background: #ffffff;
+            color: #111111;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0,0,0,0.2);
+            border-radius: 4px 4px 0 0;
+            transition: width 0.3s ease;
+            position: relative;
+            padding: 20px 16px 36px 16px;
+            font-size: 13px;
+            line-height: 1.4;
+            user-select: none;
+        }
+
+        .receipt-paper.w-58 { width: 330px; }
+        .receipt-paper.w-80 { width: 440px; }
+
+        /* Serrated Tear Edge Bottom */
+        .receipt-paper::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            right: 0;
+            height: 10px;
+            background: linear-gradient(135deg, #ffffff 5px, transparent 0),
+                        linear-gradient(-135deg, #ffffff 5px, transparent 0);
+            background-size: 10px 10px;
+        }
+
+        .paper-block {
+            padding: 4px 6px;
+            border: 1px dashed transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+        }
+        .paper-block:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            background: rgba(99, 102, 241, 0.04);
+        }
+        .paper-block.selected {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.08);
+            outline: 2px solid rgba(99, 102, 241, 0.2);
+        }
+
+        /* ESC/POS Font Styles */
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: 700; }
+        .divider-line {
+            border-bottom: 1px dashed #333;
+            margin: 6px 0;
+        }
+        .divider-double {
+            border-bottom: 2px solid #111;
+            margin: 6px 0;
+        }
+        .divider-dots {
+            border-bottom: 1px dotted #333;
+            margin: 6px 0;
+        }
+
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .receipt-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 4px 0;
+        }
+        .receipt-table th {
+            font-size: 11px;
+            font-weight: 700;
+            border-bottom: 1px dashed #333;
+            padding: 3px 0;
+            text-align: left;
+        }
+        .receipt-table th:last-child, .receipt-table td:last-child { text-align: right; }
+        .receipt-table td {
+            font-size: 12px;
+            padding: 3px 0;
+        }
+
+        .receipt-qr-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 0;
+        }
+        .receipt-qr-box img {
+            width: 110px;
+            height: 110px;
+            image-rendering: pixelated;
+        }
+
+        .receipt-barcode-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+        }
+        .barcode-bars {
+            height: 36px;
+            width: 75%;
+            background: repeating-linear-gradient(90deg, #111 0, #111 2px, #fff 2px, #fff 4px, #111 4px, #111 7px, #fff 7px, #fff 8px);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal-card {
+            background: #161637;
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            width: 100%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+        }
+        .modal-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            font-size: 1.4rem;
+            cursor: pointer;
+        }
+        .modal-close:hover { color: #fff; }
+        .modal-body { padding: 22px; }
+        .modal-footer {
+            padding: 16px 22px;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: rgba(0,0,0,0.15);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 9999;
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s ease;
+        }
+        .toast.success { background: rgba(16,185,129,0.25); border: 1px solid rgba(16,185,129,0.4); color: var(--success); }
+        .toast.error { background: rgba(239,68,68,0.25); border: 1px solid rgba(239,68,68,0.4); color: var(--danger); }
+        .toast.info { background: rgba(99,102,241,0.25); border: 1px solid rgba(99,102,241,0.4); color: var(--text); }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 15px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <a href="dashboard.html" class="back-btn" title="Back to Dashboard">←</a>
+            <div style="width:36px;height:36px;padding:0;overflow:hidden;border-radius:10px;"><img src="logo.png" alt="AndroPrint" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></div>
+            <div class="topbar-title">
+                <h1>Receipt Template Designer</h1>
+                <span>Visual ESC/POS Layout & Variable Builder</span>
+            </div>
+        </div>
+
+        <div class="topbar-actions">
+            <select class="select-input" id="templateSelector" onchange="handleTemplateSelect(this.value)">
+                <option value="">Loading templates...</option>
+            </select>
+            <button class="btn btn-glass" onclick="createNewTemplate()">
+                <span>＋</span> New
+            </button>
+            <button class="btn btn-glass" onclick="openPayloadModal()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> API JSON
+            </button>
+            <button class="btn btn-primary" onclick="saveCurrentTemplate()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Save Template
+            </button>
+            <button class="btn btn-success" onclick="openTestPrintModal()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Test Print
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN WORKSPACE -->
+    <div class="workspace">
+        <!-- LEFT SIDEBAR -->
+        <div class="sidebar">
+            <!-- Template Info & Settings -->
+            <div class="panel-section">
+                <div class="section-header">
+                    <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Template Config</span>
+                    <span id="templateIdBadge" style="font-size:0.68rem; color:var(--text-dim); text-transform:none; font-family:'JetBrains Mono',monospace;"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Template Name</label>
+                    <input type="text" class="form-input" id="tplName" placeholder="e.g. Fine Dine Restaurant Bill" oninput="updateTemplateMeta()">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" class="form-input" id="tplDesc" placeholder="Brief notes about this receipt" oninput="updateTemplateMeta()">
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label class="form-label">Paper Width</label>
+                        <select class="form-select" id="tplWidth" onchange="setPaperWidth(parseInt(this.value))">
+                            <option value="80">80mm (Standard 42c)</option>
+                            <option value="58">58mm (Compact 32c)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Auto Cut</label>
+                        <select class="form-select" id="tplCut" onchange="updateTemplateMeta()">
+                            <option value="true">Full Cut</option>
+                            <option value="partial">Partial Cut</option>
+                            <option value="false">No Cut</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:16px;">
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="tplDrawerKick" onchange="updateTemplateMeta()">
+                        <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Kick Drawer</span>
+                    </label>
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="tplBuzzer" onchange="updateTemplateMeta()">
+                        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> Kitchen Buzzer</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Add Elements Palette -->
+            <div class="panel-section">
+                <div class="section-header">
+                    <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add Component</span>
+                </div>
+                <div class="palette-grid">
+                    <button class="palette-btn" onclick="addElement('header')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Store Header
+                    </button>
+                    <button class="palette-btn" onclick="addElement('divider')">
+                        <span>〰️</span> Divider Line
+                    </button>
+                    <button class="palette-btn" onclick="addElement('meta')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Key-Value Info
+                    </button>
+                    <button class="palette-btn" onclick="addElement('items')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Items Table
+                    </button>
+                    <button class="palette-btn" onclick="addElement('totals')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Totals Block
+                    </button>
+                    <button class="palette-btn" onclick="addElement('qr')">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg> Dynamic UPI QR
+                    </button>
+                    <button class="palette-btn" onclick="addElement('barcode')">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Barcode
+                    </button>
+                    <button class="palette-btn" onclick="addElement('footer')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Footer Note
+                    </button>
+                </div>
+            </div>
+
+            <!-- Elements Structure List -->
+            <div class="panel-section" style="flex:1;">
+                <div class="section-header">
+                    <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Receipt Structure</span>
+                    <span id="elementsCountBadge" style="font-size:0.7rem; color:var(--text-dim); text-transform:none;">0 blocks</span>
+                </div>
+                <div class="elements-list" id="elementsListContainer"></div>
+            </div>
+
+            <!-- Block Inspector -->
+            <div class="panel-section" id="blockInspectorSection" style="display:none; background:rgba(99,102,241,0.05); border-top:1px solid rgba(99,102,241,0.2);">
+                <div class="section-header">
+                    <span id="inspectorTitle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit Block</span>
+                    <button class="ctrl-btn danger" onclick="deleteSelectedElement()" title="Delete Block"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Remove</button>
+                </div>
+                <div id="inspectorFormArea"></div>
+            </div>
+        </div>
+
+        <!-- RIGHT STAGE: LIVE THERMAL SIMULATION -->
+        <div class="stage">
+            <div class="stage-toolbar">
+                <div class="roll-width-tabs">
+                    <button class="width-tab" id="btnWidth58" onclick="setPaperWidth(58)">58mm</button>
+                    <button class="width-tab active" id="btnWidth80" onclick="setPaperWidth(80)">80mm</button>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-dim); display:flex; align-items:center; gap:6px;">
+                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--success);"></span>
+                    <span>Live ESC/POS Preview</span>
+                </div>
+            </div>
+
+            <!-- THERMAL PAPER ROLL -->
+            <div class="receipt-paper w-80" id="receiptPaper">
+                <!-- Blocks dynamically injected -->
+            </div>
+        </div>
+    </div>
+
+    <!-- TEST PRINT MODAL -->
+    <div class="modal-overlay" id="testPrintModal" style="display:none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Dispatch Test Print</h3>
+                <button class="modal-close" onclick="closeTestPrintModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.85rem; color:var(--text-dim); margin-bottom:16px;">
+                    Send the rendered receipt directly to a connected ESC/POS thermal printer.
+                </p>
+                <div class="form-group">
+                    <label class="form-label">Target Printer</label>
+                    <select class="form-select" id="testPrintPrinterSelect">
+                        <option value="">Auto-Route (Smart Fallback)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Role (Optional)</label>
+                    <select class="form-select" id="testPrintRoleSelect">
+                        <option value="">Any Printer</option>
+                        <option value="CASHIER">CASHIER</option>
+                        <option value="KITCHEN">KITCHEN</option>
+                        <option value="BAR">BAR</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-glass" onclick="closeTestPrintModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="executeTestPrint()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Print Receipt Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API PAYLOAD EXPORT MODAL -->
+    <div class="modal-overlay" id="payloadModal" style="display:none;">
+        <div class="modal-card" style="max-width: 620px;">
+            <div class="modal-header">
+                <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> API Integration Payload</h3>
+                <button class="modal-close" onclick="closePayloadModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.82rem; color:var(--text-dim); margin-bottom:12px;">
+                    Use this JSON payload with <code>POST /api/template/render-and-print</code> in your POS or web app.
+                </p>
+                <pre id="payloadCodeArea" style="background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:10px; padding:14px; font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:#a5b4fc; max-height:300px; overflow-y:auto; white-space:pre-wrap;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-glass" onclick="closePayloadModal()">Close</button>
+                <button class="btn btn-primary" onclick="copyPayloadToClipboard()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy JSON
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script>
+        const AUTH = {
+            'x-client-id': localStorage.getItem('androprint_client_id') || 'admin',
+            'x-client-secret': localStorage.getItem('androprint_client_secret') || 'androprint2024'
+        };
+
+        let currentTemplate = null;
+        let templatesList = [];
+        let selectedIndex = -1;
+        let availablePrinters = [];
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTemplates();
+            loadPrinters();
+        });
+
+        async function loadTemplates() {
+            try {
+                const res = await fetch('/api/templates', { headers: AUTH });
+                const data = await res.json();
+                templatesList = data.templates || [];
+                renderTemplateSelector();
+                if (templatesList.length > 0) {
+                    loadTemplate(templatesList[0].id);
+                }
+            } catch (err) {
+                console.error("Failed to load templates:", err);
+                showToast("Failed to load templates", "error");
+            }
+        }
+
+        async function loadPrinters() {
+            try {
+                const res = await fetch('/api/printers', { headers: AUTH });
+                const data = await res.json();
+                availablePrinters = data.printers || [];
+                const select = document.getElementById('testPrintPrinterSelect');
+                select.innerHTML = '<option value="">Auto-Route (Smart Fallback)</option>';
+                availablePrinters.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = `${p.name} (${p.role || 'CASHIER'}) - ${p.online ? 'Online' : 'Offline'}`;
+                    select.appendChild(opt);
+                });
+            } catch (e) {}
+        }
+
+        function renderTemplateSelector() {
+            const select = document.getElementById('templateSelector');
+            select.innerHTML = '';
+            templatesList.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.name;
+                select.appendChild(opt);
+            });
+            if (currentTemplate) {
+                select.value = currentTemplate.id;
+            }
+        }
+
+        function handleTemplateSelect(id) {
+            if (!id) return;
+            loadTemplate(id);
+        }
+
+        function loadTemplate(id) {
+            const t = templatesList.find(x => x.id === id);
+            if (!t) return;
+            currentTemplate = JSON.parse(JSON.stringify(t));
+            selectedIndex = -1;
+            populateForm();
+            renderStructureList();
+            renderPaperPreview();
+            hideInspector();
+        }
+
+        function populateForm() {
+            document.getElementById('tplName').value = currentTemplate.name || '';
+            document.getElementById('tplDesc').value = currentTemplate.description || '';
+            document.getElementById('templateIdBadge').textContent = `ID: ${currentTemplate.id}`;
+            document.getElementById('tplWidth').value = currentTemplate.paperWidth || 80;
+            document.getElementById('tplCut').value = String(currentTemplate.actions?.cut !== false);
+            document.getElementById('tplDrawerKick').checked = !!currentTemplate.actions?.drawerKick;
+            document.getElementById('tplBuzzer').checked = !!currentTemplate.actions?.buzzer;
+            setPaperWidth(currentTemplate.paperWidth || 80, false);
+        }
+
+        function setPaperWidth(width, updateMeta = true) {
+            if (currentTemplate && updateMeta) {
+                currentTemplate.paperWidth = width;
+                document.getElementById('tplWidth').value = width;
+            }
+            const paper = document.getElementById('receiptPaper');
+            const btn58 = document.getElementById('btnWidth58');
+            const btn80 = document.getElementById('btnWidth80');
+
+            if (width === 58) {
+                paper.className = 'receipt-paper w-58';
+                btn58.classList.add('active');
+                btn80.classList.remove('active');
+            } else {
+                paper.className = 'receipt-paper w-80';
+                btn80.classList.add('active');
+                btn58.classList.remove('active');
+            }
+            renderPaperPreview();
+        }
+
+        function updateTemplateMeta() {
+            if (!currentTemplate) return;
+            currentTemplate.name = document.getElementById('tplName').value.trim() || 'Untitled Template';
+            currentTemplate.description = document.getElementById('tplDesc').value.trim();
+            currentTemplate.paperWidth = parseInt(document.getElementById('tplWidth').value) || 80;
+            currentTemplate.actions = {
+                cut: document.getElementById('tplCut').value === 'true',
+                drawerKick: document.getElementById('tplDrawerKick').checked,
+                buzzer: document.getElementById('tplBuzzer').checked
+            };
+            renderTemplateSelector();
+        }
+
+        function createNewTemplate() {
+            const newTpl = {
+                id: 'tpl-' + Math.random().toString(36).substring(2, 8),
+                name: 'New Custom Receipt',
+                description: 'Custom ESC/POS template',
+                paperWidth: 80,
+                elements: [
+                    { type: 'header', text: 'STORE NAME', subtitle: 'Store Address • Phone: 000-000', align: 'center', bold: true },
+                    { type: 'divider', style: 'double' },
+                    { type: 'meta', rows: [{ key: 'Invoice', val: '#1001' }, { key: 'Date', val: '{DATE_TIME}' }] },
+                    { type: 'divider', style: 'single' },
+                    { type: 'items', headers: ['ITEM', 'QTY', 'RATE', 'TOTAL'], rows: [
+                        { name: 'Sample Item 1', qty: '1', rate: '100', total: '100.00' }
+                    ]},
+                    { type: 'divider', style: 'single' },
+                    { type: 'totals', rows: [{ label: 'TOTAL', val: 'Rs. 100.00', bold: true }] },
+                    { type: 'footer', text: 'Thank you for your visit!', align: 'center' }
+                ],
+                actions: { cut: true, drawerKick: false, buzzer: false }
+            };
+            templatesList.push(newTpl);
+            renderTemplateSelector();
+            loadTemplate(newTpl.id);
+            showToast("New template created", "success");
+        }
+
+        // Palette add
+        function addElement(type) {
+            if (!currentTemplate) return;
+            let el = { type };
+            if (type === 'header') {
+                el = { type, text: 'MY STORE', subtitle: 'City, State • GSTIN: 000000', align: 'center', bold: true };
+            } else if (type === 'divider') {
+                el = { type, style: 'single' };
+            } else if (type === 'meta') {
+                el = { type, rows: [{ key: 'Order #', val: '{ORDER_ID}' }, { key: 'Time', val: '{TIME}' }] };
+            } else if (type === 'items') {
+                el = { type, headers: ['ITEM', 'QTY', 'PRICE', 'AMT'], rows: [{ name: 'Item Name', qty: '1', rate: '50', total: '50.00' }] };
+            } else if (type === 'totals') {
+                el = { type, rows: [{ label: 'Subtotal', val: '50.00' }, { label: 'Grand Total', val: '50.00', bold: true }] };
+            } else if (type === 'qr') {
+                el = { type, pa: 'msamods@okaxis', pn: 'Store Name', am: '50.00', label: 'SCAN & PAY WITH UPI' };
+            } else if (type === 'barcode') {
+                el = { type, value: '12345678', format: 'CODE128' };
+            } else if (type === 'footer') {
+                el = { type, text: 'Visit Again! • Have a nice day', align: 'center' };
+            }
+
+            currentTemplate.elements.push(el);
+            selectElement(currentTemplate.elements.length - 1);
+            renderStructureList();
+            renderPaperPreview();
+        }
+
+        // Structure list
+        function renderStructureList() {
+            const container = document.getElementById('elementsListContainer');
+            if (!currentTemplate || !currentTemplate.elements) return;
+
+            document.getElementById('elementsCountBadge').textContent = `${currentTemplate.elements.length} blocks`;
+            container.innerHTML = '';
+
+            currentTemplate.elements.forEach((el, idx) => {
+                const item = document.createElement('div');
+                item.className = `element-item ${selectedIndex === idx ? 'active' : ''}`;
+                item.onclick = () => selectElement(idx);
+
+                const iconMap = {
+                    header: 'HEADER', divider: '---', meta: 'META', items: 'ITEMS',
+                    totals: 'TOTAL', qr: 'QR', barcode: 'BARCODE', footer: 'FOOTER'
+                };
+
+                item.innerHTML = `
+                    <div class="element-title">
+                        <span>${iconMap[el.type] || 'BLOCK'}</span>
+                        <span>${escapeHtml(el.type.toUpperCase())}</span>
+                    </div>
+                    <div class="element-controls">
+                        <button class="ctrl-btn" onclick="event.stopPropagation(); moveElement(${idx}, -1)" title="Move Up">↑</button>
+                        <button class="ctrl-btn" onclick="event.stopPropagation(); moveElement(${idx}, 1)" title="Move Down">↓</button>
+                        <button class="ctrl-btn danger" onclick="event.stopPropagation(); removeElement(${idx})" title="Delete">&times;</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function moveElement(idx, dir) {
+            const target = idx + dir;
+            if (target < 0 || target >= currentTemplate.elements.length) return;
+            const temp = currentTemplate.elements[idx];
+            currentTemplate.elements[idx] = currentTemplate.elements[target];
+            currentTemplate.elements[target] = temp;
+            if (selectedIndex === idx) selectedIndex = target;
+            renderStructureList();
+            renderPaperPreview();
+        }
+
+        function removeElement(idx) {
+            currentTemplate.elements.splice(idx, 1);
+            if (selectedIndex === idx) hideInspector();
+            else if (selectedIndex > idx) selectedIndex--;
+            renderStructureList();
+            renderPaperPreview();
+        }
+
+        function deleteSelectedElement() {
+            if (selectedIndex >= 0) removeElement(selectedIndex);
+        }
+
+        function selectElement(idx) {
+            selectedIndex = idx;
+            renderStructureList();
+            renderPaperPreview();
+            showInspector();
+        }
+
+        // Inspector logic
+        function showInspector() {
+            if (selectedIndex < 0 || !currentTemplate.elements[selectedIndex]) {
+                hideInspector();
+                return;
+            }
+            const el = currentTemplate.elements[selectedIndex];
+            const section = document.getElementById('blockInspectorSection');
+            const formArea = document.getElementById('inspectorFormArea');
+            document.getElementById('inspectorTitle').textContent = `Edit ${el.type.toUpperCase()} Block`;
+            section.style.display = 'block';
+
+            let html = '';
+            if (el.type === 'header') {
+                html = `
+                    <div class="form-group">
+                        <label class="form-label">Store / Header Text</label>
+                        <input type="text" class="form-input" value="${escapeHtml(el.text || '')}" oninput="updateElProp('text', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Subtitle / Details (Multi-line)</label>
+                        <textarea class="form-textarea" oninput="updateElProp('subtitle', this.value)">${escapeHtml(el.subtitle || '')}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Alignment</label>
+                        <select class="form-select" onchange="updateElProp('align', this.value)">
+                            <option value="center" ${el.align === 'center' ? 'selected' : ''}>Center</option>
+                            <option value="left" ${el.align === 'left' ? 'selected' : ''}>Left</option>
+                        </select>
+                    </div>
+                `;
+            } else if (el.type === 'divider') {
+                html = `
+                    <div class="form-group">
+                        <label class="form-label">Line Style</label>
+                        <select class="form-select" onchange="updateElProp('style', this.value)">
+                            <option value="single" ${el.style === 'single' ? 'selected' : ''}>Dashed (-----)</option>
+                            <option value="double" ${el.style === 'double' ? 'selected' : ''}>Double (=====)</option>
+                            <option value="dots" ${el.style === 'dots' ? 'selected' : ''}>Dotted (.....)</option>
+                        </select>
+                    </div>
+                `;
+            } else if (el.type === 'meta') {
+                html = `
+                    <label class="form-label">Key-Value Rows</label>
+                    <div id="metaRowsList" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;">
+                        ${(el.rows || []).map((r, rIdx) => `
+                            <div style="display:flex; gap:6px;">
+                                <input type="text" class="form-input" placeholder="Key" value="${escapeHtml(r.key)}" oninput="updateMetaRow(${rIdx}, 'key', this.value)">
+                                <input type="text" class="form-input" placeholder="Value" value="${escapeHtml(r.val)}" oninput="updateMetaRow(${rIdx}, 'val', this.value)">
+                                <button class="ctrl-btn danger" onclick="removeMetaRow(${rIdx})">&times;</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="btn btn-glass" onclick="addMetaRow()" style="padding:6px 12px; font-size:0.75rem;">＋ Add Row</button>
+                `;
+            } else if (el.type === 'qr') {
+                html = `
+                    <div class="form-group">
+                        <label class="form-label">Merchant UPI VPA (e.g. name@okaxis)</label>
+                        <input type="text" class="form-input" value="${escapeHtml(el.pa || '')}" oninput="updateElProp('pa', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Payee Store Name</label>
+                        <input type="text" class="form-input" value="${escapeHtml(el.pn || '')}" oninput="updateElProp('pn', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Default Amount ₹ (or dynamic {TOTAL})</label>
+                        <input type="text" class="form-input" value="${escapeHtml(el.am || '')}" oninput="updateElProp('am', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Top Banner Text</label>
+                        <input type="text" class="form-input" value="${escapeHtml(el.label || '')}" oninput="updateElProp('label', this.value)">
+                    </div>
+                `;
+            } else if (el.type === 'barcode') {
+                html = `
+                    <div class="form-group">
+                        <label class="form-label">Barcode Value / Data</label>
+                        <input type="text" class="form-input" value="${escapeHtml(el.value || '')}" oninput="updateElProp('value', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Barcode Format</label>
+                        <select class="form-select" onchange="updateElProp('format', this.value)">
+                            <option value="CODE128">CODE128 (Standard)</option>
+                            <option value="EAN13">EAN13 (Retail)</option>
+                        </select>
+                    </div>
+                `;
+            } else if (el.type === 'footer') {
+                html = `
+                    <div class="form-group">
+                        <label class="form-label">Footer Note (Multi-line)</label>
+                        <textarea class="form-textarea" oninput="updateElProp('text', this.value)">${escapeHtml(el.text || '')}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Alignment</label>
+                        <select class="form-select" onchange="updateElProp('align', this.value)">
+                            <option value="center" ${el.align === 'center' ? 'selected' : ''}>Center</option>
+                            <option value="left" ${el.align === 'left' ? 'selected' : ''}>Left</option>
+                        </select>
+                    </div>
+                `;
+            } else {
+                html = `<div style="font-size:0.8rem; color:var(--text-dim);">Live table controls enabled on receipt.</div>`;
+            }
+
+            formArea.innerHTML = html;
+        }
+
+        function hideInspector() {
+            selectedIndex = -1;
+            document.getElementById('blockInspectorSection').style.display = 'none';
+        }
+
+        function updateElProp(prop, val) {
+            if (selectedIndex < 0) return;
+            currentTemplate.elements[selectedIndex][prop] = val;
+            renderPaperPreview();
+        }
+
+        function updateMetaRow(rIdx, prop, val) {
+            if (selectedIndex < 0) return;
+            currentTemplate.elements[selectedIndex].rows[rIdx][prop] = val;
+            renderPaperPreview();
+        }
+
+        function addMetaRow() {
+            if (selectedIndex < 0) return;
+            currentTemplate.elements[selectedIndex].rows.push({ key: 'Key', val: 'Value' });
+            showInspector();
+            renderPaperPreview();
+        }
+
+        function removeMetaRow(rIdx) {
+            if (selectedIndex < 0) return;
+            currentTemplate.elements[selectedIndex].rows.splice(rIdx, 1);
+            showInspector();
+            renderPaperPreview();
+        }
+
+        // Live Paper Rendering
+        function renderPaperPreview() {
+            const paper = document.getElementById('receiptPaper');
+            if (!currentTemplate || !currentTemplate.elements) {
+                paper.innerHTML = '<div style="text-align:center; padding:40px; color:#999;">No Template Loaded</div>';
+                return;
+            }
+
+            paper.innerHTML = '';
+
+            currentTemplate.elements.forEach((el, idx) => {
+                const block = document.createElement('div');
+                block.className = `paper-block ${selectedIndex === idx ? 'selected' : ''}`;
+                block.onclick = (e) => {
+                    e.stopPropagation();
+                    selectElement(idx);
+                };
+
+                if (el.type === 'header') {
+                    block.innerHTML = `
+                        <div class="${el.align === 'center' ? 'text-center' : 'text-left'}">
+                            <div class="font-bold" style="font-size:15px; letter-spacing:0.04em;">${escapeHtml(el.text || 'HEADER')}</div>
+                            ${el.subtitle ? `<div style="font-size:11px; white-space:pre-wrap; margin-top:3px; color:#333;">${escapeHtml(el.subtitle)}</div>` : ''}
+                        </div>
+                    `;
+                } else if (el.type === 'divider') {
+                    const styleClass = el.style === 'double' ? 'divider-double' : (el.style === 'dots' ? 'divider-dots' : 'divider-line');
+                    block.innerHTML = `<div class="${styleClass}"></div>`;
+                } else if (el.type === 'meta') {
+                    block.innerHTML = (el.rows || []).map(r => `
+                        <div class="receipt-row" style="font-size:12px;">
+                            <span style="color:#555;">${escapeHtml(r.key)}:</span>
+                            <span class="font-bold">${escapeHtml(r.val)}</span>
+                        </div>
+                    `).join('');
+                } else if (el.type === 'items') {
+                    block.innerHTML = `
+                        <table class="receipt-table">
+                            <thead>
+                                <tr>
+                                    ${(el.headers || ['ITEM', 'QTY', 'RATE', 'TOTAL']).map(h => `<th>${escapeHtml(h)}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(el.rows || []).map(r => `
+                                    <tr>
+                                        <td>${escapeHtml(r.name || '')}</td>
+                                        <td>${escapeHtml(r.qty || '1')}</td>
+                                        <td>${escapeHtml(r.rate || '')}</td>
+                                        <td>${escapeHtml(r.total || '')}</td>
+                                    </tr>
+                                    ${r.note ? `<tr><td colspan="4" style="font-size:10px; color:#555; padding-left:10px;">>> ${escapeHtml(r.note)}</td></tr>` : ''}
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } else if (el.type === 'totals') {
+                    block.innerHTML = (el.rows || []).map(r => `
+                        <div class="receipt-row ${r.bold ? 'font-bold' : ''}" style="margin:2px 0;">
+                            <span>${escapeHtml(r.label)}:</span>
+                            <span>${escapeHtml(r.val)}</span>
+                        </div>
+                    `).join('');
+                } else if (el.type === 'qr') {
+                    const upiString = `upi://pay?pa=${encodeURIComponent(el.pa || 'msamods@okaxis')}&pn=${encodeURIComponent(el.pn || 'Store')}&am=${encodeURIComponent(el.am || '100')}&cu=INR`;
+                    block.innerHTML = `
+                        <div class="receipt-qr-box">
+                            ${el.label ? `<div style="font-size:10px; font-weight:700; margin-bottom:4px;">${escapeHtml(el.label)}</div>` : ''}
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(upiString)}" alt="UPI QR">
+                            <div style="font-size:10px; color:#444; margin-top:4px;">GPay • PhonePe • Paytm • BHIM</div>
+                        </div>
+                    `;
+                } else if (el.type === 'barcode') {
+                    block.innerHTML = `
+                        <div class="receipt-barcode-box">
+                            <div class="barcode-bars"></div>
+                            <div style="font-size:10px; letter-spacing:0.1em; margin-top:3px;">${escapeHtml(el.value || '12345678')}</div>
+                        </div>
+                    `;
+                } else if (el.type === 'footer') {
+                    block.innerHTML = `
+                        <div class="${el.align === 'center' ? 'text-center' : 'text-left'}" style="font-size:11px; white-space:pre-wrap; margin-top:8px;">
+                            ${escapeHtml(el.text || '')}
+                        </div>
+                    `;
+                }
+
+                paper.appendChild(block);
+            });
+        }
+
+        // Save
+        async function saveCurrentTemplate() {
+            if (!currentTemplate) return;
+            try {
+                showToast("Saving template...", "info");
+                const res = await fetch('/api/template/save', {
+                    method: 'POST',
+                    headers: { ...AUTH, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentTemplate)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast("Template saved successfully!", "success");
+                    loadTemplates();
+                } else {
+                    showToast(data.error || "Failed to save", "error");
+                }
+            } catch (err) {
+                showToast("Save error: " + err.message, "error");
+            }
+        }
+
+        // Test Print Modal
+        function openTestPrintModal() {
+            document.getElementById('testPrintModal').style.display = 'flex';
+        }
+        function closeTestPrintModal() {
+            document.getElementById('testPrintModal').style.display = 'none';
+        }
+
+        async function executeTestPrint() {
+            const printerId = document.getElementById('testPrintPrinterSelect').value || null;
+            const role = document.getElementById('testPrintRoleSelect').value || null;
+
+            closeTestPrintModal();
+            showToast("Dispatching print job...", "info");
+
+            try {
+                const res = await fetch('/api/template/render-and-print', {
+                    method: 'POST',
+                    headers: { ...AUTH, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        template: currentTemplate,
+                        printerId,
+                        role
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || "Printed successfully!", "success");
+                } else {
+                    showToast(data.error || "Print failed", "error");
+                }
+            } catch (err) {
+                showToast("Print error: " + err.message, "error");
+            }
+        }
+
+        // Payload Export Modal
+        function openPayloadModal() {
+            const modal = document.getElementById('payloadModal');
+            const codeArea = document.getElementById('payloadCodeArea');
+            const payload = {
+                templateId: currentTemplate.id,
+                role: "CASHIER",
+                variables: {
+                    ORDER_ID: "ORD-9921",
+                    TOTAL: "987.00",
+                    CUSTOMER: "Rahul"
+                }
+            };
+            codeArea.textContent = JSON.stringify(payload, null, 2);
+            modal.style.display = 'flex';
+        }
+
+        function closePayloadModal() {
+            document.getElementById('payloadModal').style.display = 'none';
+        }
+
+        function copyPayloadToClipboard() {
+            const text = document.getElementById('payloadCodeArea').textContent;
+            navigator.clipboard.writeText(text);
+            showToast("Payload JSON copied to clipboard!", "success");
+            closePayloadModal();
+        }
+
+        // Helpers
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function showToast(msg, type = 'success') {
+            document.querySelectorAll('.toast').forEach(t => t.remove());
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            const icon = type === 'success' ? 'SUCCESS' : (type === 'error' ? 'ERROR' : 'INFO');
+            t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+            document.body.appendChild(t);
+            setTimeout(() => {
+                t.style.opacity = '0';
+                t.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => t.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

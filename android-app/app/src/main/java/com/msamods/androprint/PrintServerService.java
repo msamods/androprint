@@ -10,7 +10,10 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.util.Log;
 import androidx.core.app.NotificationCompat;
+
+import java.io.File;
 
 /**
  * Foreground Service that keeps AndroPrint Node.js print daemon
@@ -19,38 +22,81 @@ import androidx.core.app.NotificationCompat;
  */
 public class PrintServerService extends Service {
 
+    private static final String TAG = "AndroPrint::Service";
     private static final String CHANNEL_ID = "AndroPrintServiceChannel";
     private static final int NOTIFICATION_ID = 8921;
+
     private PowerManager.WakeLock wakeLock;
+    private Thread nodeThread;
+    private Process nodeProcess;
+    private static boolean isRunning = false;
+
+    public static boolean isServerRunning() {
+        return isRunning;
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
 
-        // Acquire WakeLock so printing never sleeps
+        // 1. Acquire WakeLock so printing never sleeps
         PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
         if (powerManager != null) {
             wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AndroPrint::PrintServerWakelock");
             wakeLock.acquire();
+            Log.i(TAG, "Android CPU WakeLock acquired for 24/7 printing");
         }
 
+        // 2. Start Node.js Engine
         startNodePrintEngine();
+        isRunning = true;
     }
 
     private void startNodePrintEngine() {
-        // Here nodejs-mobile or embedded Node runtime executes server.js
-        new Thread(new Runnable() {
+        nodeThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    // Node.js background thread execution
-                    // NodeRunner.startNodeWithArguments(new String[]{"node", "main.js"});
+                    // Extract project files if needed
+                    NodeProjectManager.ensureProjectExtracted(getApplicationContext());
+                    File projectDir = NodeProjectManager.getProjectDir(getApplicationContext());
+                    File serverJs = new File(projectDir, "server.js");
+
+                    Log.i(TAG, "Starting AndroPrint Gateway from: " + serverJs.getAbsolutePath());
+
+                    // Check if JNI native library libnode.so is loaded
+                    if (NodeRunner.isLoaded()) {
+                        Log.i(TAG, "Executing via libnode.so Native JNI runtime");
+                        NodeRunner.startNodeWithArguments(new String[]{
+                                "node",
+                                serverJs.getAbsolutePath()
+                        });
+                    } else {
+                        // Fallback: Check if embedded node binary exists in bin/node
+                        File nodeBin = new File(projectDir, "bin/node");
+                        if (!nodeBin.exists()) {
+                            nodeBin = new File(getFilesDir(), "node");
+                        }
+
+                        if (nodeBin.exists()) {
+                            nodeBin.setExecutable(true);
+                            Log.i(TAG, "Executing via standalone binary: " + nodeBin.getAbsolutePath());
+                            ProcessBuilder pb = new ProcessBuilder(nodeBin.getAbsolutePath(), serverJs.getAbsolutePath());
+                            pb.directory(projectDir);
+                            nodeProcess = pb.start();
+                            nodeProcess.waitFor();
+                        } else {
+                            Log.w(TAG, "Embedded Node runtime pending. Termux or remote node fallback active.");
+                        }
+                    }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.e(TAG, "Error in Node print engine thread", e);
                 }
             }
-        }).start();
+        }, "AndroPrintNodeEngineThread");
+
+        nodeThread.start();
     }
 
     @Override
@@ -63,7 +109,7 @@ public class PrintServerService extends Service {
 
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("AndroPrint Active")
-                .setContentText("ESC/POS Thermal Cloud Print Gateway is running")
+                .setContentText("ESC/POS Thermal Print Gateway is running (Port 3000)")
                 .setSmallIcon(android.R.drawable.ic_menu_agenda)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
@@ -76,9 +122,20 @@ public class PrintServerService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        isRunning = false;
+
+        if (nodeProcess != null) {
+            try {
+                nodeProcess.destroy();
+            } catch (Exception ignored) {}
+        }
+
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
+            Log.i(TAG, "WakeLock released");
         }
+
+        Log.i(TAG, "PrintServerService stopped");
     }
 
     @Override

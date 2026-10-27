@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
     <title>AndroPrint – Cloud Print Server</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -356,7 +357,9 @@
     <div class="login-container">
         <div class="login-card">
             <div class="logo-area">
-                <div class="logo-icon">🖨️</div>
+                <div class="logo-icon" style="padding:0; overflow:hidden; background:transparent;">
+                    <img src="logo.png" alt="AndroPrint" style="width:100%; height:100%; object-fit:cover; border-radius:20px; box-shadow:0 8px 32px rgba(99,102,241,0.4);">
+                </div>
                 <div class="logo-title">AndroPrint</div>
                 <div class="logo-subtitle">ESC/POS Cloud Print Server</div>
                 <div style="text-align:center;margin-top:12px;">
@@ -435,7 +438,7 @@
             setTimeout(() => {
                 if (u === "admin" && p === "1231") {
                     localStorage.setItem("auth", "1");
-                    btn.textContent = '✓ Welcome!';
+                    btn.textContent = 'Welcome!';
                     btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
                     setTimeout(() => {
                         window.location.href = "dashboard.html";

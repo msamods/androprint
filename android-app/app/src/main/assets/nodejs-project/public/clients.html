@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <title>Clients & API Keys – AndroPrint Cloud</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --accent: #06b6d4;
+            --bg: #0f0f23;
+            --bg-surface: #161637;
+            --bg-card: rgba(255,255,255,0.04);
+            --glass: rgba(255,255,255,0.06);
+            --glass-border: rgba(255,255,255,0.08);
+            --text: #e2e8f0;
+            --text-dim: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --radius: 16px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* Topbar */
+        .topbar {
+            background: rgba(15,15,35,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 12px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-logo {
+            width: 38px; height: 38px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .topbar-title { flex: 1; }
+        .topbar-title h1 { font-size: 1.15rem; font-weight: 700; }
+        .topbar-title span { font-size: 0.72rem; color: var(--text-dim); display: block; }
+
+        .back-btn, .icon-btn {
+            width: 38px; height: 38px;
+            border-radius: 12px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .back-btn:hover, .icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        .main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Summary Stats */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-value { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; }
+        .stat-label { font-size: 0.72rem; color: var(--text-dim); margin-top: 4px; font-weight: 500; }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(99,102,241,0.3);
+        }
+        .btn-primary:hover { box-shadow: 0 6px 20px rgba(99,102,241,0.45); transform: translateY(-1px); }
+
+        .btn-glass {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text);
+        }
+        .btn-glass:hover { background: rgba(255,255,255,0.1); }
+
+        /* Clients List */
+        .clients-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .client-card {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            padding: 20px;
+            transition: all 0.25s ease;
+        }
+        .client-card:hover {
+            border-color: rgba(99,102,241,0.3);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+        }
+
+        .client-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 14px;
+            gap: 12px;
+        }
+
+        .client-identity {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .client-avatar {
+            width: 42px; height: 42px;
+            background: rgba(6,182,212,0.12);
+            border: 1px solid rgba(6,182,212,0.25);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .client-id-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .client-date {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        .badges-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .role-badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            background: rgba(99,102,241,0.15);
+            color: var(--primary);
+            border: 1px solid rgba(99,102,241,0.25);
+        }
+        .role-badge.admin {
+            background: rgba(245,158,11,0.15);
+            color: var(--warning);
+            border-color: rgba(245,158,11,0.25);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+        .status-badge.enabled {
+            background: rgba(16,185,129,0.12);
+            color: var(--success);
+            border: 1px solid rgba(16,185,129,0.25);
+        }
+        .status-badge.disabled {
+            background: rgba(239,68,68,0.12);
+            color: var(--danger);
+            border: 1px solid rgba(239,68,68,0.25);
+        }
+
+        .dot-sm { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+        /* Credential Box */
+        .cred-box {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .cred-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cred-label {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .cred-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.88rem;
+            color: var(--accent);
+            font-weight: 600;
+            background: rgba(6,182,212,0.1);
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        .copy-pill {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .copy-pill:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+        /* Actions */
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-action {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid var(--glass-border);
+            background: var(--glass);
+            color: var(--text);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-action:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .btn-action.toggle-off {
+            color: var(--warning);
+            border-color: rgba(245,158,11,0.25);
+            background: rgba(245,158,11,0.08);
+        }
+        .btn-action.toggle-on {
+            color: var(--success);
+            border-color: rgba(16,185,129,0.25);
+            background: rgba(16,185,129,0.08);
+        }
+        .btn-action.danger {
+            color: var(--danger);
+            border-color: rgba(239,68,68,0.25);
+            background: rgba(239,68,68,0.08);
+            margin-left: auto;
+        }
+        .btn-action.danger:hover { background: rgba(239,68,68,0.2); }
+
+        /* Empty & Loading */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            color: var(--text-dim);
+        }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+        .empty-state h3 { font-size: 1.1rem; color: var(--text); margin-bottom: 6px; }
+
+        .loading-wrap {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-dim);
+        }
+        .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid rgba(255,255,255,0.08);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .modal-card {
+            background: #161637;
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .modal-header h3 { font-size: 1.1rem; font-weight: 700; }
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+        .modal-close:hover { color: #fff; }
+
+        .modal-body { padding: 24px; }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 16px 24px;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(0,0,0,0.15);
+        }
+
+        /* Generated Key Showcase in Modal */
+        .success-hero {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .success-hero .icon {
+            font-size: 2.8rem;
+            margin-bottom: 8px;
+        }
+        .success-hero h4 {
+            font-size: 1.15rem;
+            color: var(--success);
+            font-weight: 700;
+        }
+        .success-hero p {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .key-row {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .key-row-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .key-row-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+        .key-row-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.92rem;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 9999;
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        }
+        .toast.success { background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
+        .toast.error { background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <a href="dashboard.html" class="back-btn" title="Back to Dashboard">←</a>
+        <div class="topbar-logo" style="padding:0;overflow:hidden;background:transparent;"><img src="logo.png" alt="AndroPrint" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></div>
+        <div class="topbar-title">
+            <h1>Clients & API Keys</h1>
+            <span id="topbarSummary">Loading authorized POS clients...</span>
+        </div>
+        <button class="icon-btn" id="refreshBtn" title="Refresh list"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg></button>
+    </div>
+
+    <div class="main">
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value" id="statTotal" style="color:var(--primary)">0</div>
+                <div class="stat-label">Total Clients</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statActive" style="color:var(--success)">0</div>
+                <div class="stat-label">Active / Authorized</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statAdmins" style="color:var(--warning)">0</div>
+                <div class="stat-label">Admin Accounts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statDisabled" style="color:var(--danger)">0</div>
+                <div class="stat-label">Disabled</div>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div style="font-size:0.9rem; font-weight:600; color:var(--text-dim);" id="listSummary">
+                Manage API credentials for Point of Sale terminals
+            </div>
+            <button class="btn btn-primary" onclick="createClient()">
+                <span>＋</span> Create Client
+            </button>
+        </div>
+
+        <!-- Clients Container -->
+        <div id="clientsContainer" class="clients-grid">
+            <div class="loading-wrap">
+                <div class="spinner"></div>
+                <p>Loading clients...</p>
+            </div>
+        </div>
+
+        <!-- FOOTER BRANDING -->
+        <footer style="text-align:center; padding:24px 20px 10px; font-size:0.78rem; color:var(--text-dim); border-top:1px solid var(--glass-border); margin-top:30px;">
+            <div>AndroPrint Cloud v2.0 • Access & Credentials Manager</div>
+            <div style="margin-top:6px; font-weight:600; color:var(--text); letter-spacing:0.02em;">Developed By : MSA MODS x WhatYouWantKerala</div>
+        </footer>
+    </div>
+
+    <!-- Client Created Success Modal -->
+    <div class="modal-overlay" id="createdModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>New Client Created</h3>
+                <button class="modal-close" onclick="closeCreatedModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="success-hero">
+                    <div class="icon" style="color:var(--success);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                    <h4>Credentials Generated</h4>
+                    <p>Save these keys now. They authorize your POS device or web app to send ESC/POS prints.</p>
+                </div>
+
+                <div class="key-row">
+                    <div class="key-row-info">
+                        <span class="key-row-label">Client ID (x-client-id)</span>
+                        <span class="key-row-val" id="newClientId">-</span>
+                    </div>
+                    <button class="copy-pill" onclick="copyText('newClientId')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy</button>
+                </div>
+
+                <div class="key-row">
+                    <div class="key-row-info">
+                        <span class="key-row-label">Print Key / PIN (x-print-key)</span>
+                        <span class="key-row-val" id="newClientPin">-</span>
+                    </div>
+                    <button class="copy-pill" onclick="copyText('newClientPin')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy</button>
+                </div>
+
+                <div class="key-row">
+                    <div class="key-row-info">
+                        <span class="key-row-label">Assigned Role</span>
+                        <span class="key-row-val" id="newClientRole">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-glass" onclick="copyAllNewCredentials()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy All</button>
+                <button type="button" class="btn btn-primary" onclick="closeCreatedModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-card" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3>Confirm Action</h3>
+                <button class="modal-close" onclick="closeConfirmModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 28px 20px;">
+                <div style="margin-bottom:12px;color:var(--warning);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>
+                <p id="confirmMessage" style="font-size: 0.95rem; color: var(--text);">Delete this client?</p>
+                <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 6px;">Applications using this client ID will lose access.</p>
+            </div>
+            <div class="modal-footer" style="justify-content: center;">
+                <button type="button" class="btn btn-glass" onclick="closeConfirmModal()">Cancel</button>
+                <button type="button" class="btn btn-action danger" id="btnExecuteDelete" style="padding: 10px 20px; font-size: 0.85rem;">Delete Client</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let clientsList = [];
+        let clientToDelete = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadClients();
+            document.getElementById('refreshBtn').addEventListener('click', loadClients);
+
+            ['createdModal', 'confirmModal'].forEach(id => {
+                document.getElementById(id).addEventListener('click', (e) => {
+                    if (e.target.id === id) e.target.style.display = 'none';
+                });
+            });
+        });
+
+        async function loadClients() {
+            const container = document.getElementById('clientsContainer');
+            container.innerHTML = `
+                <div class="loading-wrap">
+                    <div class="spinner"></div>
+                    <p>Fetching authorized clients...</p>
+                </div>
+            `;
+
+            try {
+                const res = await fetch('/api/clients');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                clientsList = data.clients || [];
+                renderClients();
+            } catch (err) {
+                console.error('Fetch clients error:', err);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>
+                        <h3>Failed to load clients</h3>
+                        <p style="font-size:0.85rem; margin-bottom:14px;">Could not connect to /api/clients</p>
+                        <button class="btn btn-glass" onclick="loadClients()">Retry</button>
+                    </div>
+                `;
+                showToast('Failed to load clients', 'error');
+            }
+        }
+
+        function renderClients() {
+            const container = document.getElementById('clientsContainer');
+            const total = clientsList.length;
+            const active = clientsList.filter(c => c.enabled !== false).length;
+            const admins = clientsList.filter(c => c.role === 'ADMIN').length;
+            const disabled = total - active;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statActive').textContent = active;
+            document.getElementById('statAdmins').textContent = admins;
+            document.getElementById('statDisabled').textContent = disabled;
+
+            document.getElementById('topbarSummary').textContent = `${active}/${total} Active Clients`;
+            document.getElementById('listSummary').textContent = `${total} client credential${total !== 1 ? 's' : ''}`;
+
+            if (total === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
+                        <h3>No Clients Found</h3>
+                        <p style="font-size:0.85rem; margin-bottom:16px;">Generate your first client credential to authorize printing requests.</p>
+                        <button class="btn btn-primary" onclick="createClient()">＋ Create Client</button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = clientsList.map(c => {
+                const isEnabled = c.enabled !== false;
+                const isAdmin = c.role === 'ADMIN';
+                const createdDate = c.createdAt ? new Date(c.createdAt).toLocaleDateString(undefined, {
+                    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                }) : 'Legacy';
+
+                return `
+                    <div class="client-card">
+                        <div class="client-header">
+                            <div class="client-identity">
+                                <div class="client-avatar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg></div>
+                                <div>
+                                    <div class="client-id-title">${escapeHtml(c.id)}</div>
+                                    <div class="client-date">Created: ${createdDate}</div>
+                                </div>
+                            </div>
+                            <div class="badges-group">
+                                <span class="role-badge ${isAdmin ? 'admin' : ''}">${c.role || 'CLIENT'}</span>
+                                <span class="status-badge ${isEnabled ? 'enabled' : 'disabled'}">
+                                    <span class="dot-sm"></span>${isEnabled ? 'Active' : 'Disabled'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="cred-box">
+                            <div class="cred-item">
+                                <span class="cred-label">Client ID</span>
+                                <span class="cred-value">${escapeHtml(c.id)}</span>
+                            </div>
+                            <div class="cred-item">
+                                <span class="cred-label">Key / PIN</span>
+                                <span class="cred-value">${escapeHtml(c.pin || '••••')}</span>
+                            </div>
+                            <button class="copy-pill" onclick="copyCustomText('${c.id}', '${c.pin}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy Headers</button>
+                        </div>
+
+                        <div class="card-actions">
+                            <button class="btn-action ${isEnabled ? 'toggle-off' : 'toggle-on'}" onclick="toggleClient('${c.id}', ${isEnabled})">
+                                ${isEnabled ? '⏸ Deactivate' : '▶ Activate'}
+                            </button>
+                            ${!isAdmin ? `
+                                <button class="btn-action danger" onclick="confirmDeleteClient('${c.id}')">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete
+                                </button>
+                            ` : '<span style="font-size:0.72rem; color:var(--text-dim); margin-left:auto;">Protected Admin</span>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function createClient() {
+            try {
+                showToast('Generating client...', 'success');
+                const res = await fetch('/api/client/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const newClient = await res.json();
+
+                document.getElementById('newClientId').textContent = newClient.id;
+                document.getElementById('newClientPin').textContent = newClient.pin;
+                document.getElementById('newClientRole').textContent = newClient.role || 'CLIENT';
+                document.getElementById('createdModal').style.display = 'flex';
+
+                loadClients();
+            } catch (err) {
+                console.error('Create client error:', err);
+                showToast('Failed to create client', 'error');
+            }
+        }
+
+        function closeCreatedModal() {
+            document.getElementById('createdModal').style.display = 'none';
+        }
+
+        async function toggleClient(clientId, currentStatus) {
+            try {
+                const res = await fetch('/api/client/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: clientId, enabled: !currentStatus })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Client ${!currentStatus ? 'activated' : 'deactivated'}`, 'success');
+                    loadClients();
+                } else {
+                    showToast(data.error || 'Failed to toggle client', 'error');
+                }
+            } catch (err) {
+                showToast('Failed to update client', 'error');
+            }
+        }
+
+        function confirmDeleteClient(clientId) {
+            clientToDelete = clientId;
+            document.getElementById('confirmMessage').textContent = `Are you sure you want to delete "${clientId}"?`;
+            document.getElementById('btnExecuteDelete').onclick = executeDeleteClient;
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+            clientToDelete = null;
+        }
+
+        async function executeDeleteClient() {
+            if (!clientToDelete) return;
+            try {
+                const res = await fetch('/api/client/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: clientToDelete })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Client deleted', 'success');
+                    closeConfirmModal();
+                    loadClients();
+                } else {
+                    showToast(data.error || 'Failed to delete client', 'error');
+                }
+            } catch (err) {
+                showToast('Error deleting client', 'error');
+            }
+        }
+
+        function copyText(elementId) {
+            const val = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(val).then(() => showToast('Copied to clipboard!'));
+        }
+
+        function copyCustomText(id, pin) {
+            const text = `x-client-id: ${id}\nx-print-key: ${pin}`;
+            navigator.clipboard.writeText(text).then(() => showToast('Headers copied!'));
+        }
+
+        function copyAllNewCredentials() {
+            const id = document.getElementById('newClientId').textContent;
+            const pin = document.getElementById('newClientPin').textContent;
+            const text = `Client ID: ${id}\nPrint Key / PIN: ${pin}\nHeaders:\nx-client-id: ${id}\nx-print-key: ${pin}`;
+            navigator.clipboard.writeText(text).then(() => showToast('All credentials copied!'));
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function showToast(msg, type = 'success') {
+            document.querySelectorAll('.toast').forEach(t => t.remove());
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.innerHTML = `<span>${msg}</span>`;
+            document.body.appendChild(t);
+            setTimeout(() => {
+                t.style.opacity = '0';
+                t.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => t.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

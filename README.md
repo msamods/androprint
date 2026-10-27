@@ -1,7 +1,10 @@
 <div align="center">
 
-# 🖨️ ANDROPRINT v2.0
-### *Next-Gen Cloud & LAN Thermal ESC/POS Print Gateway*
+<img src="public/logo.png" width="130" height="130" style="border-radius:26px; box-shadow:0 10px 30px rgba(99,102,241,0.4);" alt="AndroPrint App Logo" />
+
+# ANDROPRINT v2.0
+### *Next-Gen Standalone ESC/POS & Cloud Print Gateway*
+*(Termux-Less Standalone Android APK • Auto-SSL • 0% Emojis • Vector Icons)*
 
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,18,24&height=180&section=header&text=AndroPrint%20Cloud&fontSize=42&fontColor=fff&animation=twinkling&fontAlignY=38&desc=Enterprise%20ESC/POS%20Print%20Gateway%20%7C%20No%20PC%20Required&descSize=16&descAlignY=62&descColor=06b6d4" width="100%" alt="AndroPrint Banner" />
@@ -174,24 +177,48 @@ All administrative dashboards are accessible directly from your browser:
 
 ## 🚀 Quick Start Guide
 
-### 1️⃣ Option A: Android (Termux)
+### 1️⃣ Option A: Universal One-Click Android Installer (Android 8 - 16)
+Transform any Android phone into an autonomous print hub in 60 seconds with our animated installer:
+
 ```bash
-# Clone and setup (Installs packages, acquires Wakelock, and sets up Termux:Boot)
+# One-Click Install in Termux:
+curl -sSL https://raw.githubusercontent.com/msamods/androprint/main/install.sh | bash
+
+# Or clone and run:
 git clone https://github.com/msamods/androprint.git
 cd androprint
-bash setup.sh
-
-# Run Server manually
-node server.js
+bash install.sh
 ```
-> 💡 **Auto-Start on Boot**: `setup.sh` automatically configures `~/.termux/boot/start-androprint.sh`. Whenever you restart your Android phone, AndroPrint boots up automatically in the background with Wakelock enabled!
+
+#### ✨ What the One-Click Installer Sets Up Automatically:
+* 📲 **All Phone Support**: 100% compatible with Android 8 (Oreo) up to Android 16 (Baklava) across `aarch64`, `arm`, and `x86_64`.
+* 🔋 **Android CPU Wakelock**: Prevents Doze mode battery sleep so printing works 24/7.
+* 🔒 **Local SSL HTTPS Active**: Auto-generates 10-year SSL certs with SAN for `https://localhost:3000` and local Wi-Fi IPs.
+* 🖨️ **Single-Phone Standalone Hub**: Connect USB OTG, Bluetooth, and Wi-Fi LAN thermal printers directly to one phone without cloud or PC.
+* ⚙️ **Dynamic Port Changer**: Change port live from the GUI or via `androprint port <PORT>`.
+* 🛠️ **Termux Terminal CLI (`androprint`)**:
+  ```bash
+  androprint start      # Start server in background with Wakelock
+  androprint stop       # Stop background server
+  androprint restart    # 1-second clean restart
+  androprint status     # Live PID, port & memory status
+  androprint logs       # Stream real-time logs
+  androprint repair     # 1-Click self-healing bug fix
+  androprint port 8080  # Change port dynamically
+  androprint open       # Open Web Dashboard in browser
+  ```
+* 📲 **One-Tap Termux:Widget Shortcuts**:
+  Adds 5 quick desktop widgets to `~/.shortcuts/` (`AndroPrint-Start.sh`, `AndroPrint-Stop.sh`, `AndroPrint-Restart.sh`, `AndroPrint-Repair.sh`, `AndroPrint-OpenUI.sh`).
+* 🔄 **Termux:Boot Auto-Start**: Boots automatically whenever your phone restarts.
+* 🛡️ **1-Click Auto-Repair Engine**: Identifies issues (memory, wakelock, stuck jobs, certs) and fixes them automatically.
 
 ### 2️⃣ Option B: Linux / Windows / macOS (Node.js)
 ```bash
 git clone https://github.com/msamods/androprint.git
 cd androprint
 npm install
-npm start
+npm run ssl    # Generate 10-year SSL certificates with SAN
+npm start      # Starts on https://localhost:3000
 ```
 
 <span id="windows-exe"></span>
@@ -205,17 +232,74 @@ Or download the pre-packaged executable directly:
 
 ---
 
+---
+
 <span id="android-apk"></span>
-## 📱 Native Android Print Agent (APK)
+## 📱 Termux-less Standalone Android `.apk` (Zero Termux Required)
 
-A complete native Android application project with **Background Foreground Service** and **WakeLock** is available in [`android-app/`](android-app/):
+For environments where customers want a pure native Android install experience without touching a terminal:
 
-- **One-Touch Start / Stop**: Toggle the print engine with a single button.
-- **Doze Mode Immunity**: Runs 24/7 without being stopped by Android battery managers.
-- **Auto Wi-Fi IP Detection**: Instantly shows your phone's LAN IP address on the screen.
-- 👉 **[Download AndroPrint-v2.0.0-release.apk](https://github.com/msamods/androprint/releases/download/v2.0.0/AndroPrint-v2.0.0-release.apk)**
+### 🌟 1-Click Android App Architecture
+* **Direct APK Install**: Just download and tap **[`AndroPrint-v2.0.0-release.apk`](https://github.com/msamods/androprint/releases/download/v2.0.0/AndroPrint-v2.0.0-release.apk)**.
+* **Embedded Daemon & Service**: Runs via Android's native `PrintServerService` as a Foreground Service with an ongoing notification.
+* **Doze Mode Immunity**: Uses native `PARTIAL_WAKE_LOCK` to keep CPU active for continuous print listening even when the phone screen is off or locked.
+* **Auto-SSL Certificate Handshake**: Local 10-year SSL certs are pre-trusted inside the native WebView, ensuring zero warning popups for customers.
+* **Built-in LAN IP Detector**: Automatically resolves phone's Wi-Fi IP and displays clickable management links.
+* **Building from Source**: The full Gradle project is located in [`android-app/`](android-app/):
+  ```bash
+  cd android-app
+  ./gradlew assembleRelease
+  ```
 
-<br/>
+---
+
+## 🔒 Auto-SSL & Encrypted Local Communication
+
+* **Localhost & LAN HTTPS**: Auto-generates high-security X.509 2048-bit RSA certificates on boot with full Subject Alternative Names (SAN) for `localhost`, `127.0.0.1`, and local Wi-Fi / Hotspot IP addresses.
+* **10-Year Validity**: Never worry about certificate expirations on offline retail counters.
+* **Browser Trust**: Inside the native APK WebView, SSL is automatically approved, and on desktop browsers, certificates can be installed into the Windows/Android root store with one click.
+* **Manual Certificate Generation**:
+  ```bash
+  npm run ssl
+  ```
+
+---
+
+## 📱 Strict Mobile Responsive & "No Zooming Allowed" Engine
+
+Every interface in [`public/`](public/) is designed for mobile POS touchscreens, waiter tablets, and phones:
+* **Strict Viewport Enforcement**:
+  ```html
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+  ```
+* **Gesture & Touch Lock**: Disables accidental double-tap zoom, rubber-band pull, and multi-touch pinch zoom via `touch-action: pan-y; -webkit-text-size-adjust: 100%;` and `gesturestart` cancellation.
+* **16px Input Standard**: Prevents iOS Safari and Android Chrome from triggering auto-zoom when tapping text fields.
+* **Glassmorphic Cyber Aesthetics**: Glowing status pills, animated radial health gauges, and dark cyber-neon palettes.
+
+---
+
+## 🖨️ Single-Phone Local Connected Devices Hub
+
+Transform a single Android phone into a master print server for all your retail devices:
+* 🔌 **USB OTG Printers**: Direct kernel communication via `/dev/usb/lp*`, `/dev/bus/usb/*`, and USB-Serial adapters (`CH340`, `PL2303`, `FTDI`).
+* 📡 **Bluetooth Thermal Printers**: Real-time scanning and pairing of portable Bluetooth ESC/POS receipt printers.
+* 📶 **Wi-Fi LAN Printers**: Fast subnet radar probing ESC/POS Port 9100 across the local network.
+* 📲 **Hotspot Connected POS Terminals**: Automatically inspects the kernel ARP table (`/proc/net/arp`) to identify client devices connected to the phone's Wi-Fi hotspot.
+* 🧪 **1-Click Test Prints**: Send immediate test receipts to any discovered device directly from the scanner list.
+
+---
+
+## ⚙️ Dynamic Port Changer & 🛡️ 1-Click Auto-Repair
+
+* **Hot Port Switching**: Change ports (e.g. `3000` ➔ `8080`, `8443`, `9000`) on the fly through the web UI modal or via `androprint port <PORT>`. The server rebinds without crashing and automatically redirects your browser.
+* **Diagnostic Health Score (`0% - 100%`)**: Live detection of RAM pressure, storage write capabilities, CPU wakelock status, and database integrity.
+* **Self-Healing Bug Fixer**:
+  ```bash
+  bash repair.sh
+  # or
+  androprint repair
+  ```
+  Automatically sanitizes corrupted JSON databases (`jobs.json`, `printer.json`, `clients.json`), flushes stuck print jobs, clears zombie network sockets, and locks CPU wakelock.
 
 ---
 

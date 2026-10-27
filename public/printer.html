@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+    <link rel="icon" type="image/png" href="favicon.png">
     <title>Printers – AndroPrint Cloud</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -516,12 +517,12 @@
 <body>
     <div class="topbar">
         <a href="dashboard.html" class="back-btn" title="Back to Dashboard">←</a>
-        <div class="topbar-logo">🖨️</div>
+        <div class="topbar-logo" style="padding:0;overflow:hidden;background:transparent;"><img src="logo.png" alt="AndroPrint" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></div>
         <div class="topbar-title">
             <h1>Printers</h1>
             <span id="topbarSummary">Loading ESC/POS devices...</span>
         </div>
-        <button class="icon-btn" id="refreshBtn" title="Refresh list">🔄</button>
+        <button class="icon-btn" id="refreshBtn" title="Refresh list"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg></button>
     </div>
 
     <div class="main">
@@ -552,19 +553,19 @@
             </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
                 <a href="webprint.html" class="btn btn-glass" style="color:var(--accent); border-color:rgba(6,182,212,0.3);">
-                    <span>📶</span> Web Bluetooth / USB
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline></svg> Web Bluetooth / USB
                 </a>
                 <button class="btn btn-glass" onclick="triggerLogoUpload()" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);">
-                    <span>🖼️</span> Receipt Logo
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Receipt Logo
                 </button>
                 <a href="webhook.html" class="btn btn-glass" style="color:#a855f7; border-color:rgba(168,85,247,0.3);">
-                    <span>⚡</span> Webhooks
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Webhooks
                 </a>
                 <a href="designer.html" class="btn btn-glass" style="color:#ec4899; border-color:rgba(236,72,153,0.3);">
-                    <span>🧾</span> Template Designer
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Template Designer
                 </a>
                 <button class="btn btn-glass" onclick="openDiscoveryModal()" style="color:#10b981; border-color:rgba(16,185,129,0.3);">
-                    <span>🔍</span> Scan Network
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> Scan Network
                 </button>
                 <input type="file" id="logoFileInput" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleLogoUpload(event)">
                 <button class="btn btn-primary" onclick="openPrinterModal()">
@@ -664,7 +665,7 @@
                 <button class="modal-close" onclick="closeConfirmModal()">&times;</button>
             </div>
             <div class="modal-body" style="text-align: center; padding: 28px 20px;">
-                <div style="font-size: 2.5rem; margin-bottom: 12px;">⚠️</div>
+                <div style="margin-bottom:12px;color:var(--warning);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>
                 <p id="confirmMessage" style="font-size: 0.95rem; color: var(--text);">Are you sure you want to delete this printer?</p>
                 <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 6px;">This action cannot be undone.</p>
             </div>
@@ -680,7 +681,7 @@
         <div class="modal-card" style="max-width: 580px;">
             <div class="modal-header">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="width:32px; height:32px; border-radius:8px; background:rgba(16,185,129,0.15); color:var(--success); display:flex; align-items:center; justify-content:center; font-size:1.1rem;">🔍</div>
+                    <div style="width:32px; height:32px; border-radius:8px; background:rgba(16,185,129,0.15); color:var(--success); display:flex; align-items:center; justify-content:center; "><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
                     <div>
                         <h3 style="font-size:1.05rem;">Auto-Discover ESC/POS Printers</h3>
                         <span style="font-size:0.72rem; color:var(--text-dim); display:block;">Scan local Wi-Fi / LAN subnet for network thermal printers (Port 9100)</span>
@@ -692,7 +693,7 @@
                 <div style="display:flex; gap:10px; margin-bottom:16px;">
                     <input type="text" class="form-input" id="scanSubnetInput" placeholder="Auto-detecting subnet..." style="font-family:'JetBrains Mono',monospace;">
                     <button type="button" class="btn btn-primary" id="btnStartScan" onclick="runNetworkScan()" style="background:linear-gradient(135deg, var(--success), #059669); box-shadow:0 4px 16px rgba(16,185,129,0.3); white-space:nowrap;">
-                        <span>⚡</span> Start Scan
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Start Scan
                     </button>
                 </div>
 
@@ -773,7 +774,7 @@
                 console.error('Error loading printers:', err);
                 container.innerHTML = `
                     <div class="empty-state">
-                        <div class="icon">⚠️</div>
+                        <div class="icon" style="color:var(--warning);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>
                         <h3>Failed to connect to printer service</h3>
                         <p style="font-size:0.85rem; margin-bottom:14px;">${err.message || 'Check server status'}</p>
                         <button class="btn btn-glass" onclick="loadPrinters()">Try Again</button>
@@ -804,7 +805,7 @@
             if (list.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
-                        <div class="icon">🖨️</div>
+                        <div class="icon" style="color:var(--primary);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg></div>
                         <h3>No Printers Configured</h3>
                         <p style="font-size:0.85rem; margin-bottom:16px;">Add your first ESC/POS network thermal printer to start dispatching jobs.</p>
                         <button class="btn btn-primary" onclick="openPrinterModal()">＋ Add Printer</button>
@@ -837,7 +838,7 @@
                     <div class="printer-card" id="printer-${p.id}">
                         <div class="printer-header">
                             <div class="printer-title-group">
-                                <div class="printer-icon">🖨️</div>
+                                <div class="printer-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg></div>
                                 <div>
                                     <div class="printer-name">${escapeHtml(p.name)}</div>
                                     <div class="printer-id">ID: ${p.id}</div>
@@ -861,7 +862,7 @@
                             <div class="meta-item">
                                 <span class="meta-label">Features</span>
                                 <div class="chips-list">
-                                    ${cut ? '<span class="chip">✂️ Auto Cut</span>' : ''}
+                                    ${cut ? '<span class="chip">Auto Cut</span>' : ''}
                                     ${p.printSettings?.bold ? '<span class="chip">𝐁 Bold</span>' : ''}
                                     ${p.printSettings?.doubleWidth ? '<span class="chip">↔ Wide</span>' : ''}
                                 </div>
@@ -870,25 +871,25 @@
 
                         <div class="card-actions" style="display:flex; flex-wrap:wrap; gap:6px;">
                             <button class="btn-action test" onclick="testPrinter('${p.id}')" ${!isEnabled ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-                                📄 Test
+                                Test
                             </button>
                             <button class="btn-action" style="color:var(--success); border-color:rgba(16,185,129,0.3);" onclick="openUpiModal('${p.id}')" ${!isEnabled ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-                                📲 UPI QR
+                                UPI QR
                             </button>
                             <button class="btn-action" style="color:var(--accent); border-color:rgba(6,182,212,0.3);" onclick="kickDrawer('${p.id}')" ${!isEnabled ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-                                💵 Drawer
+                                Drawer
                             </button>
                             <button class="btn-action" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);" onclick="soundBuzzer('${p.id}')" ${!isEnabled ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-                                🔔 Buzzer
+                                Buzzer
                             </button>
                             <button class="btn-action" onclick="openPrinterModal('${p.id}')">
-                                ✏️ Edit
+                                Edit
                             </button>
                             <button class="btn-action ${isEnabled ? 'toggle-off' : 'toggle-on'}" onclick="togglePrinter('${p.id}', ${isEnabled})">
-                                ${isEnabled ? '⏸ Disable' : '▶ Enable'}
+                                ${isEnabled ? 'Disable' : 'Enable'}
                             </button>
-                            <button class="btn-action danger" onclick="confirmDeletePrinter('${p.id}', '${escapeHtml(p.name)}')">
-                                🗑
+                            <button class="btn-action danger" onclick="confirmDeletePrinter('${p.id}', '${escapeHtml(p.name)}')" title="Delete Printer">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
                         </div>
                     </div>
@@ -1027,7 +1028,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast('💵 Cash drawer opened!', 'success');
+                    showToast('Cash drawer opened successfully', 'success');
                 } else {
                     showToast(data.error || 'Failed to open drawer', 'error');
                 }
@@ -1047,7 +1048,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast('🔔 Buzzer sounded successfully!', 'success');
+                    showToast('Buzzer sounded successfully', 'success');
                 } else {
                     showToast(data.error || 'Failed to trigger buzzer', 'error');
                 }
@@ -1082,7 +1083,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast('📲 Dynamic UPI QR printed!', 'success');
+                    showToast('Dynamic UPI QR printed', 'success');
                 } else {
                     showToast(data.error || 'Failed to print QR code', 'error');
                 }
@@ -1112,7 +1113,7 @@
                     });
                     const data = await res.json();
                     if (data.success) {
-                        showToast('🖼️ Store logo saved! Will appear on top of receipts.', 'success');
+                        showToast('Store logo saved successfully', 'success');
                     } else {
                         showToast(data.error || 'Failed to save logo', 'error');
                     }
@@ -1220,19 +1221,19 @@
                 const data = await res.json();
                 statusArea.style.display = 'none';
                 btn.disabled = false;
-                btn.innerHTML = '<span>⚡</span> Start Scan';
+                btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Start Scan';
 
                 if (data.success && data.printers && data.printers.length > 0) {
                     resultsArea.innerHTML = `
                         <div style="font-size:0.85rem; font-weight:700; color:var(--success); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-                            <span>🎉</span> Discovered ${data.printers.length} Thermal Printer(s) Online!
+                            Discovered ${data.printers.length} Thermal Printer(s) Online!
                         </div>
                         <div style="display:flex; flex-direction:column; gap:10px;">
                             ${data.printers.map(p => `
                                 <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); padding:14px; border-radius:12px;">
                                     <div>
                                         <div style="font-weight:700; color:var(--text); font-size:0.95rem; display:flex; align-items:center; gap:8px;">
-                                            <span>🖨️</span> ${escapeHtml(p.model || 'ESC/POS Printer')}
+                                            ${escapeHtml(p.model || 'ESC/POS Printer')}
                                         </div>
                                         <div style="font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--accent); margin-top:3px;">
                                             ${p.ip}:${p.port}
@@ -1249,7 +1250,7 @@
                 } else {
                     resultsArea.innerHTML = `
                         <div style="text-align:center; padding:30px 10px; color:var(--text-dim);">
-                            <div style="font-size:2rem; margin-bottom:8px;">📡</div>
+                            <div style="margin-bottom:8px;color:var(--accent);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg></div>
                             <h4 style="color:var(--text); margin-bottom:4px;">No printers found on ${subnet}.0/24</h4>
                             <p style="font-size:0.78rem;">Make sure the thermal printer is powered on and connected to the same Wi-Fi router / Ethernet switch.</p>
                         </div>
@@ -1258,10 +1259,10 @@
             } catch (err) {
                 statusArea.style.display = 'none';
                 btn.disabled = false;
-                btn.innerHTML = '<span>⚡</span> Start Scan';
+                btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Start Scan';
                 resultsArea.innerHTML = `
                     <div style="text-align:center; padding:20px 10px; color:var(--danger); font-size:0.85rem;">
-                        ⚠️ Scan failed: ${err.message}
+                        Scan failed: ${err.message}
                     </div>
                 `;
             }
@@ -1292,7 +1293,7 @@
             document.querySelectorAll('.toast').forEach(t => t.remove());
             const t = document.createElement('div');
             t.className = `toast ${type}`;
-            t.innerHTML = `<span>${type === 'success' ? '✅' : '⚠️'}</span><span>${msg}</span>`;
+            t.innerHTML = `<span>${msg}</span>`;
             document.body.appendChild(t);
             setTimeout(() => {
                 t.style.opacity = '0';

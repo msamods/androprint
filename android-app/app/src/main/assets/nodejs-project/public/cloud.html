@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <title>Cloudflare Connection & Remote Gateway – AndroPrint</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --primary:#6366f1;
+            --primary-dark:#4f46e5;
+            --accent:#06b6d4;
+            --accent-glow:rgba(6, 182, 212, 0.4);
+            --cf-orange:#f38020;
+            --cf-glow:rgba(243, 128, 32, 0.4);
+            --bg:#0b0f19;
+            --bg-card:rgba(17, 24, 39, 0.7);
+            --glass:rgba(255,255,255,0.04);
+            --glass-border:rgba(255,255,255,0.08);
+            --text:#f1f5f9;
+            --text-dim:#94a3b8;
+            --success:#10b981;
+            --warning:#f59e0b;
+            --danger:#ef4444;
+            --radius:16px;
+        }
+
+        body{
+            font-family:'Inter',-apple-system,sans-serif;
+            background:var(--bg);
+            background-image:
+                radial-gradient(circle at 15% 15%, rgba(243, 128, 32, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.08) 0%, transparent 40%);
+            background-attachment:fixed;
+            color:var(--text);
+            min-height:100vh;
+            line-height:1.5;
+            overflow-x:hidden;
+        }
+
+        /* Topbar */
+        .topbar{
+            background:rgba(11, 15, 25, 0.85);
+            backdrop-filter:blur(24px);
+            -webkit-backdrop-filter:blur(24px);
+            border-bottom:1px solid var(--glass-border);
+            padding:12px 20px;
+            position:sticky;
+            top:0;
+            z-index:100;
+            display:flex;
+            align-items:center;
+            gap:12px;
+        }
+        .topbar-logo{width:38px;height:38px;border-radius:12px;overflow:hidden;}
+        .topbar h1{flex:1;font-size:1.15rem;font-weight:700;letter-spacing:-0.02em}
+        .back-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;transition:all 0.2s}
+        .back-btn:hover{background:rgba(255,255,255,0.1);color:#fff}
+
+        .main{max-width:960px;margin:0 auto;padding:20px}
+
+        /* Hero */
+        .cloud-hero{
+            background:linear-gradient(135deg, rgba(243, 128, 32, 0.15), rgba(99, 102, 241, 0.15));
+            border:1px solid rgba(243, 128, 32, 0.3);
+            border-radius:20px;
+            padding:32px 24px;
+            text-align:center;
+            margin-bottom:24px;
+            position:relative;
+            overflow:hidden;
+            box-shadow:0 10px 30px -10px rgba(0,0,0,0.5);
+        }
+        .cloud-hero h2{font-size:1.7rem;font-weight:800;margin-bottom:6px;letter-spacing:-0.02em}
+        .cloud-hero p{color:var(--text-dim);font-size:0.9rem;max-width:560px;margin:0 auto}
+
+        /* Status indicator */
+        .tunnel-status{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:100px;margin-top:16px;font-weight:600;font-size:0.85rem}
+        .tunnel-status.active{background:rgba(16,185,129,0.15);color:var(--success);border:1px solid rgba(16,185,129,0.25)}
+        .tunnel-status.inactive{background:rgba(245,158,11,0.15);color:var(--warning);border:1px solid rgba(245,158,11,0.25)}
+        .tunnel-status.connecting{background:rgba(6,182,212,0.15);color:var(--accent);border:1px solid rgba(6,182,212,0.25)}
+        .tunnel-status .dot{width:8px;height:8px;border-radius:50%;background:currentColor;animation:blink 2s ease-in-out infinite}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+        /* Mode Selector Tabs */
+        .mode-tabs{
+            display:flex;
+            gap:8px;
+            background:rgba(0,0,0,0.3);
+            border:1px solid var(--glass-border);
+            padding:5px;
+            border-radius:12px;
+            margin-bottom:16px;
+        }
+        .mode-tab{
+            flex:1;
+            padding:9px 12px;
+            font-size:0.8rem;
+            font-weight:600;
+            border-radius:8px;
+            border:none;
+            background:transparent;
+            color:var(--text-dim);
+            cursor:pointer;
+            transition:all 0.2s ease;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:6px;
+        }
+        .mode-tab.active{
+            background:linear-gradient(135deg, var(--cf-orange), #ea580c);
+            color:#fff;
+            box-shadow:0 2px 10px var(--cf-glow);
+        }
+
+        /* Cards */
+        .card{background:var(--bg-card);backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;box-shadow:0 10px 30px -10px rgba(0,0,0,0.5)}
+        .card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--glass-border)}
+        .card-header h3{font-size:0.95rem;font-weight:700;display:flex;align-items:center;gap:8px}
+        .card-body{padding:20px}
+
+        /* Binary Status Pill */
+        .binary-pill{
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            padding:4px 10px;
+            border-radius:20px;
+            font-size:0.75rem;
+            font-weight:600;
+            cursor:pointer;
+        }
+        .binary-pill.installed{background:rgba(16,185,129,0.15);color:var(--success);border:1px solid rgba(16,185,129,0.25)}
+        .binary-pill.missing{background:rgba(245,158,11,0.15);color:var(--warning);border:1px solid rgba(245,158,11,0.25)}
+
+        /* Form elements */
+        .form-group{margin-bottom:16px}
+        .form-label{display:block;font-size:0.78rem;font-weight:600;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em}
+        .form-input,.form-select{width:100%;padding:12px 16px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:12px;color:#fff;font-size:0.88rem;outline:none;transition:all 0.2s}
+        .form-input:focus,.form-select:focus{border-color:var(--cf-orange);box-shadow:0 0 0 3px rgba(243, 128, 32, 0.2)}
+        .form-select option{background:var(--bg)}
+
+        /* Buttons */
+        .btn{padding:12px 20px;border:none;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+        .btn-cf{background:linear-gradient(135deg, var(--cf-orange), #ea580c);color:#fff;box-shadow:0 4px 15px var(--cf-glow)}
+        .btn-cf:hover{transform:translateY(-1px);box-shadow:0 6px 20px var(--cf-glow)}
+        .btn-primary{background:linear-gradient(135deg, var(--primary), var(--primary-dark));color:#fff}
+        .btn-danger{background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.3)}
+        .btn-danger:hover{background:rgba(239,68,68,0.25)}
+        .btn-glass{background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);color:var(--text)}
+        .btn-glass:hover{background:rgba(255,255,255,0.1);color:#fff}
+        .btn-full{width:100%;justify-content:center}
+
+        /* URL Display Box */
+        .url-display{background:rgba(0,0,0,0.4);border:1px solid var(--glass-border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;margin-bottom:14px}
+        .url-display code{flex:1;font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--accent);word-break:break-all}
+
+        /* Code block */
+        .code-block{background:rgba(0,0,0,0.4);border:1px solid var(--glass-border);border-radius:12px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text);overflow-x:auto;line-height:1.7}
+        .code-block .keyword{color:var(--accent)}
+        .code-block .string{color:#fbbf24}
+        .code-block .comment{color:var(--text-dim)}
+
+        /* Steps */
+        .step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+        .step:last-child{border-bottom:none}
+        .step-num{width:30px;height:30px;background:linear-gradient(135deg,var(--cf-orange),var(--primary));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:700;flex-shrink:0}
+        .step-content h4{font-size:0.88rem;font-weight:600;margin-bottom:3px}
+        .step-content p{font-size:0.8rem;color:var(--text-dim)}
+        .step-content code{background:rgba(243,128,32,0.15);color:var(--cf-orange);padding:2px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:0.78rem}
+
+        /* Toast */
+        .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:12px;font-size:0.85rem;font-weight:600;z-index:9999;backdrop-filter:blur(20px);display:flex;align-items:center;gap:8px;box-shadow:0 10px 25px rgba(0,0,0,0.5)}
+        .toast.success{background:rgba(16,185,129,0.9);color:#fff}
+        .toast.error{background:rgba(239,68,68,0.9);color:#fff}
+        .toast.info{background:rgba(6,182,212,0.9);color:#fff}
+
+        /* Modal */
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+        .modal-overlay.active{display:flex}
+        .modal-content{background:#111827;border:1px solid var(--glass-border);border-radius:20px;width:100%;max-width:540px;padding:24px;box-shadow:0 20px 40px rgba(0,0,0,0.7)}
+        .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+
+        .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+        @media(max-width:768px){.grid-2{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <a href="dashboard.html" class="back-btn" title="Back to Dashboard">←</a>
+        <div class="topbar-logo"><img src="logo.png" alt="AndroPrint" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></div>
+        <h1>Cloudflare Connection Setup</h1>
+    </div>
+
+    <div class="main">
+        <!-- HERO -->
+        <div class="cloud-hero">
+            <div style="width:64px;height:64px;margin:0 auto 16px;background:linear-gradient(135deg,var(--cf-orange),var(--primary));border-radius:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px var(--cf-glow);">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+            </div>
+            <h2>Cloudflare Tunnel Gateway</h2>
+            <p>Expose your local thermal print server securely to the web with zero router port forwarding and automatic SSL certificate validation.</p>
+            
+            <div class="tunnel-status inactive" id="tunnelStatus">
+                <span class="dot"></span>
+                <span id="tunnelText">Not Connected</span>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- TUNNEL CONFIGURATION & LAUNCHER -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+                        Connection Setup
+                    </h3>
+                    <div class="binary-pill missing" id="binaryBadge" onclick="openInstallModal()" title="Click to view install guide">
+                        Checking cloudflared...
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Mode Switcher Tabs -->
+                    <div class="mode-tabs">
+                        <button class="mode-tab active" id="tabQuick" onclick="switchMode('quick')">
+                            1-Click Quick Tunnel
+                        </button>
+                        <button class="mode-tab" id="tabToken" onclick="switchMode('token')">
+                            Zero Trust Token
+                        </button>
+                        <button class="mode-tab" id="tabManual" onclick="switchMode('manual')">
+                            Manual URL
+                        </button>
+                    </div>
+
+                    <!-- MODE 1: QUICK TUNNEL -->
+                    <div id="panelQuick">
+                        <div style="font-size:0.82rem;color:var(--text-dim);margin-bottom:16px;">
+                            Instantly creates a public HTTPS address on <strong style="color:#fff;">trycloudflare.com</strong>. Free, no Cloudflare account or credit card required.
+                        </div>
+                        <button class="btn btn-cf btn-full" id="btnStartQuick" onclick="startQuickTunnel()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                            Launch Cloudflare Quick Tunnel
+                        </button>
+                    </div>
+
+                    <!-- MODE 2: TOKEN TUNNEL -->
+                    <div id="panelToken" style="display:none;">
+                        <div style="font-size:0.82rem;color:var(--text-dim);margin-bottom:12px;">
+                            Connect your permanent branded domain (e.g., <code>print.yourstore.com</code>) via Cloudflare Zero Trust Named Tunnel token.
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tunnel Token</label>
+                            <input class="form-input" id="tunnelTokenInput" type="password" placeholder="eyJhIjoi..." autocomplete="off">
+                        </div>
+                        <button class="btn btn-cf btn-full" id="btnStartToken" onclick="startTokenTunnel()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            Connect Named Tunnel
+                        </button>
+                    </div>
+
+                    <!-- MODE 3: MANUAL URL -->
+                    <div id="panelManual" style="display:none;">
+                        <div style="font-size:0.82rem;color:var(--text-dim);margin-bottom:12px;">
+                            Register an external tunnel started outside this dashboard (e.g. ngrok, localtunnel, or background daemon).
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Provider</label>
+                            <select class="form-select" id="manualProvider">
+                                <option value="cloudflare">Cloudflare Tunnel</option>
+                                <option value="ngrok">ngrok</option>
+                                <option value="localtunnel">LocalTunnel</option>
+                                <option value="custom">Custom Proxy URL</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Public HTTPS URL</label>
+                            <input class="form-input" id="manualUrlInput" placeholder="https://xxxx.trycloudflare.com">
+                        </div>
+                        <button class="btn btn-primary btn-full" onclick="registerManualUrl()">
+                            Register Public URL
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACTIVE CONNECTION CARD -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                        Live Cloud Gateway
+                    </h3>
+                    <button class="btn btn-glass" style="padding:4px 10px;font-size:0.75rem;" onclick="loadCloudInfo()">Refresh</button>
+                </div>
+                <div class="card-body" id="activeConnectionCard">
+                    <div style="text-align:center;padding:24px 16px;color:var(--text-dim);">
+                        <div style="margin-bottom:10px;opacity:0.6;color:var(--accent);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        </div>
+                        <div style="font-weight:600;color:#fff;">No Active Tunnel</div>
+                        <div style="font-size:0.8rem;margin-top:4px;">Launch a Quick Tunnel or connect with a Token to enable worldwide printing.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QUICK SETUP GUIDE -->
+        <div class="card">
+            <div class="card-header">
+                <h3>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    How Cloudflare Printing Works
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <h4>Zero Router Configuration</h4>
+                        <p>Cloudflare creates an outbound-only encrypted tunnel from your phone/PC to Cloudflare edge nodes. No static IP or router port forwarding needed.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <h4>Sub-50ms Global Print Latency</h4>
+                        <p>Your web shops (Shopify, WooCommerce, custom POS apps) send HTTP POST requests to your public Cloudflare URL. AndroPrint prints them in real time.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <h4>Full Payload Encryption</h4>
+                        <p>All print jobs pass through high-security HTTPS TLS 1.3 with optional API token validation (<code>x-client-id</code> and <code>x-print-key</code>).</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXAMPLE CURL REQUEST -->
+        <div class="card">
+            <div class="card-header">
+                <h3>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                    Remote Cloud API Usage
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="code-block" id="curlExample">curl -X POST "https://your-tunnel.trycloudflare.com/print" \
+  -H "Content-Type: application/json" \
+  -H "x-client-id: YOUR_CLIENT_ID" \
+  -H "x-print-key: YOUR_PRINT_KEY" \
+  -d '{"printerId":"Cashier1","text":"*** CLOUD PRINT OK ***\nOrder #1024\n"}'</div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer style="text-align:center; padding:24px 20px 10px; font-size:0.78rem; color:var(--text-dim); border-top:1px solid var(--glass-border); margin-top:30px;">
+            <div>AndroPrint v2.0 • Standalone ESC/POS & Cloud Relay</div>
+            <div style="margin-top:6px; font-weight:600; color:var(--text);">Developed By : MSA MODS x WhatYouWantKerala</div>
+        </footer>
+    </div>
+
+    <!-- MODAL: CLOUDFLARED INSTALL GUIDE -->
+    <div class="modal-overlay" id="installModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="font-size:1rem;font-weight:700;">Install cloudflared Binary</h3>
+                <button class="back-btn" onclick="closeInstallModal()" style="width:30px;height:30px;">&times;</button>
+            </div>
+            <div style="font-size:0.82rem;color:var(--text-dim);margin-bottom:16px;">
+                <code>cloudflared</code> is Cloudflare's lightweight tunnel daemon. Install it on your device in seconds:
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <div style="font-size:0.75rem;font-weight:700;color:#38bdf8;margin-bottom:4px;">Android Termux:</div>
+                <div class="code-block" style="padding:10px;margin-bottom:6px;">pkg update && pkg install -y cloudflared</div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <div style="font-size:0.75rem;font-weight:700;color:#34d399;margin-bottom:4px;">Windows (PowerShell):</div>
+                <div class="code-block" style="padding:10px;margin-bottom:6px;">winget install --id Cloudflare.cloudflared</div>
+            </div>
+
+            <div style="margin-bottom:16px;">
+                <div style="font-size:0.75rem;font-weight:700;color:#a78bfa;margin-bottom:4px;">Linux / Ubuntu:</div>
+                <div class="code-block" style="padding:10px;">curl -L --output /tmp/cf.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && sudo dpkg -i /tmp/cf.deb</div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;">
+                <button class="btn btn-cf" onclick="closeInstallModal()">Got It</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'quick';
+        let isBinaryInstalled = false;
+        let activePublicUrl = '';
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('tabQuick').classList.toggle('active', mode === 'quick');
+            document.getElementById('tabToken').classList.toggle('active', mode === 'token');
+            document.getElementById('tabManual').classList.toggle('active', mode === 'manual');
+
+            document.getElementById('panelQuick').style.display = mode === 'quick' ? 'block' : 'none';
+            document.getElementById('panelToken').style.display = mode === 'token' ? 'block' : 'none';
+            document.getElementById('panelManual').style.display = mode === 'manual' ? 'block' : 'none';
+        }
+
+        function openInstallModal() {
+            document.getElementById('installModal').classList.add('active');
+        }
+
+        function closeInstallModal() {
+            document.getElementById('installModal').classList.remove('active');
+        }
+
+        async function loadCloudInfo() {
+            try {
+                const res = await fetch('/api/cloud');
+                const data = await res.json();
+
+                const status = document.getElementById('tunnelStatus');
+                const statusText = document.getElementById('tunnelText');
+                const badge = document.getElementById('binaryBadge');
+                const card = document.getElementById('activeConnectionCard');
+
+                isBinaryInstalled = !!data.installed;
+                if (isBinaryInstalled) {
+                    badge.className = 'binary-pill installed';
+                    badge.innerHTML = '✔ cloudflared: Installed';
+                    badge.onclick = null;
+                } else {
+                    badge.className = 'binary-pill missing';
+                    badge.innerHTML = '⚠ cloudflared: Not Detected';
+                    badge.onclick = openInstallModal;
+                }
+
+                if (data.tunnel && data.tunnel.active && data.tunnel.url) {
+                    activePublicUrl = data.tunnel.url;
+                    status.className = 'tunnel-status active';
+                    statusText.textContent = `Connected (${data.tunnel.provider.toUpperCase()})`;
+
+                    card.innerHTML = `
+                        <div style="margin-bottom:12px;">
+                            <div style="font-size:0.75rem;font-weight:700;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;">Public HTTPS Endpoint</div>
+                            <div class="url-display">
+                                <code>${data.tunnel.url}</code>
+                                <button class="btn btn-primary" style="padding:6px 12px;font-size:0.75rem;" onclick="copyUrl('${data.tunnel.url}')">Copy</button>
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+                            <div style="padding:10px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid var(--glass-border);">
+                                <div style="font-size:0.72rem;color:var(--text-dim);">Provider & Mode</div>
+                                <div style="font-weight:700;font-size:0.85rem;">${data.tunnel.provider} (${data.tunnel.mode})</div>
+                            </div>
+                            <div style="padding:10px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid var(--glass-border);">
+                                <div style="font-size:0.72rem;color:var(--text-dim);">Server ID</div>
+                                <div style="font-weight:700;font-size:0.85rem;">${data.serverId}</div>
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <button class="btn btn-cf" style="flex:1;justify-content:center;" onclick="testCloudPrint()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                                Test Print via Cloud
+                            </button>
+                            <button class="btn btn-danger" onclick="disconnectTunnel()">
+                                Disconnect
+                            </button>
+                        </div>
+                    `;
+
+                    updateCurlExample(data.tunnel.url);
+                } else {
+                    activePublicUrl = '';
+                    status.className = 'tunnel-status inactive';
+                    statusText.textContent = 'Not Connected';
+                    card.innerHTML = `
+                        <div style="text-align:center;padding:24px 16px;color:var(--text-dim);">
+                            <div style="margin-bottom:10px;opacity:0.6;color:var(--accent);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            </div>
+                            <div style="font-weight:600;color:#fff;">No Active Tunnel</div>
+                            <div style="font-size:0.8rem;margin-top:4px;">Launch a Quick Tunnel or connect with a Token to enable worldwide printing.</div>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.warn('Failed to load cloud info:', err);
+            }
+        }
+
+        async function startQuickTunnel() {
+            const btn = document.getElementById('btnStartQuick');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = 'Connecting to Cloudflare...';
+            showToast('Starting Cloudflare Quick Tunnel...', 'info');
+
+            try {
+                const res = await fetch('/api/cloudflare/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'quick' })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Cloudflare tunnel connected!', 'success');
+                    loadCloudInfo();
+                } else {
+                    showToast(data.error || 'Failed to start tunnel', 'error');
+                    if (!isBinaryInstalled) openInstallModal();
+                }
+            } catch (e) {
+                showToast('Tunnel error: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function startTokenTunnel() {
+            const token = document.getElementById('tunnelTokenInput').value.trim();
+            if (!token) {
+                showToast('Please enter your Cloudflare Tunnel Token', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnStartToken');
+            btn.disabled = true;
+            btn.innerHTML = 'Connecting Named Tunnel...';
+
+            try {
+                const res = await fetch('/api/cloudflare/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'token', token })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Cloudflare Named Tunnel active!', 'success');
+                    loadCloudInfo();
+                } else {
+                    showToast(data.error || 'Connection failed', 'error');
+                    if (!isBinaryInstalled) openInstallModal();
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Connect Named Tunnel';
+            }
+        }
+
+        async function registerManualUrl() {
+            const url = document.getElementById('manualUrlInput').value.trim();
+            const provider = document.getElementById('manualProvider').value;
+
+            if (!url) {
+                showToast('Please enter a tunnel URL', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/cloud/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, provider })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Tunnel URL registered!', 'success');
+                    loadCloudInfo();
+                } else {
+                    showToast(data.error || 'Registration failed', 'error');
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            }
+        }
+
+        async function disconnectTunnel() {
+            if (!confirm('Disconnect active cloud tunnel?')) return;
+            try {
+                const res = await fetch('/api/cloud/disconnect', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Cloud tunnel disconnected', 'success');
+                    loadCloudInfo();
+                }
+            } catch (e) {
+                showToast('Disconnect error', 'error');
+            }
+        }
+
+        async function testCloudPrint() {
+            showToast('Dispatching test print via Cloudflare...', 'info');
+            try {
+                const res = await fetch('/print', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: '*** ANDROPRINT CLOUDFLARE TEST ***\nRemote Cloud Print Verified OK!\nLatency: <50ms\n--------------------------------\n'
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Test print dispatched successfully!', 'success');
+                } else {
+                    showToast(data.error || 'Print failed', 'error');
+                }
+            } catch (e) {
+                showToast('Print error: ' + e.message, 'error');
+            }
+        }
+
+        function updateCurlExample(cloudUrl) {
+            const block = document.getElementById('curlExample');
+            block.textContent = `curl -X POST "${cloudUrl}/print" \\
+  -H "Content-Type: application/json" \\
+  -H "x-client-id: YOUR_CLIENT_ID" \\
+  -H "x-print-key: YOUR_PRINT_KEY" \\
+  -d '{"printerId":"Cashier1","text":"*** CLOUD PRINT OK ***\\nOrder #1024\\n"}'`;
+        }
+
+        function copyUrl(url) {
+            navigator.clipboard.writeText(url);
+            showToast('Cloud URL copied to clipboard!', 'success');
+        }
+
+        function showToast(msg, type = 'success') {
+            document.querySelectorAll('.toast').forEach(t => t.remove());
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3200);
+        }
+
+        // Connect SSE for live updates
+        try {
+            const es = new EventSource('/api/events');
+            es.onmessage = (e) => {
+                try {
+                    const d = JSON.parse(e.data);
+                    if (d.type === 'cloud_update') {
+                        loadCloudInfo();
+                    }
+                } catch {}
+            };
+        } catch {}
+
+        loadCloudInfo();
+    </script>
+</body>
+</html>

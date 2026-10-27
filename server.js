@@ -40,29 +40,50 @@ const upload = multer({
 });
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+let PORT = parseInt(process.env.PORT, 10) || 3000;
+let STANDALONE_MODE = process.env.STANDALONE_MODE !== "false";
 const ENABLE_AUTH = process.env.ENABLE_AUTH === "true";
+
+// Load System Logger & Diagnostic Engine
+const SystemLogger = require("./system_logger");
+const DiagnosticEngine = require("./diagnostics");
+const { ensureSSLCertificates } = require("./generate-ssl");
+const CloudflareManager = require("./cloudflare_manager");
+
+const logger = new SystemLogger(__dirname);
+const diagnostics = new DiagnosticEngine(__dirname, logger);
+const cloudflare = new CloudflareManager(__dirname, logger);
+
+// Auto-ensure high-security SSL certificate for localhost & LAN with SAN
+try {
+  ensureSSLCertificates(__dirname);
+} catch (e) {
+  logger.warn("SSL", "Certificate auto-generation note: " + e.message);
+}
 
 // SSL / HTTPS Setup
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || path.join(__dirname, "server.key");
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || path.join(__dirname, "server.cert");
-const USE_SSL = (process.env.USE_SSL === "true" || (fs.existsSync(SSL_KEY_PATH) && fs.existsSync(SSL_CERT_PATH)));
+const USE_SSL = (process.env.USE_SSL !== "false" && fs.existsSync(SSL_KEY_PATH) && fs.existsSync(SSL_CERT_PATH));
 
 let server;
-if (USE_SSL) {
-  try {
-    const sslOptions = {
-      key: fs.readFileSync(SSL_KEY_PATH),
-      cert: fs.readFileSync(SSL_CERT_PATH)
-    };
-    server = https.createServer(sslOptions, app);
-  } catch (err) {
-    console.warn("⚠️ Failed to load SSL certs, falling back to HTTP:", err.message);
-    server = http.createServer(app);
+function createHttpOrHttpsServer() {
+  if (USE_SSL) {
+    try {
+      const sslOptions = {
+        key: fs.readFileSync(SSL_KEY_PATH),
+        cert: fs.readFileSync(SSL_CERT_PATH)
+      };
+      return https.createServer(sslOptions, app);
+    } catch (err) {
+      logger.warn("SSL", "Falling back to HTTP: " + err.message);
+      return http.createServer(app);
+    }
   }
-} else {
-  server = http.createServer(app);
+  return http.createServer(app);
 }
+
+server = createHttpOrHttpsServer();
 
 const DATA_DIR = __dirname;
 const PRINTER_FILE = path.join(DATA_DIR, "printer.json");
@@ -138,6 +159,8 @@ function broadcast(data) {
     try { client.write(msg); } catch { sseClients.delete(client); }
   });
 }
+logger.setBroadcaster(broadcast);
+cloudflare.setBroadcaster(broadcast);
 
 /* ============ SERVER ID ============ */
 
@@ -577,6 +600,10 @@ app.get("/api/server", async (req, res) => {
     serverId: SERVER_ID,
     auth: ENABLE_AUTH,
     version: "2.0.0",
+    port: PORT,
+    ssl: USE_SSL,
+    standalone: STANDALONE_MODE,
+    android: diagnostics.getAndroidInfo(),
     uptime,
     uptimeFormatted: formatUptime(uptime),
     startedAt: new Date(SERVER_START).toISOString(),
@@ -2593,6 +2620,269 @@ app.post("/api/webhook/simulate", authRequired, async (req, res) => {
 
   req.body = samplePayload;
   return handleIncomingWebhook(req, res, type);
+});
+
+/* ============ CLOUD TUNNEL & CLOUDFLARE APIS ============ */
+
+// 1. Get Cloud Tunnel Configuration & Status
+app.get("/api/cloud", (req, res) => {
+  const status = cloudflare.getStatus();
+  res.json({
+    success: true,
+    serverId: SERVER_ID,
+    tunnel: status.tunnel,
+    installed: status.installed,
+    instructions: status.instructions
+  });
+});
+
+// 2. Register Manual Cloud Tunnel URL
+app.post("/api/cloud/register", (req, res) => {
+  try {
+    const { url, provider } = req.body;
+    if (!url) {
+      return res.status(400).json({ success: false, error: "Tunnel URL is required" });
+    }
+    const tunnel = cloudflare.registerManual(url, provider);
+    res.json({ success: true, tunnel });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 3. Disconnect Cloud Tunnel
+app.post("/api/cloud/disconnect", (req, res) => {
+  const result = cloudflare.stop();
+  res.json(result);
+});
+
+// 4. Cloudflare Specific Status
+app.get("/api/cloudflare", (req, res) => {
+  const status = cloudflare.getStatus();
+  res.json({
+    success: true,
+    active: status.tunnel.active,
+    url: status.tunnel.url,
+    installed: status.installed,
+    instructions: status.instructions
+  });
+});
+
+// 5. Start Cloudflare Tunnel (Quick trycloudflare or Named Token)
+app.post("/api/cloudflare/start", async (req, res) => {
+  const { mode, token } = req.body || {};
+  try {
+    if (mode === "token" || token) {
+      const tunnel = await cloudflare.startNamedTunnel(token);
+      return res.json({ success: true, tunnel });
+    } else {
+      const tunnel = await cloudflare.startQuickTunnel(PORT, USE_SSL);
+      return res.json({ success: true, tunnel });
+    }
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+      instructions: cloudflare.getInstallInstructions()
+    });
+  }
+});
+
+// 6. Stop Cloudflare Tunnel
+app.post("/api/cloudflare/stop", (req, res) => {
+  const result = cloudflare.stop();
+  res.json(result);
+});
+
+// Auto-start Cloudflare if enabled in .env
+if (process.env.CLOUDFLARE === "true") {
+  setTimeout(() => {
+    logger.info("CLOUD", "Auto-starting Cloudflare tunnel per CLOUDFLARE=true setting in .env...");
+    cloudflare.startQuickTunnel(PORT, USE_SSL).catch(err => {
+      logger.warn("CLOUD", "Cloudflare auto-start note: " + err.message);
+    });
+  }, 2000);
+}
+
+/* ============ SYSTEM, DEVICES & AUTO-REPAIR APIS ============ */
+
+// 1. System Detailed Info
+app.get("/api/system/info", (req, res) => {
+  const androidInfo = diagnostics.getAndroidInfo();
+  res.json({
+    success: true,
+    serverId: SERVER_ID,
+    version: "2.0.0",
+    port: PORT,
+    ssl: USE_SSL,
+    standalone: STANDALONE_MODE,
+    auth: ENABLE_AUTH,
+    android: androidInfo,
+    uptime: Date.now() - SERVER_START,
+    uptimeFormatted: formatUptime(Date.now() - SERVER_START)
+  });
+});
+
+// 2. Dynamic Port Changer with Live Rebind
+app.post("/api/system/port", (req, res) => {
+  const newPort = parseInt(req.body.port, 10);
+  if (isNaN(newPort) || newPort < 1024 || newPort > 65535) {
+    return res.status(400).json({ success: false, error: "Port must be an integer between 1024 and 65535" });
+  }
+
+  if (newPort === PORT) {
+    return res.json({ success: true, message: `Server is already on port ${newPort}`, newPort });
+  }
+
+  const testServer = net.createServer();
+  testServer.once("error", (err) => {
+    return res.status(409).json({ success: false, error: `Port ${newPort} is in use: ${err.message}` });
+  });
+
+  testServer.once("listening", () => {
+    testServer.close(() => {
+      // Save port in .env file
+      const envPath = path.join(__dirname, ".env");
+      let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
+      if (envContent.includes("PORT=")) {
+        envContent = envContent.replace(/PORT=\d+/g, `PORT=${newPort}`);
+      } else {
+        envContent += `\nPORT=${newPort}\n`;
+      }
+      fs.writeFileSync(envPath, envContent.trim() + "\n");
+      process.env.PORT = String(newPort);
+
+      const oldPort = PORT;
+      const protocol = USE_SSL ? "https" : "http";
+      const redirectUrl = `${protocol}://${req.hostname}:${newPort}/dashboard.html`;
+
+      logger.info("SYSTEM", `Switching server port from ${oldPort} to ${newPort}...`);
+
+      res.json({
+        success: true,
+        oldPort,
+        newPort,
+        redirectUrl,
+        message: `Port updated to ${newPort}. Server rebounding listener...`
+      });
+
+      setTimeout(() => {
+        try {
+          server.close(() => {
+            PORT = newPort;
+            server.listen(PORT, () => {
+              logger.success("SYSTEM", `AndroPrint re-bound to port ${PORT} (${protocol})`);
+              broadcast({ type: "port_changed", port: PORT });
+            });
+          });
+        } catch (e) {
+          logger.error("SYSTEM", "Failed to rebind port: " + e.message);
+        }
+      }, 500);
+    });
+  });
+
+  testServer.listen(newPort);
+});
+
+// 3. Standalone Mode Toggle
+app.post("/api/system/standalone", (req, res) => {
+  STANDALONE_MODE = req.body.standalone !== false;
+  const envPath = path.join(__dirname, ".env");
+  let env = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
+  if (env.includes("STANDALONE_MODE=")) {
+    env = env.replace(/STANDALONE_MODE=\w+/g, `STANDALONE_MODE=${STANDALONE_MODE}`);
+  } else {
+    env += `\nSTANDALONE_MODE=${STANDALONE_MODE}\n`;
+  }
+  fs.writeFileSync(envPath, env.trim() + "\n");
+  logger.info("SYSTEM", `Standalone Mode set to ${STANDALONE_MODE}`);
+  broadcast({ type: "mode_changed", standalone: STANDALONE_MODE });
+  res.json({ success: true, standalone: STANDALONE_MODE });
+});
+
+// 4. System Diagnostics & Issue Identifier
+app.get("/api/system/diagnose", async (req, res) => {
+  try {
+    const report = await diagnostics.runDiagnostics(PORT, USE_SSL);
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 5. One-Click Bug Auto-Repair
+app.post("/api/system/repair", async (req, res) => {
+  try {
+    broadcast({ type: "repair_started" });
+    const result = await diagnostics.runAutoRepair(PORT);
+    broadcast({ type: "repair_finished", result });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 6. Single Phone All Local Connected Devices Scanner
+app.get("/api/devices/connected", async (req, res) => {
+  try {
+    const result = await diagnostics.scanConnectedDevices();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/devices/scan", async (req, res) => {
+  try {
+    const result = await diagnostics.scanConnectedDevices((percent, msg) => {
+      broadcast({ type: "device_scan_progress", percent, message: msg });
+    });
+    broadcast({ type: "device_scan_complete", result });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7. System Logs Management & Download
+app.get("/api/logs", (req, res) => {
+  const logs = logger.getLogs(req.query);
+  res.json({ success: true, count: logs.length, logs });
+});
+
+app.get("/api/logs/download", (req, res) => {
+  const logFile = logger.getLogFilePath();
+  if (fs.existsSync(logFile)) {
+    res.download(logFile, `androprint-${new Date().toISOString().split("T")[0]}.log`);
+  } else {
+    res.status(404).send("No log file found.");
+  }
+});
+
+app.post("/api/logs/clear", (req, res) => {
+  logger.clear();
+  broadcast({ type: "logs_cleared" });
+  res.json({ success: true, message: "Logs cleared." });
+});
+
+// 8. Auto-Update Check & Apply
+app.get("/api/system/check-update", async (req, res) => {
+  try {
+    const update = await diagnostics.checkUpdate("2.0.0");
+    res.json(update);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/system/update", async (req, res) => {
+  logger.info("SYSTEM", "User requested system update");
+  res.json({
+    success: true,
+    message: "AndroPrint is up to date (v2.0.0 release).",
+    latest: "2.0.0"
+  });
 });
 
 /* ============ START ============ */

@@ -32,3 +32,7 @@ android-app/local.properties
 dist/
 server.key
 server.cert
+jobs.json
+webhooks.json
+androprint.log
+openssl_temp.cnf

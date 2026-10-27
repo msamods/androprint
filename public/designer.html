@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+    <link rel="icon" type="image/png" href="favicon.png">
     <title>Receipt Template Designer • AndroPrint Cloud</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -555,7 +556,7 @@
     <div class="topbar">
         <div class="topbar-left">
             <a href="dashboard.html" class="back-btn" title="Back to Dashboard">←</a>
-            <div style="font-size:1.5rem;">🧾</div>
+            <div style="width:36px;height:36px;padding:0;overflow:hidden;border-radius:10px;"><img src="logo.png" alt="AndroPrint" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></div>
             <div class="topbar-title">
                 <h1>Receipt Template Designer</h1>
                 <span>Visual ESC/POS Layout & Variable Builder</span>
@@ -570,13 +571,13 @@
                 <span>＋</span> New
             </button>
             <button class="btn btn-glass" onclick="openPayloadModal()">
-                <span>📋</span> API JSON
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> API JSON
             </button>
             <button class="btn btn-primary" onclick="saveCurrentTemplate()">
-                <span>💾</span> Save Template
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Save Template
             </button>
             <button class="btn btn-success" onclick="openTestPrintModal()">
-                <span>🖨️</span> Test Print
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Test Print
             </button>
         </div>
     </div>
@@ -588,7 +589,7 @@
             <!-- Template Info & Settings -->
             <div class="panel-section">
                 <div class="section-header">
-                    <span>⚙️ Template Config</span>
+                    <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Template Config</span>
                     <span id="templateIdBadge" style="font-size:0.68rem; color:var(--text-dim); text-transform:none; font-family:'JetBrains Mono',monospace;"></span>
                 </div>
 
@@ -623,11 +624,11 @@
                 <div style="display:flex; gap:16px;">
                     <label class="checkbox-row">
                         <input type="checkbox" id="tplDrawerKick" onchange="updateTemplateMeta()">
-                        <span>💵 Kick Drawer</span>
+                        <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Kick Drawer</span>
                     </label>
                     <label class="checkbox-row">
                         <input type="checkbox" id="tplBuzzer" onchange="updateTemplateMeta()">
-                        <span>🔔 Kitchen Buzzer</span>
+                        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> Kitchen Buzzer</span>
                     </label>
                 </div>
             </div>
@@ -635,32 +636,32 @@
             <!-- Add Elements Palette -->
             <div class="panel-section">
                 <div class="section-header">
-                    <span>➕ Add Component</span>
+                    <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add Component</span>
                 </div>
                 <div class="palette-grid">
                     <button class="palette-btn" onclick="addElement('header')">
-                        <span>🏷️</span> Store Header
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Store Header
                     </button>
                     <button class="palette-btn" onclick="addElement('divider')">
                         <span>〰️</span> Divider Line
                     </button>
                     <button class="palette-btn" onclick="addElement('meta')">
-                        <span>📌</span> Key-Value Info
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Key-Value Info
                     </button>
                     <button class="palette-btn" onclick="addElement('items')">
-                        <span>🛒</span> Items Table
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Items Table
                     </button>
                     <button class="palette-btn" onclick="addElement('totals')">
-                        <span>💰</span> Totals Block
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Totals Block
                     </button>
                     <button class="palette-btn" onclick="addElement('qr')">
-                        <span>📱</span> Dynamic UPI QR
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg> Dynamic UPI QR
                     </button>
                     <button class="palette-btn" onclick="addElement('barcode')">
-                        <span>📊</span> Barcode
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Barcode
                     </button>
                     <button class="palette-btn" onclick="addElement('footer')">
-                        <span>💬</span> Footer Note
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Footer Note
                     </button>
                 </div>
             </div>
@@ -668,7 +669,7 @@
             <!-- Elements Structure List -->
             <div class="panel-section" style="flex:1;">
                 <div class="section-header">
-                    <span>📑 Receipt Structure</span>
+                    <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Receipt Structure</span>
                     <span id="elementsCountBadge" style="font-size:0.7rem; color:var(--text-dim); text-transform:none;">0 blocks</span>
                 </div>
                 <div class="elements-list" id="elementsListContainer"></div>
@@ -677,8 +678,8 @@
             <!-- Block Inspector -->
             <div class="panel-section" id="blockInspectorSection" style="display:none; background:rgba(99,102,241,0.05); border-top:1px solid rgba(99,102,241,0.2);">
                 <div class="section-header">
-                    <span id="inspectorTitle">✏️ Edit Block</span>
-                    <button class="ctrl-btn danger" onclick="deleteSelectedElement()" title="Delete Block">🗑️ Remove</button>
+                    <span id="inspectorTitle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit Block</span>
+                    <button class="ctrl-btn danger" onclick="deleteSelectedElement()" title="Delete Block"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Remove</button>
                 </div>
                 <div id="inspectorFormArea"></div>
             </div>
@@ -708,7 +709,7 @@
     <div class="modal-overlay" id="testPrintModal" style="display:none;">
         <div class="modal-card">
             <div class="modal-header">
-                <h3>🖨️ Dispatch Test Print</h3>
+                <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Dispatch Test Print</h3>
                 <button class="modal-close" onclick="closeTestPrintModal()">&times;</button>
             </div>
             <div class="modal-body">
@@ -734,7 +735,7 @@
             <div class="modal-footer">
                 <button class="btn btn-glass" onclick="closeTestPrintModal()">Cancel</button>
                 <button class="btn btn-primary" onclick="executeTestPrint()">
-                    <span>🚀</span> Print Receipt Now
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Print Receipt Now
                 </button>
             </div>
         </div>
@@ -744,7 +745,7 @@
     <div class="modal-overlay" id="payloadModal" style="display:none;">
         <div class="modal-card" style="max-width: 620px;">
             <div class="modal-header">
-                <h3>📋 API Integration Payload</h3>
+                <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> API Integration Payload</h3>
                 <button class="modal-close" onclick="closePayloadModal()">&times;</button>
             </div>
             <div class="modal-body">
@@ -756,7 +757,7 @@
             <div class="modal-footer">
                 <button class="btn btn-glass" onclick="closePayloadModal()">Close</button>
                 <button class="btn btn-primary" onclick="copyPayloadToClipboard()">
-                    <span>📋</span> Copy JSON
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy JSON
                 </button>
             </div>
         </div>
@@ -805,7 +806,7 @@
                 availablePrinters.forEach(p => {
                     const opt = document.createElement('option');
                     opt.value = p.id;
-                    opt.textContent = `${p.name} (${p.role || 'CASHIER'}) - ${p.online ? '🟢 Online' : '🔴 Offline'}`;
+                    opt.textContent = `${p.name} (${p.role || 'CASHIER'}) - ${p.online ? 'Online' : 'Offline'}`;
                     select.appendChild(opt);
                 });
             } catch (e) {}
@@ -954,19 +955,19 @@
                 item.onclick = () => selectElement(idx);
 
                 const iconMap = {
-                    header: '🏷️', divider: '〰️', meta: '📌', items: '🛒',
-                    totals: '💰', qr: '📱', barcode: '📊', footer: '💬'
+                    header: 'HEADER', divider: '---', meta: 'META', items: 'ITEMS',
+                    totals: 'TOTAL', qr: 'QR', barcode: 'BARCODE', footer: 'FOOTER'
                 };
 
                 item.innerHTML = `
                     <div class="element-title">
-                        <span>${iconMap[el.type] || '📄'}</span>
+                        <span>${iconMap[el.type] || 'BLOCK'}</span>
                         <span>${escapeHtml(el.type.toUpperCase())}</span>
                     </div>
                     <div class="element-controls">
                         <button class="ctrl-btn" onclick="event.stopPropagation(); moveElement(${idx}, -1)" title="Move Up">↑</button>
                         <button class="ctrl-btn" onclick="event.stopPropagation(); moveElement(${idx}, 1)" title="Move Down">↓</button>
-                        <button class="ctrl-btn danger" onclick="event.stopPropagation(); removeElement(${idx})" title="Delete">✕</button>
+                        <button class="ctrl-btn danger" onclick="event.stopPropagation(); removeElement(${idx})" title="Delete">&times;</button>
                     </div>
                 `;
                 container.appendChild(item);
@@ -1012,7 +1013,7 @@
             const el = currentTemplate.elements[selectedIndex];
             const section = document.getElementById('blockInspectorSection');
             const formArea = document.getElementById('inspectorFormArea');
-            document.getElementById('inspectorTitle').textContent = `✏️ Edit ${el.type.toUpperCase()} Block`;
+            document.getElementById('inspectorTitle').textContent = `Edit ${el.type.toUpperCase()} Block`;
             section.style.display = 'block';
 
             let html = '';
@@ -1053,7 +1054,7 @@
                             <div style="display:flex; gap:6px;">
                                 <input type="text" class="form-input" placeholder="Key" value="${escapeHtml(r.key)}" oninput="updateMetaRow(${rIdx}, 'key', this.value)">
                                 <input type="text" class="form-input" placeholder="Value" value="${escapeHtml(r.val)}" oninput="updateMetaRow(${rIdx}, 'val', this.value)">
-                                <button class="ctrl-btn danger" onclick="removeMetaRow(${rIdx})">✕</button>
+                                <button class="ctrl-btn danger" onclick="removeMetaRow(${rIdx})">&times;</button>
                             </div>
                         `).join('')}
                     </div>
@@ -1333,7 +1334,7 @@
             document.querySelectorAll('.toast').forEach(t => t.remove());
             const t = document.createElement('div');
             t.className = `toast ${type}`;
-            const icon = type === 'success' ? '✅' : (type === 'error' ? '⚠️' : 'ℹ️');
+            const icon = type === 'success' ? 'SUCCESS' : (type === 'error' ? 'ERROR' : 'INFO');
             t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
             document.body.appendChild(t);
             setTimeout(() => {

@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+    <link rel="icon" type="image/png" href="favicon.png">
     <title>Web Direct Print – AndroPrint Cloud</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -363,7 +364,7 @@
 <body>
     <div class="topbar">
         <a href="dashboard.html" class="back-btn" title="Back to Dashboard">←</a>
-        <div class="topbar-logo">⚡</div>
+        <div class="topbar-logo" style="padding:0;overflow:hidden;background:transparent;"><img src="logo.png" alt="AndroPrint" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></div>
         <div class="topbar-title">
             <h1>Web Direct Printing</h1>
             <span>Client-side Web Bluetooth & WebUSB ESC/POS bridge</span>
@@ -373,7 +374,7 @@
     <div class="main">
         <!-- Hero Header -->
         <div class="hero-banner">
-            <div class="hero-icon">🖨️</div>
+            <div class="hero-icon" style="color:var(--primary);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg></div>
             <div class="hero-info">
                 <h2>Direct Browser-to-Printer Bridge</h2>
                 <p>Connect your thermal receipt printers directly via <b>Web Bluetooth (BLE)</b> or <b>WebUSB</b> right inside Chrome/Edge on Android or PC, with zero drivers or local server required!</p>
@@ -382,7 +383,7 @@
 
         <!-- Browser Support Banner -->
         <div class="browser-compat-banner">
-            <span class="icon">💡</span>
+            
             <div>
                 <b>Hardware Requirements:</b> Web Bluetooth and WebUSB are natively supported in Chromium browsers (Chrome, Edge, Opera, Samsung Internet) on Android, Windows, Mac, and Linux. HTTPS or localhost required.
             </div>
@@ -391,14 +392,14 @@
         <!-- Tabs Navigation -->
         <div class="tabs-header">
             <div class="tab-btn active" id="tabBluetoothBtn" onclick="switchTab('bluetooth')">
-                <div class="tab-icon" style="color:#38bdf8;">📶</div>
+                <div class="tab-icon" style="color:#38bdf8;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline></svg></div>
                 <div>
                     <div class="tab-title">Web Bluetooth</div>
                     <div class="tab-desc">Wireless BLE thermal printers</div>
                 </div>
             </div>
             <div class="tab-btn" id="tabUsbBtn" onclick="switchTab('usb')">
-                <div class="tab-icon" style="color:#a855f7;">🔌</div>
+                <div class="tab-icon" style="color:#a855f7;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="19" r="2"></circle><circle cx="6" cy="9" r="1.5"></circle><circle cx="18" cy="13" r="1.5"></circle><path d="M12 17V3"></path><path d="m9 5 3-3 3 3"></path><path d="M6 10.5V13a3 3 0 0 0 3 3h3"></path><path d="M18 14.5V16a3 3 0 0 1-3 3h-3"></path></svg></div>
                 <div>
                     <div class="tab-title">WebUSB (OTG)</div>
                     <div class="tab-desc">Direct USB cable / POS thermal</div>
@@ -410,20 +411,20 @@
         <div id="panelBluetooth" class="tab-panel">
             <div class="card">
                 <div class="card-header">
-                    <h3>📶 Web Bluetooth ESC/POS Device</h3>
+                    <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline></svg> Web Bluetooth ESC/POS Device</h3>
                     <span id="btStatusPill" class="status-pill disconnected"><span class="dot-sm"></span>Disconnected</span>
                 </div>
                 <div class="card-body">
                     <div class="device-status-box">
                         <div class="device-info-left">
-                            <div class="device-avatar" style="color:#38bdf8;">📶</div>
+                            <div class="device-avatar" style="color:#38bdf8;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline></svg></div>
                             <div>
                                 <div class="device-name" id="btDeviceName">No Bluetooth Printer Paired</div>
                                 <div class="device-sub" id="btDeviceId">Click 'Pair Bluetooth' to scan nearby BLE printers</div>
                             </div>
                         </div>
                         <div style="display:flex; gap:8px;">
-                            <button class="btn btn-accent" id="btnPairBT" onclick="connectBluetooth()">🔍 Pair Bluetooth</button>
+                            <button class="btn btn-accent" id="btnPairBT" onclick="connectBluetooth()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline></svg> Pair Bluetooth</button>
                             <button class="btn btn-danger" id="btnDisconnectBT" onclick="disconnectBluetooth()" style="display:none;">Disconnect</button>
                         </div>
                     </div>
@@ -444,8 +445,8 @@
                     </div>
 
                     <div class="btn-row">
-                        <button class="btn btn-primary" onclick="printBluetooth()">🖨️ Send to Bluetooth Printer</button>
-                        <button class="btn btn-glass" onclick="testBluetoothReceipt()">📄 Print Sample Receipt</button>
+                        <button class="btn btn-primary" onclick="printBluetooth()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Send to Bluetooth Printer</button>
+                        <button class="btn btn-glass" onclick="testBluetoothReceipt()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Print Sample Receipt</button>
                     </div>
                 </div>
             </div>
@@ -455,20 +456,20 @@
         <div id="panelUsb" class="tab-panel" style="display:none;">
             <div class="card">
                 <div class="card-header">
-                    <h3>🔌 WebUSB ESC/POS Printer</h3>
+                    <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="19" r="2"></circle><circle cx="6" cy="9" r="1.5"></circle><circle cx="18" cy="13" r="1.5"></circle><path d="M12 17V3"></path><path d="m9 5 3-3 3 3"></path><path d="M6 10.5V13a3 3 0 0 0 3 3h3"></path><path d="M18 14.5V16a3 3 0 0 1-3 3h-3"></path></svg> WebUSB ESC/POS Printer</h3>
                     <span id="usbStatusPill" class="status-pill disconnected"><span class="dot-sm"></span>Disconnected</span>
                 </div>
                 <div class="card-body">
                     <div class="device-status-box">
                         <div class="device-info-left">
-                            <div class="device-avatar" style="color:#a855f7;">🔌</div>
+                            <div class="device-avatar" style="color:#a855f7;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="19" r="2"></circle><circle cx="6" cy="9" r="1.5"></circle><circle cx="18" cy="13" r="1.5"></circle><path d="M12 17V3"></path><path d="m9 5 3-3 3 3"></path><path d="M6 10.5V13a3 3 0 0 0 3 3h3"></path><path d="M18 14.5V16a3 3 0 0 1-3 3h-3"></path></svg></div>
                             <div>
                                 <div class="device-name" id="usbDeviceName">No USB Printer Connected</div>
                                 <div class="device-sub" id="usbDeviceId">Connect USB cable via OTG and grant browser permission</div>
                             </div>
                         </div>
                         <div style="display:flex; gap:8px;">
-                            <button class="btn btn-accent" id="btnPairUSB" onclick="connectUsb()">🔍 Connect USB</button>
+                            <button class="btn btn-accent" id="btnPairUSB" onclick="connectUsb()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="19" r="2"></circle><circle cx="6" cy="9" r="1.5"></circle><circle cx="18" cy="13" r="1.5"></circle><path d="M12 17V3"></path><path d="m9 5 3-3 3 3"></path><path d="M6 10.5V13a3 3 0 0 0 3 3h3"></path><path d="M18 14.5V16a3 3 0 0 1-3 3h-3"></path></svg> Connect USB</button>
                             <button class="btn btn-danger" id="btnDisconnectUSB" onclick="disconnectUsb()" style="display:none;">Disconnect</button>
                         </div>
                     </div>
@@ -489,8 +490,8 @@
                     </div>
 
                     <div class="btn-row">
-                        <button class="btn btn-primary" onclick="printUsb()">🖨️ Send to USB Printer</button>
-                        <button class="btn btn-glass" onclick="testUsbReceipt()">📄 Print Sample Receipt</button>
+                        <button class="btn btn-primary" onclick="printUsb()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Send to USB Printer</button>
+                        <button class="btn btn-glass" onclick="testUsbReceipt()">Print Sample Receipt</button>
                     </div>
                 </div>
             </div>
@@ -901,7 +902,7 @@ bypassing all spoolers!
             document.querySelectorAll('.toast').forEach(t => t.remove());
             const t = document.createElement('div');
             t.className = `toast ${type}`;
-            const icon = type === 'success' ? '✅' : (type === 'error' ? '⚠️' : 'ℹ️');
+            const icon = type === 'success' ? 'SUCCESS' : (type === 'error' ? 'ERROR' : 'INFO');
             t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
             document.body.appendChild(t);
             setTimeout(() => {
