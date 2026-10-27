@@ -18,8 +18,11 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
 
+    <!-- Permissions for In-App APK Updates -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- USB Host permission for direct OTG thermal printers -->
-    <uses-feature android:name="android.hardware.usb.host" />
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -49,6 +52,17 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="ESC/POS Thermal Printing and Local Gateway Daemon" />
         </service>
+
+        <!-- Secure In-App APK Installer Provider -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

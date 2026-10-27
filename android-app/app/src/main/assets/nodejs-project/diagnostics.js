@@ -531,22 +531,53 @@ class DiagnosticEngine {
     ]);
   }
 
-  // Check for updates
-  async checkUpdate(currentVersion = '2.0.0') {
-    return {
-      currentVersion,
-      latestVersion: '2.0.0',
-      updateAvailable: false,
-      changelog: [
-        '✨ One-click Android Installer for all systems (Android 8 - 16)',
-        '✨ Standalone Single-Phone Hub for all local connected devices',
-        '✨ SSL Enabled Local https://localhost:3000 out-of-the-box',
-        '✨ Dynamic Port Changer with live rebind',
-        '✨ Diagnostic Health Score & 1-Click Auto-Repair for bugs',
-        '✨ Termux Widgets & Termux Terminal CLI integration'
-      ],
-      downloadUrl: 'https://github.com/msamods/androprint'
-    };
+  // Check for updates via GitHub Releases API
+  async checkUpdate(currentVersion = '2.0.1') {
+    const https = require('https');
+    return new Promise(resolve => {
+      const fallback = {
+        currentVersion,
+        latestVersion: currentVersion,
+        updateAvailable: false,
+        downloadUrl: 'https://github.com/msamods/androprint/releases/latest'
+      };
+
+      const req = https.get('https://api.github.com/repos/msamods/androprint/releases/latest', {
+        headers: { 'User-Agent': 'AndroPrint-Server' },
+        timeout: 4000
+      }, res => {
+        if (res.statusCode !== 200) return resolve(fallback);
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          try {
+            const rel = JSON.parse(data);
+            const tag = (rel.tag_name || '').replace('v', '');
+            let apkUrl = 'https://github.com/msamods/androprint/releases/latest';
+            for (const a of (rel.assets || [])) {
+              if (a.name && a.name.endsWith('.apk')) {
+                apkUrl = a.browser_download_url;
+                break;
+              }
+            }
+
+            resolve({
+              currentVersion,
+              latestVersion: tag || currentVersion,
+              updateAvailable: Boolean(tag && tag !== currentVersion),
+              releaseName: rel.name || `AndroPrint v${tag}`,
+              body: rel.body || '',
+              downloadUrl: apkUrl
+            });
+          } catch {
+            resolve(fallback);
+          }
+        });
+      });
+
+      req.on('error', () => resolve(fallback));
+      req.on('timeout', () => { req.destroy(); resolve(fallback); });
+    });
   }
 }
 

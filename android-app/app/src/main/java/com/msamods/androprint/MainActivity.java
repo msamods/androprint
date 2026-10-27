@@ -1,12 +1,18 @@
 package com.msamods.androprint;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
 import android.text.format.Formatter;
 import android.view.View;
 import android.webkit.SslErrorHandler;
@@ -19,10 +25,19 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 /**
  * AndroPrint Main Activity
  * Features Native Controller HUD + In-App Fullscreen WebView with Auto-SSL & Strict No-Zoom.
+ * Includes In-App GitHub Releases Auto-Updater with 1-Click APK Installer.
  *
  * Developed By : MSA MODS x WhatYouWantKerala
  */
@@ -34,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvLogConsole;
     private Button btnToggleServer;
     private Button btnOpenDashboard;
+    private Button btnCheckUpdate;
 
     private Button btnTabHud;
     private Button btnTabDashboard;
@@ -42,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isServerRunning = false;
     private String localDashboardUrl = "https://localhost:3000/dashboard.html";
+    private String currentAppVersion = "2.0.1";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +72,20 @@ public class MainActivity extends AppCompatActivity {
         tvLogConsole = findViewById(R.id.tvLogConsole);
         btnToggleServer = findViewById(R.id.btnToggleServer);
         btnOpenDashboard = findViewById(R.id.btnOpenDashboard);
+        btnCheckUpdate = findViewById(R.id.btnCheckUpdate);
+
+        try {
+            PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            currentAppVersion = pInfo.versionName;
+            btnCheckUpdate.setText("CHECK FOR UPDATES (v" + currentAppVersion + ")");
+        } catch (Exception ignored) {}
+
+        btnCheckUpdate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                checkForUpdates(true);
+            }
+        });
 
         btnTabHud = findViewById(R.id.btnTabHud);
         btnTabDashboard = findViewById(R.id.btnTabDashboard);
@@ -184,6 +215,33 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public void checkUpdate() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        checkForUpdates(true);
+                    }
+                });
+            }
+
+            @android.webkit.JavascriptInterface
+            public void installUpdate(final String url, final String version) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        downloadAndInstallApk(url, version);
+                    }
+                });
+            }
+
+            @android.webkit.JavascriptInterface
+            public String getAppVersion() {
+                return currentAppVersion;
+            }
+        }, "AndroidApp");
     }
 
     private void detectWifiIp() {
@@ -305,6 +363,236 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         statusCheckHandler.removeCallbacks(statusCheckRunnable);
+    }
+
+    private void checkForUpdates(final boolean userInitiated) {
+        if (userInitiated) {
+            Toast.makeText(this, "Checking GitHub for updates...", Toast.LENGTH_SHORT).show();
+            btnCheckUpdate.setText("CHECKING...");
+        }
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                HttpURLConnection conn = null;
+                try {
+                    URL url = new URL("https://api.github.com/repos/msamods/androprint/releases/latest");
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestProperty("User-Agent", "AndroPrint-App");
+                    conn.setConnectTimeout(6000);
+                    conn.setReadTimeout(6000);
+
+                    if (conn.getResponseCode() == 200) {
+                        InputStream in = conn.getInputStream();
+                        java.util.Scanner scanner = new java.util.Scanner(in).useDelimiter("\\A");
+                        String result = scanner.hasNext() ? scanner.next() : "";
+                        in.close();
+
+                        JSONObject release = new JSONObject(result);
+                        final String tagName = release.optString("tag_name", "").replace("v", "");
+                        final String releaseNotes = release.optString("body", "New features & performance improvements.");
+
+                        String apkDownloadUrl = null;
+                        JSONArray assets = release.optJSONArray("assets");
+                        if (assets != null) {
+                            for (int i = 0; i < assets.length(); i++) {
+                                JSONObject asset = assets.getJSONObject(i);
+                                String name = asset.optString("name", "");
+                                if (name.endsWith(".apk")) {
+                                    apkDownloadUrl = asset.optString("browser_download_url", "");
+                                    break;
+                                }
+                            }
+                        }
+
+                        final String finalApkUrl = apkDownloadUrl;
+                        final boolean isNewer = isVersionNewer(tagName, currentAppVersion);
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                btnCheckUpdate.setText("CHECK FOR UPDATES (v" + currentAppVersion + ")");
+                                if (isNewer && finalApkUrl != null && !finalApkUrl.isEmpty()) {
+                                    showUpdateDialog(tagName, releaseNotes, finalApkUrl);
+                                } else if (userInitiated) {
+                                    Toast.makeText(MainActivity.this, "AndroPrint is up to date (v" + currentAppVersion + ")!", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        });
+                    } else if (userInitiated) {
+                        final int code = conn.getResponseCode();
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                btnCheckUpdate.setText("CHECK FOR UPDATES (v" + currentAppVersion + ")");
+                                Toast.makeText(MainActivity.this, "Could not check updates (HTTP " + code + ")", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                } catch (final Exception e) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            btnCheckUpdate.setText("CHECK FOR UPDATES (v" + currentAppVersion + ")");
+                            if (userInitiated) {
+                                Toast.makeText(MainActivity.this, "Update check notice: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                } finally {
+                    if (conn != null) conn.disconnect();
+                }
+            }
+        }).start();
+    }
+
+    private boolean isVersionNewer(String latest, String current) {
+        if (latest == null || latest.isEmpty()) return false;
+        try {
+            String[] lParts = latest.split("\\.");
+            String[] cParts = current.split("\\.");
+            int length = Math.max(lParts.length, cParts.length);
+            for (int i = 0; i < length; i++) {
+                int l = i < lParts.length ? Integer.parseInt(lParts[i].replaceAll("[^0-9]", "")) : 0;
+                int c = i < cParts.length ? Integer.parseInt(cParts[i].replaceAll("[^0-9]", "")) : 0;
+                if (l > c) return true;
+                if (l < c) return false;
+            }
+        } catch (Exception ignored) {}
+        return !latest.equals(current);
+    }
+
+    private void showUpdateDialog(final String newVersion, String notes, final String downloadUrl) {
+        new AlertDialog.Builder(this)
+                .setTitle("🚀 New Version Available: v" + newVersion)
+                .setMessage("A new update is available on GitHub with fixes and improvements.\n\nWould you like to download and install this update inside the app now?")
+                .setPositiveButton("DOWNLOAD & INSTALL", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        downloadAndInstallApk(downloadUrl, newVersion);
+                    }
+                })
+                .setNegativeButton("LATER", null)
+                .show();
+    }
+
+    private void downloadAndInstallApk(final String downloadUrl, final String version) {
+        // Check unknown source install permission on Android 8+ (Oreo+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (!getPackageManager().canRequestPackageInstalls()) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Permission Required")
+                        .setMessage("To install updates directly inside AndroPrint, please enable 'Allow from this source'.")
+                        .setPositiveButton("OPEN SETTINGS", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface d, int w) {
+                                Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                                intent.setData(Uri.parse("package:" + getPackageName()));
+                                startActivity(intent);
+                            }
+                        })
+                        .setNegativeButton("CANCEL", null)
+                        .show();
+                return;
+            }
+        }
+
+        final ProgressDialog progressDialog = new ProgressDialog(this);
+        progressDialog.setTitle("Downloading AndroPrint v" + version);
+        progressDialog.setMessage("Downloading APK package from GitHub releases...");
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        progressDialog.setIndeterminate(false);
+        progressDialog.setMax(100);
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                HttpURLConnection connection = null;
+                try {
+                    URL url = new URL(downloadUrl);
+                    connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestProperty("User-Agent", "AndroPrint-App");
+                    connection.setInstanceFollowRedirects(true);
+                    connection.connect();
+
+                    int status = connection.getResponseCode();
+                    if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == 307 || status == 302) {
+                        String newUrl = connection.getHeaderField("Location");
+                        connection.disconnect();
+                        connection = (HttpURLConnection) new URL(newUrl).openConnection();
+                        connection.setRequestProperty("User-Agent", "AndroPrint-App");
+                        connection.connect();
+                    }
+
+                    final int fileLength = connection.getContentLength();
+                    File destDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                    if (destDir == null) destDir = getCacheDir();
+                    final File apkFile = new File(destDir, "AndroPrint-v" + version + "-update.apk");
+
+                    InputStream input = connection.getInputStream();
+                    FileOutputStream output = new FileOutputStream(apkFile);
+
+                    byte[] data = new byte[8192];
+                    long total = 0;
+                    int count;
+                    while ((count = input.read(data)) != -1) {
+                        total += count;
+                        if (fileLength > 0) {
+                            final int progress = (int) (total * 100 / fileLength);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    progressDialog.setProgress(progress);
+                                }
+                            });
+                        }
+                        output.write(data, 0, count);
+                    }
+
+                    output.flush();
+                    output.close();
+                    input.close();
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            progressDialog.dismiss();
+                            installDownloadedApk(apkFile);
+                        }
+                    });
+                } catch (final Exception e) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            progressDialog.dismiss();
+                            Toast.makeText(MainActivity.this, "Download failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+                } finally {
+                    if (connection != null) connection.disconnect();
+                }
+            }
+        }).start();
+    }
+
+    private void installDownloadedApk(File apkFile) {
+        try {
+            Uri apkUri = FileProvider.getUriForFile(
+                    this,
+                    getPackageName() + ".provider",
+                    apkFile
+            );
+
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, "Failed to launch installer: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     @Override

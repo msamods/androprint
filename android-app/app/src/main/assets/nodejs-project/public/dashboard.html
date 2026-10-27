@@ -958,6 +958,11 @@
         <footer style="text-align:center; padding:30px 20px; font-size:0.78rem; color:var(--text-dim); border-top:1px solid var(--glass-border);">
             <div>AndroPrint v2.0 • High-Performance Standalone & Cloud Print Gateway</div>
             <div style="margin-top:6px; font-weight:600; color:var(--text);">Developed By : MSA MODS x WhatYouWantKerala</div>
+            <div style="margin-top:12px;">
+                <button class="btn-sm" style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.35); color:#818cf8; border-radius:8px; padding:6px 14px; font-weight:600; cursor:pointer;" onclick="checkSystemUpdate()">
+                    🚀 Check for In-App Updates
+                </button>
+            </div>
         </footer>
     </div>
 
@@ -1492,11 +1497,25 @@
             return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
-        function checkUpdateManual() {
-            showToast('Checking for AndroPrint updates...', 'success');
-            setTimeout(() => {
-                showToast('You are running the latest AndroPrint v2.0 release!', 'success');
-            }, 800);
+        async function checkSystemUpdate() {
+            if (window.AndroidApp && typeof window.AndroidApp.checkUpdate === 'function') {
+                window.AndroidApp.checkUpdate();
+                return;
+            }
+            showToast('Checking GitHub for latest release...', 'info');
+            try {
+                const res = await fetch('/api/system/check-update');
+                const data = await res.json();
+                if (data.updateAvailable) {
+                    if (confirm(`🚀 New Version Available: v${data.latestVersion}!\n\nOpen GitHub release page to download?`)) {
+                        window.open(data.downloadUrl, '_blank');
+                    }
+                } else {
+                    showToast(`You are running the latest version (v${data.currentVersion || '2.0.1'})!`, 'success');
+                }
+            } catch (e) {
+                showToast('Update check notice: ' + e.message, 'warning');
+            }
         }
 
         function openDiagnosticModal() {
