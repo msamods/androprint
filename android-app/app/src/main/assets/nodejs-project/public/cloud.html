@@ -431,15 +431,14 @@
                 const badge = document.getElementById('binaryBadge');
                 const card = document.getElementById('activeConnectionCard');
 
-                isBinaryInstalled = !!data.installed;
-                if (isBinaryInstalled) {
+                if (data.hasNativeCloudflared) {
                     badge.className = 'binary-pill installed';
-                    badge.innerHTML = '✔ cloudflared: Installed';
+                    badge.innerHTML = '✔ Cloudflare (Native)';
                     badge.onclick = null;
                 } else {
-                    badge.className = 'binary-pill missing';
-                    badge.innerHTML = '⚠ cloudflared: Not Detected';
-                    badge.onclick = openInstallModal;
+                    badge.className = 'binary-pill installed';
+                    badge.innerHTML = '✔ Zero-Config Gateway: Ready';
+                    badge.onclick = null;
                 }
 
                 if (data.tunnel && data.tunnel.active && data.tunnel.url) {
@@ -502,8 +501,8 @@
             const btn = document.getElementById('btnStartQuick');
             const originalText = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = 'Connecting to Cloudflare...';
-            showToast('Starting Cloudflare Quick Tunnel...', 'info');
+            btn.innerHTML = 'Connecting Cloud Gateway...';
+            showToast('Starting Instant Cloud Gateway...', 'info');
 
             try {
                 const res = await fetch('/api/cloudflare/start', {
@@ -513,11 +512,10 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast('Cloudflare tunnel connected!', 'success');
+                    showToast('Cloud gateway connected!', 'success');
                     loadCloudInfo();
                 } else {
                     showToast(data.error || 'Failed to start tunnel', 'error');
-                    if (!isBinaryInstalled) openInstallModal();
                 }
             } catch (e) {
                 showToast('Tunnel error: ' + e.message, 'error');

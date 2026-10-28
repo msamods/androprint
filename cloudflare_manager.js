@@ -16,6 +16,7 @@ class CloudflareManager {
     this.broadcaster = broadcaster || (() => {});
     this.configFile = path.join(dataDir, 'cloud.json');
     this.process = null;
+    this.ltInstance = null;
     this.tunnel = {
       active: false,
       url: null,
@@ -63,7 +64,7 @@ class CloudflareManager {
     }
   }
 
-  isInstalled() {
+  isCloudflaredBinaryInstalled() {
     try {
       const cmd = os.platform() === 'win32' ? 'where cloudflared' : 'which cloudflared';
       const out = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
@@ -71,6 +72,11 @@ class CloudflareManager {
     } catch {
       return false;
     }
+  }
+
+  isInstalled() {
+    // Built-in Zero-Config Gateway (localtunnel) is always available in AndroPrint bundle!
+    return true;
   }
 
   getInstallInstructions() {
@@ -82,9 +88,9 @@ class CloudflareManager {
         platform: 'Android Termux',
         command: 'pkg update && pkg install -y cloudflared',
         steps: [
-          'Open Termux terminal',
-          'Run: pkg update && pkg install -y cloudflared',
-          'Verify with: cloudflared --version'
+          'Built-in Zero-Config Gateway is active and requires no install.',
+          'To optionally use official Cloudflare binary:',
+          'Open Termux terminal and run: pkg update && pkg install -y cloudflared'
         ]
       };
     } else if (isWin) {
@@ -93,9 +99,8 @@ class CloudflareManager {
         command: 'winget install --id Cloudflare.cloudflared',
         manualUrl: 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe',
         steps: [
-          'Open PowerShell as Administrator',
-          'Run: winget install --id Cloudflare.cloudflared',
-          'Or download cloudflared-windows-amd64.exe and add it to your PATH'
+          'Built-in Zero-Config Gateway is active and requires no install.',
+          'To optionally use official Cloudflare binary: winget install --id Cloudflare.cloudflared'
         ]
       };
     } else {
@@ -103,17 +108,20 @@ class CloudflareManager {
         platform: 'Linux / Debian / Ubuntu',
         command: 'curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && sudo dpkg -i cloudflared.deb',
         steps: [
-          'Run the command above to install the debian package',
-          'Verify with: cloudflared --version'
+          'Built-in Zero-Config Gateway is active and requires no install.',
+          'To optionally use official Cloudflare binary: sudo dpkg -i cloudflared.deb'
         ]
       };
     }
   }
 
   getStatus() {
+    const hasNative = this.isCloudflaredBinaryInstalled();
     return {
       success: true,
-      installed: this.isInstalled(),
+      installed: true,
+      hasNativeCloudflared: hasNative,
+      hasBuiltInGateway: true,
       instructions: this.getInstallInstructions(),
       tunnel: {
         active: this.tunnel.active,
@@ -144,11 +152,88 @@ class CloudflareManager {
     return this.tunnel;
   }
 
-  async startQuickTunnel(port, useSsl = false) {
-    if (!this.isInstalled()) {
-      throw new Error('cloudflared binary is not installed on system. Run install command first.');
+  async startLocalTunnel(port) {
+    if (this.process) this.stop();
+    if (this.ltInstance) {
+      try { this.ltInstance.close(); } catch {}
+      this.ltInstance = null;
     }
 
+    let localtunnel = null;
+    try {
+      localtunnel = require('localtunnel');
+    } catch (err) {
+      throw new Error('Built-in LocalTunnel engine not loaded: ' + err.message);
+    }
+
+    if (this.logger) this.logger.info('CLOUD', `Launching Built-in Zero-Config Cloud Gateway on port ${port}...`);
+
+    return new Promise(async (resolve, reject) => {
+      let resolved = false;
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          reject(new Error('Cloud gateway startup timed out. Check internet connection.'));
+        }
+      }, 25000);
+
+      try {
+        const tunnel = await localtunnel({ port });
+        this.ltInstance = tunnel;
+        resolved = true;
+        clearTimeout(timeout);
+
+        this.tunnel.active = true;
+        this.tunnel.url = tunnel.url;
+        this.tunnel.provider = 'localtunnel';
+        this.tunnel.mode = 'quick';
+        this.tunnel.startedAt = new Date().toISOString();
+        this.tunnel.error = null;
+        this.saveConfig();
+
+        if (this.logger) this.logger.success('CLOUD', `Built-in Cloud Gateway LIVE: ${tunnel.url}`);
+        this.broadcaster({ type: 'cloud_update', tunnel: this.tunnel });
+
+        tunnel.on('close', () => {
+          if (this.tunnel.active && this.tunnel.provider === 'localtunnel') {
+            this.tunnel.active = false;
+            this.tunnel.url = null;
+            this.saveConfig();
+            this.broadcaster({ type: 'cloud_update', tunnel: this.tunnel });
+          }
+          if (this.logger) this.logger.warn('CLOUD', 'Built-in Cloud Gateway closed');
+        });
+
+        tunnel.on('error', (err) => {
+          if (this.logger) this.logger.error('CLOUD', 'Built-in Cloud Gateway error: ' + (err.message || err));
+        });
+
+        resolve(this.tunnel);
+      } catch (err) {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeout);
+          reject(err);
+        }
+      }
+    });
+  }
+
+  async startQuickTunnel(port, useSsl = false) {
+    if (this.isCloudflaredBinaryInstalled()) {
+      try {
+        return await this._spawnCloudflaredQuick(port, useSsl);
+      } catch (err) {
+        if (this.logger) this.logger.warn('CLOUD', `Cloudflared quick failed (${err.message}), falling back to Built-in Gateway...`);
+      }
+    }
+
+    // Zero-Install fallback for Android APK and all platforms
+    if (this.logger) this.logger.info('CLOUD', 'Starting Built-in Zero-Config Cloud Gateway (No installation needed)...');
+    return await this.startLocalTunnel(port);
+  }
+
+  async _spawnCloudflaredQuick(port, useSsl = false) {
     if (this.process) {
       this.stop();
     }
@@ -321,12 +406,17 @@ class CloudflareManager {
       this.process = null;
     }
 
+    if (this.ltInstance) {
+      try { this.ltInstance.close(); } catch {}
+      this.ltInstance = null;
+    }
+
     this.tunnel.active = false;
     this.tunnel.url = null;
     this.saveConfig();
-    if (this.logger) this.logger.info('CLOUD', 'Cloudflare tunnel stopped');
+    if (this.logger) this.logger.info('CLOUD', 'Cloud gateway stopped');
     this.broadcaster({ type: 'cloud_update', tunnel: this.tunnel });
-    return { success: true, message: 'Cloud tunnel stopped' };
+    return { success: true, message: 'Cloud gateway stopped' };
   }
 }
 
