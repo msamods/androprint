@@ -143,17 +143,17 @@ public class MainActivity extends AppCompatActivity {
         if (showHud) {
             layoutHud.setVisibility(View.VISIBLE);
             webView.setVisibility(View.GONE);
-            btnTabHud.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF6366F1));
+            btnTabHud.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4F46E5));
             btnTabHud.setTextColor(0xFFFFFFFF);
-            btnTabDashboard.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF1F2937));
-            btnTabDashboard.setTextColor(0xFF94A3B8);
+            btnTabDashboard.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFF1F5F9));
+            btnTabDashboard.setTextColor(0xFF475569);
         } else {
             layoutHud.setVisibility(View.GONE);
             webView.setVisibility(View.VISIBLE);
-            btnTabDashboard.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF6366F1));
+            btnTabDashboard.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4F46E5));
             btnTabDashboard.setTextColor(0xFFFFFFFF);
-            btnTabHud.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF1F2937));
-            btnTabHud.setTextColor(0xFF94A3B8);
+            btnTabHud.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFF1F5F9));
+            btnTabHud.setTextColor(0xFF475569);
 
             // Load dashboard if needed or if port changed or if previous load failed
             String currentUrl = webView.getUrl();

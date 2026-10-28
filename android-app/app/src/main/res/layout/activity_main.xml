@@ -2,7 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0B0F19">
+    android:background="#F8FAFC">
 
     <!-- Top Navigation Tabs (HUD vs Dashboard) -->
     <LinearLayout
@@ -10,8 +10,9 @@
         android:layout_width="match_parent"
         android:layout_height="52dp"
         android:orientation="horizontal"
-        android:background="#111827"
+        android:background="#FFFFFF"
         android:padding="6dp"
+        android:elevation="2dp"
         android:layout_alignParentTop="true">
 
         <Button
@@ -23,7 +24,7 @@
             android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="#FFFFFF"
-            android:backgroundTint="#6366F1" />
+            android:backgroundTint="#4F46E5" />
 
         <Button
             android:id="@+id/btnTabDashboard"
@@ -33,8 +34,8 @@
             android:text="WEB DASHBOARD"
             android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="#94A3B8"
-            android:backgroundTint="#1F2937"
+            android:textColor="#475569"
+            android:backgroundTint="#F1F5F9"
             android:layout_marginStart="8dp" />
     </LinearLayout>
 
@@ -50,28 +51,28 @@
         android:visibility="visible">
 
         <ImageView
-            android:layout_width="90dp"
-            android:layout_height="90dp"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
             android:src="@drawable/app_logo"
             android:scaleType="fitCenter"
             android:adjustViewBounds="true"
             android:contentDescription="AndroPrint Logo"
-            android:layout_marginTop="8dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="AndroPrint v2.0"
-            android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:textStyle="bold"
             android:layout_marginTop="4dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="AndroPrint v2.0"
+            android:textColor="#0F172A"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginTop="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="Standalone ESC/POS Cloud &amp; LAN Gateway • No Termux"
-            android:textColor="#06B6D4"
+            android:textColor="#0284C7"
             android:textSize="11sp"
             android:textStyle="bold"
             android:layout_marginTop="2dp" />
@@ -81,16 +82,17 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#161F30"
+            android:background="@drawable/card_white_elevated"
             android:padding="16dp"
-            android:layout_marginTop="20dp">
+            android:elevation="2dp"
+            android:layout_marginTop="16dp">
 
             <TextView
                 android:id="@+id/tvServerStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Server Status: STOPPED"
-                android:textColor="#EF4444"
+                android:textColor="#DC2626"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
@@ -99,7 +101,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Local Endpoint: https://localhost:3000"
-                android:textColor="#94A3B8"
+                android:textColor="#64748B"
                 android:textSize="13sp"
                 android:layout_marginTop="6dp" />
 
@@ -108,8 +110,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Wi-Fi IP: Checking..."
-                android:textColor="#6366F1"
+                android:textColor="#4F46E5"
                 android:textSize="13sp"
+                android:textStyle="bold"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
 
@@ -117,13 +120,13 @@
         <Button
             android:id="@+id/btnToggleServer"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="52dp"
             android:text="START PRINT SERVICE"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="#FFFFFF"
-            android:backgroundTint="#10B981"
-            android:layout_marginTop="16dp" />
+            android:backgroundTint="#059669"
+            android:layout_marginTop="14dp" />
 
         <Button
             android:id="@+id/btnOpenDashboard"
@@ -133,8 +136,8 @@
             android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="#FFFFFF"
-            android:backgroundTint="#6366F1"
-            android:layout_marginTop="10dp" />
+            android:backgroundTint="#4F46E5"
+            android:layout_marginTop="8dp" />
 
         <Button
             android:id="@+id/btnCheckUpdate"
@@ -143,8 +146,8 @@
             android:text="CHECK FOR UPDATES (v2.0.1)"
             android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="#38BDF8"
-            android:backgroundTint="#1E293B"
+            android:textColor="#0284C7"
+            android:backgroundTint="#EEF2FF"
             android:layout_marginTop="8dp" />
 
         <!-- Console Log Terminal -->
@@ -154,14 +157,15 @@
             android:text="Native Service Log Stream:"
             android:textColor="#64748B"
             android:textSize="12sp"
-            android:layout_marginTop="16dp" />
+            android:textStyle="bold"
+            android:layout_marginTop="14dp" />
 
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:background="#06080E"
-            android:padding="10dp"
+            android:background="@drawable/console_terminal_bg"
+            android:padding="12dp"
             android:layout_marginTop="6dp">
 
             <TextView
