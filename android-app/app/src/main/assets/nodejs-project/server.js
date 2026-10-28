@@ -127303,6 +127303,45 @@ async function generateQrBuffer(qrInput) {
   return { pngBuffer, qrText };
 }
 
+/* ============ ROBUST RAW ESC/POS SOCKET SENDER ============ */
+
+function sendRawEscPos(ip, port, buffer, timeoutMs = 5000) {
+  return new Promise((resolve, reject) => {
+    const socket = new net.Socket();
+    let settled = false;
+
+    socket.setTimeout(timeoutMs);
+
+    socket.connect(port, ip, () => {
+      socket.write(buffer, null, () => {
+        // Graceful end with FIN packet so the printer buffer flushes completely to paper
+        socket.end(() => {
+          if (!settled) {
+            settled = true;
+            resolve(true);
+          }
+        });
+      });
+    });
+
+    socket.on("error", (err) => {
+      if (!settled) {
+        settled = true;
+        try { socket.destroy(); } catch {}
+        reject(err);
+      }
+    });
+
+    socket.on("timeout", () => {
+      if (!settled) {
+        settled = true;
+        try { socket.destroy(); } catch {}
+        reject(new Error(`Printer communication timed out after ${timeoutMs}ms (${ip}:${port})`));
+      }
+    });
+  });
+}
+
 /* ============ COMPREHENSIVE PRINT RECEIPT ============ */
 
 async function printReceipt(printer, options = {}) {
@@ -127445,8 +127484,8 @@ async function printReceipt(printer, options = {}) {
     }
   }
 
-  const ok = await device.execute();
-  return ok;
+  await sendRawEscPos(pIp, pPort, device.getBuffer(), 5000);
+  return true;
 }
 
 /* Legacy wrapper for backward compatibility */
@@ -127728,8 +127767,7 @@ app.post("/api/printer/test", authRequired, async (req, res) => {
     tp.println("================================\n\n");
     tp.cut();
 
-    const ok = await tp.execute();
-    if (!ok) throw new Error("Printer execute command returned false");
+    await sendRawEscPos(pIp, pPort, tp.getBuffer(), 4000);
 
     addJob({
       printerId,
@@ -127748,16 +127786,33 @@ app.post("/api/printer/test", authRequired, async (req, res) => {
       status: "failed",
       error: errorMsg
     });
+
+    let fixSteps = [];
+    if (errorMsg.includes("ECONNREFUSED")) {
+      fixSteps = [
+        `1. Port ${pPort} connection was refused by printer at ${pIp}.`,
+        "2. Verify that raw ESC/POS port 9100 is enabled in the printer's configuration."
+      ];
+    } else if (errorMsg.includes("ETIMEDOUT") || errorMsg.includes("EHOSTUNREACH")) {
+      fixSteps = [
+        `1. Connection to printer IP ${pIp} timed out.`,
+        "2. Ensure the printer and Android device are connected to the exact same Wi-Fi network.",
+        "3. Verify printer IP address has not changed via DHCP."
+      ];
+    } else {
+      fixSteps = [
+        `Detailed error: ${errorMsg}`,
+        "1. Verify printer IP and port settings.",
+        "2. Check if printer paper roll is loaded correctly."
+      ];
+    }
+
     res.status(500).json({
       success: false,
       printed: false,
       title: "Print Execution Failed",
       error: errorMsg,
-      fix: [
-        "1. Check if printer paper roll is empty or cover is open.",
-        "2. Check if printer error indicator (RED light) is blinking.",
-        "3. Turn off printer for 5 seconds and power back on."
-      ]
+      fix: fixSteps
     });
   }
 });
@@ -129096,7 +129151,7 @@ app.post("/api/printer/cut", authRequired, async (req, res) => {
       device.cut();
     }
 
-    await device.execute();
+    await sendRawEscPos(pIp, pPort, device.getBuffer(), 4000);
 
     addJob({
       printerId,
@@ -129256,7 +129311,7 @@ app.post("/api/quickprint", async (req, res) => {
       });
       directTp.println(text);
       directTp.cut();
-      await directTp.execute();
+      await sendRawEscPos(pIp, pPort, directTp.getBuffer(), 4000);
       addJob({
         printerId: `direct-${pIp}`,
         printerName: `Discovered Device (${pIp})`,
