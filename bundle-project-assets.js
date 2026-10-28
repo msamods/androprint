@@ -21,6 +21,8 @@ const FILES_TO_COPY = [
   'system_logger.js',
   'generate-ssl.js',
   'cloudflare_manager.js',
+  'printer.json',
+  'clients.json',
   'server.key',
   'server.cert',
   'package.json'

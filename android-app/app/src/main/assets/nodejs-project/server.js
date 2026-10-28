@@ -122511,6 +122511,7 @@ function authRequired(req, res, next) {
 /* ============ TCP CHECK & DIAGNOSTICS ============ */
 
 function checkPrinterConnection(ip, port, timeout = 2000) {
+  if (!ip) return Promise.resolve({ online: false, error: "NO_IP" });
   return new Promise(resolve => {
     const socket = new net.Socket();
     let online = false;
@@ -122780,9 +122781,15 @@ async function printReceipt(printer, options = {}) {
     underline = false
   } = options;
 
+  const pIp = printer && printer.connection && printer.connection.ip;
+  const pPort = (printer && printer.connection && parseInt(printer.connection.port)) || 9100;
+  if (!pIp) {
+    throw new Error(`Printer '${printer ? (printer.name || printer.id) : "unknown"}' has no IP connection configured.`);
+  }
+
   const device = new ThermalPrinter({
     type: PrinterTypes.EPSON,
-    interface: `tcp://${printer.connection.ip}:${printer.connection.port}`,
+    interface: `tcp://${pIp}:${pPort}`,
     removeSpecialCharacters: false,
     lineCharacter: "-",
     options: {
@@ -122914,8 +122921,8 @@ app.get("/api/server", async (req, res) => {
 
   const statuses = await Promise.all(
     printers.map(async p => ({
-      id: p.id,
-      online: await isPrinterOnline(p.connection.ip, p.connection.port)
+      id: p && p.id,
+      online: p && p.connection && p.connection.ip ? await isPrinterOnline(p.connection.ip, p.connection.port || 9100) : false
     }))
   );
 
@@ -123106,7 +123113,8 @@ app.post(["/api/printer/delete", "/api/printers/delete"], authRequired, (req, re
 app.post("/api/printer/test", authRequired, async (req, res) => {
   try {
     const { printerId } = req.body;
-    const printer = loadPrinters().find(p => p.id === printerId && p.enabled);
+    const printers = Array.isArray(loadPrinters()) ? loadPrinters() : [];
+    const printer = printers.find(p => p && p.id === printerId && p.enabled);
 
     if (!printer) {
       return res.status(404).json({
@@ -123121,11 +123129,19 @@ app.post("/api/printer/test", authRequired, async (req, res) => {
       });
     }
 
-    const conn = await checkPrinterConnection(
-      printer.connection.ip,
-      printer.connection.port,
-      2500
-    );
+    const pIp = printer.connection && printer.connection.ip;
+    const pPort = (printer.connection && parseInt(printer.connection.port)) || 9100;
+    if (!pIp) {
+      return res.status(400).json({
+        success: false,
+        printed: false,
+        title: "Invalid Printer Configuration",
+        error: `Printer '${printer.name}' is missing IP connection settings.`,
+        fix: ["Edit this printer in 'Printers' menu and enter a valid IP address."]
+      });
+    }
+
+    const conn = await checkPrinterConnection(pIp, pPort, 2500);
 
     if (!conn.online) {
       const diag = explainPrinterError(conn.error, printer.connection.ip, printer.connection.port, printer.name);
@@ -123219,9 +123235,9 @@ async function resolvePrinterForJob(targetId = null, role = null) {
 
   // 2. Role-based routing (e.g. KITCHEN, BAR, CASHIER, PARCEL)
   if (role) {
-    const rolePrinters = printers.filter(p => (p.role || "CASHIER").toUpperCase() === role.toUpperCase());
+    const rolePrinters = printers.filter(p => p && (p.role || "CASHIER").toUpperCase() === role.toUpperCase());
     for (const p of rolePrinters) {
-      if (await isPrinterOnline(p.connection.ip, p.connection.port)) {
+      if (p.connection && p.connection.ip && (await isPrinterOnline(p.connection.ip, p.connection.port || 9100))) {
         return p;
       }
     }
@@ -123229,18 +123245,18 @@ async function resolvePrinterForJob(targetId = null, role = null) {
   }
 
   // 3. Fallback: Find Cashier or any online printer
-  const cashier = printers.find(p => (p.role || "").toUpperCase() === "CASHIER");
-  if (cashier && (await isPrinterOnline(cashier.connection.ip, cashier.connection.port))) {
+  const cashier = printers.find(p => p && (p.role || "").toUpperCase() === "CASHIER");
+  if (cashier && cashier.connection && cashier.connection.ip && (await isPrinterOnline(cashier.connection.ip, cashier.connection.port || 9100))) {
     return cashier;
   }
 
   for (const p of printers) {
-    if (await isPrinterOnline(p.connection.ip, p.connection.port)) {
+    if (p && p.connection && p.connection.ip && (await isPrinterOnline(p.connection.ip, p.connection.port || 9100))) {
       return p;
     }
   }
 
-  return cashier || printers[0];
+  return cashier || printers[0] || null;
 }
 
 /* ============ PRINT ENDPOINT ============ */
@@ -124711,13 +124727,13 @@ app.post("/api/quickprint", async (req, res) => {
       return res.json({ success: true, printed: true, message: `Direct test receipt printed on ${pIp}:${pPort}` });
     }
 
-    const printers = loadPrinters();
+    const printers = Array.isArray(loadPrinters()) ? loadPrinters() : [];
     let printer = null;
-    if (printerId) {
-      printer = printers.find(p => p.id === printerId && p.enabled);
+    if (printerId && printers.length > 0) {
+      printer = printers.find(p => p && p.id === printerId && p.enabled);
     }
     if (!printer && printers.length > 0) {
-      printer = printers.find(p => p.enabled) || printers[0];
+      printer = printers.find(p => p && p.enabled) || printers[0];
       if (printer) printerId = printer.id;
     }
 
@@ -124736,16 +124752,28 @@ app.post("/api/quickprint", async (req, res) => {
       });
     }
 
-    const conn = await checkPrinterConnection(printer.connection.ip, printer.connection.port, 2500);
+    const pIp = printer.connection && printer.connection.ip;
+    const pPort = (printer.connection && parseInt(printer.connection.port)) || 9100;
+    if (!pIp) {
+      return res.status(400).json({
+        success: false,
+        printed: false,
+        title: "Invalid Printer Configuration",
+        error: `Printer '${printer.name || printerId}' has no IP connection configured.`,
+        fix: ["Open 'Printers' menu and update this printer's IP and port (e.g. 192.168.1.150:9100)."]
+      });
+    }
+
+    const conn = await checkPrinterConnection(pIp, pPort, 2500);
     if (!conn.online) {
-      const diag = explainPrinterError(conn.error, printer.connection.ip, printer.connection.port, printer.name);
+      const diag = explainPrinterError(conn.error, pIp, pPort, printer.name || "Configured Printer");
       return res.status(502).json({
         success: false,
         printed: false,
         title: diag.title,
         error: diag.description,
         fix: diag.fix,
-        diagnostics: { ip: printer.connection.ip, port: printer.connection.port, errCode: conn.error }
+        diagnostics: { ip: pIp, port: pPort, errCode: conn.error }
       });
     }
 
