@@ -107,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Check if service is already running
-        isServerRunning = PrintServerService.isServerRunning();
+        isServerRunning = PrintServerService.isServerRunning(this);
         updateServerUiState(isServerRunning);
 
         btnToggleServer.setOnClickListener(new View.OnClickListener() {
@@ -390,7 +390,7 @@ public class MainActivity extends AppCompatActivity {
                     socket.close();
                     running = true;
                 } catch (Exception ignored) {
-                    running = PrintServerService.isServerRunning();
+                    running = PrintServerService.isServerRunning(getApplicationContext());
                 }
 
                 final boolean isAlive = running;

@@ -32,6 +32,15 @@ public class PrintServerService extends Service {
     private Process nodeProcess;
     private static boolean isRunning = false;
 
+    public static boolean isServerRunning(Context context) {
+        if (context != null) {
+            try {
+                return context.getSharedPreferences("server_state", Context.MODE_PRIVATE).getBoolean("is_running", false);
+            } catch (Throwable ignored) {}
+        }
+        return isRunning;
+    }
+
     public static boolean isServerRunning() {
         return isRunning;
     }
@@ -39,6 +48,10 @@ public class PrintServerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        try {
+            getSharedPreferences("server_state", Context.MODE_PRIVATE).edit().putBoolean("is_running", true).apply();
+        } catch (Throwable ignored) {}
 
         // 1. Create notification channel and start foreground IMMEDIATELY to satisfy Android O-14 requirements
         createNotificationChannel();
@@ -159,6 +172,10 @@ public class PrintServerService extends Service {
         super.onDestroy();
         isRunning = false;
 
+        try {
+            getSharedPreferences("server_state", Context.MODE_PRIVATE).edit().putBoolean("is_running", false).commit();
+        } catch (Throwable ignored) {}
+
         if (nodeProcess != null) {
             try {
                 nodeProcess.destroy();
@@ -172,7 +189,9 @@ public class PrintServerService extends Service {
             } catch (Throwable ignored) {}
         }
 
-        Log.i(TAG, "PrintServerService stopped");
+        Log.i(TAG, "PrintServerService stopped. Terminating isolated :server process cleanly for fresh V8 re-initialization.");
+        // Terminate the isolated :server process so that when restarted, a fresh process is created with brand new V8 state
+        android.os.Process.killProcess(android.os.Process.myPid());
     }
 
     @Override
