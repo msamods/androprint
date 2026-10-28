@@ -715,6 +715,36 @@
         </div>
     </div>
 
+    <!-- Print Diagnostic & Troubleshooting Modal -->
+    <div class="modal-overlay" id="printDiagnosticModal" style="display:none;">
+        <div class="modal-card" style="max-width: 520px; border:1px solid rgba(239, 68, 68, 0.4); box-shadow:0 16px 48px rgba(239,68,68,0.25);">
+            <div class="modal-header" style="border-bottom:1px solid rgba(239, 68, 68, 0.2); padding-bottom:12px;">
+                <h3 style="color:#ef4444; display:flex; align-items:center; gap:8px;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <span id="diagModalTitle">Test Print Failed</span>
+                </h3>
+                <button class="modal-close" onclick="closePrintDiagnosticModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body" style="padding: 20px;">
+                <div style="background:rgba(239, 68, 68, 0.08); border-left:4px solid #ef4444; padding:12px 14px; border-radius:6px; margin-bottom:16px;">
+                    <div style="font-size:0.75rem; text-transform:uppercase; color:#ef4444; font-weight:700; margin-bottom:4px;">Why it failed (Reason)</div>
+                    <div id="diagModalReason" style="font-size:0.88rem; color:var(--text); line-height:1.45; font-weight:500;">Printer offline / unreachable</div>
+                </div>
+
+                <div style="font-size:0.78rem; text-transform:uppercase; color:var(--text-dim); font-weight:700; margin-bottom:10px;">
+                    🛠️ How to Fix / Steps to Resolve:
+                </div>
+                <div id="diagModalFixList" style="display:flex; flex-direction:column; gap:8px; font-size:0.83rem; color:var(--text); margin-bottom:10px;">
+                </div>
+            </div>
+
+            <div class="modal-footer" style="justify-content: flex-end;">
+                <button type="button" class="btn btn-glass" onclick="closePrintDiagnosticModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const AUTH = {
             "x-client-id": "clt-admin",
@@ -998,7 +1028,7 @@
         // Test Print
         async function testPrinter(id) {
             try {
-                showToast('Sending test ticket...', 'success');
+                showToast('Sending test ticket...', 'info');
                 const res = await fetch('/api/printer/test', {
                     method: 'POST',
                     headers: { ...AUTH, 'Content-Type': 'application/json' },
@@ -1006,15 +1036,53 @@
                 });
                 const data = await res.json();
                 if (data.success && data.printed) {
-                    showToast('Test print dispatched successfully', 'success');
+                    showToast(data.message || 'Test print dispatched successfully', 'success');
                 } else {
-                    showToast(data.error || 'Test print returned an error', 'error');
+                    showToast(data.title || data.error || 'Test print returned an error', 'error');
+                    showPrintDiagnostic(data);
                 }
                 setTimeout(() => loadPrinters(true), 1200);
             } catch (err) {
                 console.error('Test print error:', err);
                 showToast('Test print failed: ' + err.message, 'error');
+                showPrintDiagnostic({
+                    title: 'Network / Connection Error',
+                    error: err.message,
+                    fix: [
+                        '1. Check if the Android print service is running in AndroPrint app.',
+                        '2. Verify your phone and printer are on the same Wi-Fi network.',
+                        '3. Verify router AP Isolation is disabled.'
+                    ]
+                });
             }
+        }
+
+        function showPrintDiagnostic(errObj) {
+            const modal = document.getElementById('printDiagnosticModal');
+            if (!modal) return;
+            document.getElementById('diagModalTitle').textContent = errObj.title || 'Test Print Failed';
+            document.getElementById('diagModalReason').textContent = errObj.error || errObj.description || 'Connection failed';
+            
+            const listContainer = document.getElementById('diagModalFixList');
+            const fixes = errObj.fix || [
+                "1. Turn off printer, hold FEED button, and turn ON to print Self-Test slip (verify IP & Port 9100).",
+                "2. Ensure phone Wi-Fi and printer are on the same subnet (e.g. 192.168.1.x).",
+                "3. Disable 'AP Isolation' / 'Client Isolation' in your Wi-Fi router settings."
+            ];
+            
+            listContainer.innerHTML = fixes.map(f => `
+                <div style="display:flex; gap:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); padding:10px 12px; border-radius:8px;">
+                    <span style="color:#10b981; font-weight:bold;">✓</span>
+                    <span style="font-size:0.82rem; line-height:1.45;">${f}</span>
+                </div>
+            `).join('');
+
+            modal.style.display = 'flex';
+        }
+
+        function closePrintDiagnosticModal() {
+            const modal = document.getElementById('printDiagnosticModal');
+            if (modal) modal.style.display = 'none';
         }
 
         // Cash Drawer Kick

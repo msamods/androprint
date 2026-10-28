@@ -122494,12 +122494,13 @@ function authRequired(req, res, next) {
   next();
 }
 
-/* ============ TCP CHECK ============ */
+/* ============ TCP CHECK & DIAGNOSTICS ============ */
 
-function isPrinterOnline(ip, port, timeout = 1500) {
+function checkPrinterConnection(ip, port, timeout = 2000) {
   return new Promise(resolve => {
     const socket = new net.Socket();
     let online = false;
+    let errCode = null;
 
     socket.setTimeout(timeout);
     socket.connect(port, ip, () => {
@@ -122507,10 +122508,63 @@ function isPrinterOnline(ip, port, timeout = 1500) {
       socket.destroy();
     });
 
-    socket.on("error", () => {});
-    socket.on("timeout", () => socket.destroy());
-    socket.on("close", () => resolve(online));
+    socket.on("error", err => {
+      errCode = err.code || err.message;
+    });
+    socket.on("timeout", () => {
+      errCode = "ETIMEDOUT";
+      socket.destroy();
+    });
+    socket.on("close", () => resolve({ online, error: errCode }));
   });
+}
+
+async function isPrinterOnline(ip, port, timeout = 1500) {
+  const res = await checkPrinterConnection(ip, port, timeout);
+  return res.online;
+}
+
+function explainPrinterError(errCode, ip, port, printerName = "Printer") {
+  let title = "Connection Failed";
+  let description = `Cannot communicate with ${printerName} at ${ip}:${port}.`;
+  let fix = [];
+
+  if (errCode === "ETIMEDOUT") {
+    title = "Connection Timed Out";
+    description = `The printer at ${ip}:${port} did not respond within ${2}s.`;
+    fix = [
+      "1. Check if the printer is powered ON and LAN cable / Wi-Fi is connected.",
+      "2. Check if printer IP changed: Print Self-Test slip (turn off, hold FEED button, turn on).",
+      "3. Ensure the printer and your phone are connected to the exact same Wi-Fi router.",
+      "4. Disable 'AP Isolation' or 'Client Isolation' in your Wi-Fi router settings."
+    ];
+  } else if (errCode === "ECONNREFUSED") {
+    title = "Port 9100 Refused / Closed";
+    description = `The device at ${ip} is reachable, but Port ${port} is closed or rejected connection.`;
+    fix = [
+      "1. Make sure your printer is an ESC/POS network thermal printer with RAW Port 9100 enabled.",
+      "2. Check if the printer uses another port (e.g. 4000 or 8000) on the self-test slip.",
+      "3. If using a print server adapter, ensure it is configured for RAW ESC/POS pass-through."
+    ];
+  } else if (errCode === "EHOSTUNREACH" || errCode === "ENETUNREACH") {
+    title = "Subnet Unreachable";
+    description = `Host ${ip} is unreachable from this phone's network interface.`;
+    fix = [
+      "1. Subnet Mismatch: If your phone is on 192.168.1.x, the printer must also be on 192.168.1.x.",
+      "2. If printer is on factory IP 192.168.192.168 or 192.168.0.x, change its IP to match router subnet.",
+      "3. Verify your phone Wi-Fi is connected to the same local network."
+    ];
+  } else {
+    title = "Printer Offline / Network Error";
+    description = errCode ? `Error details: ${errCode}` : `Printer at ${ip}:${port} is unreachable.`;
+    fix = [
+      "1. Verify printer paper roll is installed correctly and cover is tightly closed.",
+      "2. Verify printer LED is solid green/blue, not blinking red error.",
+      "3. Turn off printer for 5 seconds and power back on."
+    ];
+  }
+
+  return { title, description, fix };
 }
 
 /* ============ NETWORK PRINTER AUTO-DISCOVERY ============ */
@@ -123001,50 +123055,70 @@ app.post("/api/printer/test", authRequired, async (req, res) => {
     const printer = loadPrinters().find(p => p.id === printerId && p.enabled);
 
     if (!printer) {
-      return res.status(404).json({ error: "Printer not found" });
+      return res.status(404).json({
+        success: false,
+        printed: false,
+        title: "Printer Not Found",
+        error: "Printer is not found or is currently disabled in database.",
+        fix: [
+          "1. Open 'Printers' menu and verify that your printer exists.",
+          "2. If disabled, click the 'Enable' toggle button on the printer card."
+        ]
+      });
     }
 
-    const online = await isPrinterOnline(
+    const conn = await checkPrinterConnection(
       printer.connection.ip,
-      printer.connection.port
+      printer.connection.port,
+      2500
     );
 
-    if (!online) {
+    if (!conn.online) {
+      const diag = explainPrinterError(conn.error, printer.connection.ip, printer.connection.port, printer.name);
       addJob({
         printerId,
         printerName: printer.name,
         type: "test",
         status: "failed",
-        error: "Printer offline"
+        error: diag.description
       });
-      return res.status(500).json({
+      return res.status(502).json({
+        success: false,
         printed: false,
-        error: "Printer offline"
+        title: diag.title,
+        error: diag.description,
+        fix: diag.fix,
+        diagnostics: {
+          ip: printer.connection.ip,
+          port: printer.connection.port,
+          errCode: conn.error
+        }
       });
     }
 
     const tp = new ThermalPrinter({
       type: PrinterTypes.EPSON,
       interface: `tcp://${printer.connection.ip}:${printer.connection.port}`,
-      timeout: 3000
+      timeout: 3500
     });
 
-    tp.println("════════════════════════════════");
+    tp.println("================================");
     tp.println("       ANDROPRINT v2.0");
     tp.println("       TEST PRINT");
-    tp.println("════════════════════════════════");
+    tp.println("================================");
     tp.println(`Printer : ${printer.name}`);
+    tp.println(`Host    : ${printer.connection.ip}:${printer.connection.port}`);
     tp.println(`Server  : ${SERVER_ID}`);
     tp.println(`Time    : ${new Date().toLocaleString()}`);
-    tp.println("════════════════════════════════");
+    tp.println("================================");
     tp.println("  ✓ Connection OK");
     tp.println("  ✓ Print Engine OK");
-    tp.println("  ✓ Cloud Ready");
-    tp.println("════════════════════════════════");
+    tp.println("  ✓ Paper Feed OK");
+    tp.println("================================\n\n");
     tp.cut();
 
     const ok = await tp.execute();
-    if (!ok) throw new Error("Execute failed");
+    if (!ok) throw new Error("Printer execute command returned false");
 
     addJob({
       printerId,
@@ -123053,19 +123127,26 @@ app.post("/api/printer/test", authRequired, async (req, res) => {
       status: "success"
     });
 
-    res.json({ success: true, printed: true });
+    res.json({ success: true, printed: true, message: `Test receipt printed on ${printer.name}` });
 
   } catch (e) {
+    const errorMsg = e.message || "Unknown error";
     addJob({
       printerId: req.body.printerId,
       type: "test",
       status: "failed",
-      error: e.message
+      error: errorMsg
     });
     res.status(500).json({
       success: false,
       printed: false,
-      error: e.message
+      title: "Print Execution Failed",
+      error: errorMsg,
+      fix: [
+        "1. Check if printer paper roll is empty or cover is open.",
+        "2. Check if printer error indicator (RED light) is blinking.",
+        "3. Turn off printer for 5 seconds and power back on."
+      ]
     });
   }
 });
@@ -124534,9 +124615,46 @@ app.get(["/dash", "/dashboard"], (req, res) => res.redirect("/dashboard.html"));
 
 app.post("/api/quickprint", async (req, res) => {
   try {
-    let { printerId, text } = req.body;
+    let { printerId, targetIp, targetPort, text } = req.body;
     if (!text) {
       return res.status(400).json({ success: false, error: "Print text is required" });
+    }
+
+    if (targetIp) {
+      const pIp = targetIp.trim();
+      const pPort = parseInt(targetPort) || 9100;
+      logger.info("PRINT", `Direct test print to discovered target ${pIp}:${pPort}`);
+
+      const conn = await checkPrinterConnection(pIp, pPort, 2500);
+      if (!conn.online) {
+        const diag = explainPrinterError(conn.error, pIp, pPort, `Discovered Device (${pIp})`);
+        return res.status(502).json({
+          success: false,
+          printed: false,
+          title: diag.title,
+          error: diag.description,
+          fix: diag.fix,
+          diagnostics: { ip: pIp, port: pPort, errCode: conn.error }
+        });
+      }
+
+      const directTp = new ThermalPrinter({
+        type: PrinterTypes.EPSON,
+        interface: `tcp://${pIp}:${pPort}`,
+        timeout: 4000
+      });
+      directTp.println(text);
+      directTp.cut();
+      await directTp.execute();
+      addJob({
+        printerId: `direct-${pIp}`,
+        printerName: `Discovered Device (${pIp})`,
+        type: "quickprint",
+        status: "success",
+        textPreview: text.substring(0, 100),
+        timestamp: new Date().toISOString()
+      });
+      return res.json({ success: true, printed: true, message: `Direct test receipt printed on ${pIp}:${pPort}` });
     }
 
     const printers = loadPrinters();
@@ -124550,11 +124668,30 @@ app.post("/api/quickprint", async (req, res) => {
     }
 
     if (!printer) {
-      logger.info("PRINT", `Quick test received: "${text}" (No printer configured yet)`);
-      return res.json({
-        success: true,
-        simulated: true,
-        message: "Quick test processed! (Add a printer in 'Printers' menu to print physical paper)"
+      logger.warn("PRINT", `Quick test received but no printer configured in system`);
+      return res.status(404).json({
+        success: false,
+        printed: false,
+        title: "No Printer Configured",
+        error: "No physical printer has been saved in AndroPrint yet.",
+        fix: [
+          "1. Open the 'Printers' menu from top navigation bar.",
+          "2. Click '+ Add Printer' to save your printer IP (e.g. 192.168.1.150:9100).",
+          "3. Once saved, click 'Test' on that printer card."
+        ]
+      });
+    }
+
+    const conn = await checkPrinterConnection(printer.connection.ip, printer.connection.port, 2500);
+    if (!conn.online) {
+      const diag = explainPrinterError(conn.error, printer.connection.ip, printer.connection.port, printer.name);
+      return res.status(502).json({
+        success: false,
+        printed: false,
+        title: diag.title,
+        error: diag.description,
+        fix: diag.fix,
+        diagnostics: { ip: printer.connection.ip, port: printer.connection.port, errCode: conn.error }
       });
     }
 
@@ -124569,17 +124706,28 @@ app.post("/api/quickprint", async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    res.json({ success: true, message: `Quick print dispatched to ${printer.name}` });
+    res.json({ success: true, printed: true, message: `Quick print dispatched to ${printer.name}` });
   } catch (e) {
-    logger.error("PRINT", "Quick print failed: " + e.message);
+    const errorMsg = e.message || "Unknown error";
+    logger.error("PRINT", "Quick print failed: " + errorMsg);
     addJob({
       printerId: req.body.printerId,
       type: "quickprint",
       status: "failed",
-      error: e.message,
+      error: errorMsg,
       timestamp: new Date().toISOString()
     });
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({
+      success: false,
+      printed: false,
+      title: "Print Execution Failed",
+      error: errorMsg,
+      fix: [
+        "1. Check if printer paper roll is empty or lever is open.",
+        "2. Check if printer error indicator (RED light) is blinking.",
+        "3. Power cycle printer and retry."
+      ]
+    });
   }
 });
 

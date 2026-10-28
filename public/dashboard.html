@@ -1007,6 +1007,40 @@
         </div>
     </div>
 
+    <!-- MODAL: PRINT DIAGNOSTIC ERROR & FIX GUIDE -->
+    <div class="modal-overlay" id="printDiagnosticModal">
+        <div class="modal-content" style="max-width:520px; border:1px solid rgba(239, 68, 68, 0.4); box-shadow:0 16px 48px rgba(239,68,68,0.25);">
+            <div class="modal-header" style="border-bottom:1px solid rgba(239, 68, 68, 0.2); padding-bottom:12px;">
+                <h3 style="color:#ef4444; display:flex; align-items:center; gap:8px;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <span id="diagModalTitle">Print Diagnostic: Failed</span>
+                </h3>
+                <button class="icon-btn" onclick="closePrintDiagnosticModal()">&times;</button>
+            </div>
+            
+            <div style="padding-top:14px;">
+                <div style="background:rgba(239, 68, 68, 0.08); border-left:4px solid #ef4444; padding:12px 14px; border-radius:6px; margin-bottom:16px;">
+                    <div style="font-size:0.75rem; text-transform:uppercase; color:#ef4444; font-weight:700; margin-bottom:4px;">Why it failed (Reason)</div>
+                    <div id="diagModalReason" style="font-size:0.88rem; color:var(--text); line-height:1.45; font-weight:500;">Target unreachable</div>
+                </div>
+
+                <div style="font-size:0.78rem; text-transform:uppercase; color:var(--text-dim); font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                    <span>🛠️ How to Fix / Steps to Resolve:</span>
+                </div>
+                <div id="diagModalFixList" style="display:flex; flex-direction:column; gap:8px; font-size:0.83rem; color:var(--text); margin-bottom:22px;">
+                    <!-- Dynamically populated fix items -->
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--glass-border); padding-top:16px; flex-wrap:wrap; gap:10px;">
+                    <a href="/printer.html" class="btn-premium" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; padding:8px 16px;">
+                        ⚙️ Open Printers Menu
+                    </a>
+                    <button class="btn-secondary" onclick="closePrintDiagnosticModal()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script>
         let eventSource = null;
@@ -1310,14 +1344,37 @@
 
         // Test Print to Discovered Device
         async function testPrintDevice(target) {
-            showToast('Sending test receipt to ' + target, 'success');
+            showToast('Dispatching test print to ' + target, 'info');
             try {
-                await fetch('/api/quickprint', {
+                const isIp = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(target);
+                const res = await fetch('/api/quickprint', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: `AndroPrint Device Test\nTarget: ${target}\nDate: ${new Date().toLocaleString()}` })
+                    body: JSON.stringify({
+                        targetIp: isIp ? target : null,
+                        targetPort: 9100,
+                        text: `================================\n   ANDROPRINT DEVICE TEST\nTarget: ${target}\nDate: ${new Date().toLocaleString()}\nStatus: Direct ESC/POS Print\n================================\n\n\n`
+                    })
                 });
-            } catch {}
+                const data = await res.json();
+                if (data.success && data.printed) {
+                    showToast(data.message || `Test print sent to ${target}`, 'success');
+                } else {
+                    showToast(data.title || data.error || 'Test print failed', 'error');
+                    showPrintDiagnostic(data);
+                }
+            } catch (err) {
+                showToast('Print request error: ' + err.message, 'error');
+                showPrintDiagnostic({
+                    title: 'Network / Connection Error',
+                    error: err.message,
+                    fix: [
+                        '1. Check if the Android print service is running in AndroPrint app.',
+                        '2. Verify you are connected to the phone dashboard URL.',
+                        '3. If changing port, verify server has finished restarting.'
+                    ]
+                });
+            }
         }
 
         // Quick Print Test
@@ -1334,14 +1391,51 @@
                     body: JSON.stringify({ text: `${text}\nTime: ${new Date().toLocaleTimeString()}` })
                 });
                 const data = await res.json();
-                if (data.success) {
+                if (data.success && data.printed) {
                     showToast(data.message || 'Quick print processed!', 'success');
                 } else {
-                    showToast(data.error || 'Print failed', 'error');
+                    showToast(data.title || data.error || 'Print failed', 'error');
+                    showPrintDiagnostic(data);
                 }
             } catch (e) {
                 showToast('Print request error: ' + e.message, 'error');
+                showPrintDiagnostic({
+                    title: 'Network / Connection Error',
+                    error: e.message,
+                    fix: [
+                        '1. Check if the Android print service is running in AndroPrint app.',
+                        '2. Verify you are connected to the phone dashboard URL.'
+                    ]
+                });
             }
+        }
+
+        function showPrintDiagnostic(errObj) {
+            const modal = document.getElementById('printDiagnosticModal');
+            if (!modal) return;
+            document.getElementById('diagModalTitle').textContent = errObj.title || 'Test Print Failed';
+            document.getElementById('diagModalReason').textContent = errObj.error || errObj.description || 'Connection failed';
+            
+            const listContainer = document.getElementById('diagModalFixList');
+            const fixes = errObj.fix || [
+                "1. Turn off printer, hold FEED button, and turn ON to print Self-Test slip (verify IP & Port 9100).",
+                "2. Ensure phone Wi-Fi and printer are on the same subnet (e.g. 192.168.1.x).",
+                "3. Disable 'AP Isolation' / 'Client Isolation' in your Wi-Fi router settings."
+            ];
+            
+            listContainer.innerHTML = fixes.map(f => `
+                <div style="display:flex; gap:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); padding:10px 12px; border-radius:8px;">
+                    <span style="color:#10b981; font-weight:bold;">✓</span>
+                    <span style="font-size:0.82rem; line-height:1.45;">${f}</span>
+                </div>
+            `).join('');
+
+            modal.classList.add('active');
+        }
+
+        function closePrintDiagnosticModal() {
+            const modal = document.getElementById('printDiagnosticModal');
+            if (modal) modal.classList.remove('active');
         }
 
         // Port Changer Dialog
