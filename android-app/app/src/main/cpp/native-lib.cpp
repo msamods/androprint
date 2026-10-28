@@ -71,7 +71,6 @@ Java_com_msamods_androprint_NodeRunner_startNodeWithArguments(
             chdir(dir);
             setenv("HOME", dir, 1);
             setenv("NODE_PATH", dir, 1);
-            setenv("PORT", "3000", 0);
             __android_log_print(ANDROID_LOG_INFO, TAG, "Node environment CWD configured: %s", dir);
             env->ReleaseStringUTFChars(projectDir, dir);
         }

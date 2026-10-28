@@ -155,9 +155,9 @@ public class MainActivity extends AppCompatActivity {
             btnTabHud.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF1F2937));
             btnTabHud.setTextColor(0xFF94A3B8);
 
-            // Load dashboard if needed or if port changed
+            // Load dashboard if needed or if port changed or if previous load failed
             String currentUrl = webView.getUrl();
-            if (currentUrl == null || currentUrl.isEmpty() || !currentUrl.contains(":" + currentPort + "/")) {
+            if (currentUrl == null || currentUrl.isEmpty() || !currentUrl.contains(":" + currentPort + "/") || currentUrl.startsWith("data:")) {
                 webView.loadUrl(localDashboardUrl);
             }
         }
@@ -217,6 +217,15 @@ public class MainActivity extends AppCompatActivity {
                             view.loadUrl(httpFallback);
                         }
                     }, 500);
+                } else if (failingUrl != null && failingUrl.contains("localhost")) {
+                    view.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (isServerRunning) {
+                                view.loadUrl(localDashboardUrl);
+                            }
+                        }
+                    }, 1500);
                 }
             }
         });
@@ -289,11 +298,17 @@ public class MainActivity extends AppCompatActivity {
 
     public void updateActivePort(int newPort) {
         if (newPort < 1024 || newPort > 65535) return;
+        int oldPort = this.currentPort;
         this.currentPort = newPort;
         this.localDashboardUrl = "http://localhost:" + newPort + "/dashboard.html";
         updateServerUiState(isServerRunning);
         detectWifiIp();
-        appendLog("[INFO] Active port switched to " + newPort);
+        if (oldPort != newPort) {
+            appendLog("[INFO] Active port switched to " + newPort);
+            if (webView != null && webView.getVisibility() == View.VISIBLE) {
+                webView.loadUrl(localDashboardUrl);
+            }
+        }
     }
 
     private void detectWifiIp() {
@@ -393,7 +408,27 @@ public class MainActivity extends AppCompatActivity {
                     socket.connect(new java.net.InetSocketAddress("127.0.0.1", currentPort), 800);
                     socket.close();
                     isPortListening = true;
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    // Check if server is running on alternative standard ports (e.g. 3000 vs 3005)
+                    int[] candidatePorts = new int[]{3000, 3005, 8080};
+                    for (int cand : candidatePorts) {
+                        if (cand == currentPort) continue;
+                        try {
+                            java.net.Socket testSock = new java.net.Socket();
+                            testSock.connect(new java.net.InetSocketAddress("127.0.0.1", cand), 400);
+                            testSock.close();
+                            isPortListening = true;
+                            final int matchedPort = cand;
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    updateActivePort(matchedPort);
+                                }
+                            });
+                            break;
+                        } catch (Exception ignoredAlt) {}
+                    }
+                }
 
                 if (isPortListening || isProcessAlive) {
                     consecutivePortFailures = 0;

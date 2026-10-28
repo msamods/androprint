@@ -126804,7 +126804,7 @@ process.exit = function(code) {
   console.warn(`[PROTECTION] Intercepted process.exit(${code}) to keep Android app running.`);
 };
 
-(__nccwpck_require__(23045).config)();
+(__nccwpck_require__(23045).config)({ override: true });
 const express = __nccwpck_require__(68468);
 const fs = __nccwpck_require__(79896);
 const path = __nccwpck_require__(16928);

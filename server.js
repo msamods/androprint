@@ -29,7 +29,7 @@ process.exit = function(code) {
   console.warn(`[PROTECTION] Intercepted process.exit(${code}) to keep Android app running.`);
 };
 
-require("dotenv").config();
+require("dotenv").config({ override: true });
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
