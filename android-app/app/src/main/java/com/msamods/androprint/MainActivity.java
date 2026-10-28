@@ -317,7 +317,8 @@ public class MainActivity extends AppCompatActivity {
     private void toggleServer() {
         Intent serviceIntent = new Intent(this, PrintServerService.class);
 
-        if (!isServerRunning) {
+        boolean currentlyRunning = PrintServerService.isServerRunning(this) || isServerRunning;
+        if (!currentlyRunning) {
             try {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     startForegroundService(serviceIntent);
@@ -379,26 +380,36 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private int consecutivePortFailures = 0;
+
     private void checkLivePortStatus() {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                boolean running = false;
+                boolean isProcessAlive = PrintServerService.isServerRunning(getApplicationContext());
+                boolean isPortListening = false;
                 try {
                     java.net.Socket socket = new java.net.Socket();
-                    socket.connect(new java.net.InetSocketAddress("127.0.0.1", currentPort), 400);
+                    socket.connect(new java.net.InetSocketAddress("127.0.0.1", currentPort), 800);
                     socket.close();
-                    running = true;
-                } catch (Exception ignored) {
-                    running = PrintServerService.isServerRunning(getApplicationContext());
+                    isPortListening = true;
+                } catch (Exception ignored) {}
+
+                if (isPortListening || isProcessAlive) {
+                    consecutivePortFailures = 0;
+                } else {
+                    consecutivePortFailures++;
                 }
 
-                final boolean isAlive = running;
+                // Server is alive if the :server process is running OR if port is responding
+                final boolean isAlive = isProcessAlive || (consecutivePortFailures < 2);
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        isServerRunning = isAlive;
-                        updateServerUiState(isAlive);
+                        if (isServerRunning != isAlive) {
+                            isServerRunning = isAlive;
+                            updateServerUiState(isAlive);
+                        }
                     }
                 });
             }

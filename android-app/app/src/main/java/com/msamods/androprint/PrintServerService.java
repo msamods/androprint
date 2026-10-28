@@ -35,7 +35,18 @@ public class PrintServerService extends Service {
     public static boolean isServerRunning(Context context) {
         if (context != null) {
             try {
-                return context.getSharedPreferences("server_state", Context.MODE_PRIVATE).getBoolean("is_running", false);
+                android.app.ActivityManager am = (android.app.ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+                if (am != null) {
+                    java.util.List<android.app.ActivityManager.RunningAppProcessInfo> list = am.getRunningAppProcesses();
+                    if (list != null) {
+                        String target = context.getPackageName() + ":server";
+                        for (android.app.ActivityManager.RunningAppProcessInfo info : list) {
+                            if (target.equals(info.processName)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
             } catch (Throwable ignored) {}
         }
         return isRunning;
