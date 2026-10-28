@@ -493,9 +493,65 @@ async function rasterizeImage(imageInput, maxWidth = 384) {
   }
 }
 
-/* ============ DYNAMIC UPI & QR HELPER ============ */
+/* ============ PRINTER PAPER & CANVAS METRICS ============ */
 
-async function generateQrBuffer(qrInput) {
+function getPrinterPaperMetrics(printer, tpl = {}) {
+  const paperSetting = tpl.paperWidth || (printer && (printer.paperWidth || (printer.paper && printer.paper.width)));
+  if (paperSetting === 58 || paperSetting === 384 || paperSetting === "58" || paperSetting === "58mm") {
+    return { columns: 32, dots: 384, mm: 58 };
+  }
+  // Default: Standard 80mm ESC/POS Thermal Printer (48 columns @ Font A 12x24, 576 dots printable width)
+  return { columns: 48, dots: 576, mm: 80 };
+}
+
+/* ============ MATHEMATICALLY CENTERED BITMAP CANVAS HELPER ============ */
+
+function centerPngBufferOnCanvas(pngBuffer, canvasWidth = 576, align = "center") {
+  try {
+    const src = PNG.sync.read(pngBuffer);
+    if (src.width >= canvasWidth) return pngBuffer;
+
+    const canvas = new PNG({ width: canvasWidth, height: src.height });
+    canvas.data.fill(255); // Pure white background for thermal head
+
+    let offsetX = 0;
+    const a = (align || "center").toLowerCase();
+    if (a === "center") {
+      offsetX = Math.max(0, Math.floor((canvasWidth - src.width) / 2));
+    } else if (a === "right") {
+      offsetX = Math.max(0, canvasWidth - src.width);
+    }
+
+    for (let y = 0; y < src.height; y++) {
+      for (let x = 0; x < src.width; x++) {
+        const s = (src.width * y + x) << 2;
+        const d = (canvasWidth * y + (x + offsetX)) << 2;
+        canvas.data[d] = src.data[s];
+        canvas.data[d + 1] = src.data[s + 1];
+        canvas.data[d + 2] = src.data[s + 2];
+        canvas.data[d + 3] = 255;
+      }
+    }
+    return PNG.sync.write(canvas);
+  } catch (err) {
+    return pngBuffer;
+  }
+}
+
+async function generateCenteredQrPng(qrText, canvasWidth = 576, qrSize = 220, align = "center") {
+  const rawPng = await QRCode.toBuffer(qrText, {
+    type: "png",
+    width: qrSize,
+    margin: 1,
+    errorCorrectionLevel: "M"
+  });
+
+  return centerPngBufferOnCanvas(rawPng, canvasWidth, align);
+}
+
+/* ============ DYNAMIC UPI & QR HELPER (FULL-WIDTH CENTERED) ============ */
+
+async function generateQrBuffer(qrInput, canvasDots = 576, align = "center", qrSize = 220) {
   let qrText = "";
   if (typeof qrInput === "string") {
     qrText = qrInput;
@@ -517,13 +573,9 @@ async function generateQrBuffer(qrInput) {
 
   if (!qrText) return null;
 
-  // Universal Raster QR — 100% compatible with all thermal printers
-  const pngBuffer = await QRCode.toBuffer(qrText, {
-    type: "png",
-    width: 220,
-    margin: 1,
-    errorCorrectionLevel: "M"
-  });
+  const targetWidth = canvasDots || 576;
+  const targetSize = parseInt(qrSize, 10) || (targetWidth === 384 ? 180 : 220);
+  const pngBuffer = await generateCenteredQrPng(qrText, targetWidth, targetSize, align);
 
   return { pngBuffer, qrText };
 }
@@ -595,6 +647,7 @@ async function printReceipt(printer, options = {}) {
   const device = new ThermalPrinter({
     type: PrinterTypes.EPSON,
     interface: `tcp://${pIp}:${pPort}`,
+    characterSet: "PC437_USA",
     removeSpecialCharacters: false,
     lineCharacter: "-",
     options: {
@@ -630,14 +683,17 @@ async function printReceipt(printer, options = {}) {
     }
   }
 
+  const metrics = getPrinterPaperMetrics(printer);
+
   // 3. STORE LOGO / RASTER IMAGE
   const effectiveLogo = logo || (fs.existsSync(STORE_LOGO_PATH) && logo !== false ? STORE_LOGO_PATH : null);
   if (effectiveLogo) {
     try {
-      const maxWidth = (printer.paperWidth === 58) ? 320 : 480;
+      const maxWidth = (metrics.columns === 32) ? 320 : 480;
       const pngBuf = await rasterizeImage(effectiveLogo, maxWidth);
       if (pngBuf) {
-        const png = PNG.sync.read(pngBuf);
+        const centeredBuf = centerPngBufferOnCanvas(pngBuf, metrics.dots, options.logoAlign || "center");
+        const png = PNG.sync.read(centeredBuf);
         device.alignCenter();
         const imgCmd = device.printer.printImageBuffer(png.width, png.height, png.data);
         device.append(imgCmd);
@@ -680,10 +736,10 @@ async function printReceipt(printer, options = {}) {
     }
   }
 
-  // 6. DYNAMIC UPI QR / QR CODE
+  // 6. DYNAMIC UPI QR / QR CODE (FULL-WIDTH MATHEMATICALLY CENTERED)
   if (qr) {
     try {
-      const qrRes = await generateQrBuffer(qr);
+      const qrRes = await generateQrBuffer(qr, metrics.dots, options.qrAlign || "center", options.qrSize || 220);
       if (qrRes && qrRes.pngBuffer) {
         const png = PNG.sync.read(qrRes.pngBuffer);
         device.alignCenter();
@@ -1169,7 +1225,15 @@ app.post("/print", authRequired, async (req, res) => {
 
 /* ============ SMART MULTI-PRINTER ROUTING ENGINE ============ */
 
-function padReceiptLine(left = "", right = "", width = 42) {
+function centerTextLine(text = "", width = 48) {
+  const t = String(text).trim();
+  if (t.length >= width) return t.substring(0, width);
+  const pad = Math.max(0, width - t.length);
+  const left = Math.floor(pad / 2);
+  return " ".repeat(left) + t + " ".repeat(pad - left);
+}
+
+function padReceiptLine(left = "", right = "", width = 48) {
   const l = String(left);
   const r = String(right);
   if (l.length + r.length >= width) {
@@ -1181,14 +1245,14 @@ function padReceiptLine(left = "", right = "", width = 42) {
   return l + " ".repeat(spaces) + r;
 }
 
-function buildKotTicket(order, width = 42) {
+function buildKotTicket(order, width = 48) {
   const lineChar = "=";
   const divider = lineChar.repeat(width);
   const dashDivider = "-".repeat(width);
   const lines = [];
 
   lines.push(divider);
-  lines.push("       *** KITCHEN ORDER TICKET (KOT) ***");
+  lines.push(centerTextLine("*** KITCHEN ORDER TICKET (KOT) ***", width));
   lines.push(divider);
   lines.push(padReceiptLine(`Order: #${order.orderId || "NEW"}`, `Table: ${order.table || "Dine-In"}`, width));
   if (order.serverName || order.waiter) {
@@ -1217,13 +1281,13 @@ function buildKotTicket(order, width = 42) {
   return lines.join("\n");
 }
 
-function buildBotTicket(order, width = 42) {
+function buildBotTicket(order, width = 48) {
   const divider = "=".repeat(width);
   const dashDivider = "-".repeat(width);
   const lines = [];
 
   lines.push(divider);
-  lines.push("          *** BAR ORDER TICKET (BOT) ***");
+  lines.push(centerTextLine("*** BAR ORDER TICKET (BOT) ***", width));
   lines.push(divider);
   lines.push(padReceiptLine(`Order: #${order.orderId || "NEW"}`, `Table: ${order.table || "Bar Counter"}`, width));
   lines.push(`Time: ${new Date().toLocaleTimeString()} • ${new Date().toLocaleDateString()}`);
@@ -1241,13 +1305,13 @@ function buildBotTicket(order, width = 42) {
   return lines.join("\n");
 }
 
-function buildBillReceipt(order, width = 42) {
+function buildBillReceipt(order, width = 48) {
   const divider = "=".repeat(width);
   const dashDivider = "-".repeat(width);
   const lines = [];
 
   lines.push(divider);
-  lines.push("             TAX INVOICE / CASH BILL");
+  lines.push(centerTextLine("TAX INVOICE / CASH BILL", width));
   lines.push(divider);
   lines.push(padReceiptLine(`Bill No: #${order.orderId || "INV-" + Date.now().toString().slice(-4)}`, `Table: ${order.table || "POS"}`, width));
   lines.push(`Date: ${new Date().toLocaleString()}`);
@@ -1288,7 +1352,7 @@ function buildBillReceipt(order, width = 42) {
   if (order.paymentMethod) {
     lines.push(`Payment: ${order.paymentMethod}`);
   }
-  lines.push("\n      Thank you for your visit! Please come again.\n");
+  lines.push("\n" + centerTextLine("Thank you for your visit! Please come again.", width) + "\n");
 
   return { text: lines.join("\n"), grandTotal };
 }
@@ -1393,7 +1457,7 @@ app.post("/api/print/route", authRequired, async (req, res) => {
       const targetPrinter = await resolvePrinterForJob(null, "KITCHEN");
       if (targetPrinter) {
         const isFailover = targetPrinter.role && targetPrinter.role.toUpperCase() !== "KITCHEN";
-        const width = targetPrinter.paperWidth === 58 ? 32 : 42;
+        const width = getPrinterPaperMetrics(targetPrinter).columns;
         let kotText = buildKotTicket({ ...fullOrder, items: kitchenItems }, width);
         if (isFailover) kotText = `[ROUTED VIA ${targetPrinter.role} - KITCHEN PRINTER OFFLINE]\n` + kotText;
 
@@ -1427,7 +1491,7 @@ app.post("/api/print/route", authRequired, async (req, res) => {
       const targetPrinter = await resolvePrinterForJob(null, "BAR");
       if (targetPrinter) {
         const isFailover = targetPrinter.role && targetPrinter.role.toUpperCase() !== "BAR";
-        const width = targetPrinter.paperWidth === 58 ? 32 : 42;
+        const width = getPrinterPaperMetrics(targetPrinter).columns;
         let botText = buildBotTicket({ ...fullOrder, items: barItems }, width);
         if (isFailover) botText = `[ROUTED VIA ${targetPrinter.role} - BAR PRINTER OFFLINE]\n` + botText;
 
@@ -1459,7 +1523,7 @@ app.post("/api/print/route", authRequired, async (req, res) => {
     if (printBill) {
       const cashierPrinter = await resolvePrinterForJob(null, "CASHIER");
       if (cashierPrinter) {
-        const width = cashierPrinter.paperWidth === 58 ? 32 : 42;
+        const width = getPrinterPaperMetrics(cashierPrinter).columns;
         const { text: billText, grandTotal } = buildBillReceipt(fullOrder, width);
 
         let upiQrPayload = null;
@@ -1514,7 +1578,7 @@ app.post("/api/print/route", authRequired, async (req, res) => {
 
 /* ============ HTML TO RECEIPT AUTO CONVERTER ============ */
 
-function parseHtmlToEscPos(htmlString, width = 42) {
+function parseHtmlToEscPos(htmlString, width = 48) {
   if (!htmlString) return "";
   let text = htmlString;
 
@@ -1617,7 +1681,7 @@ app.post("/api/print/html", authRequired, async (req, res) => {
     const printer = await resolvePrinterForJob(printerId, role);
     if (!printer) return res.status(404).json({ error: "No active printer found" });
 
-    const width = printer.paperWidth === 58 ? 32 : 42;
+    const width = getPrinterPaperMetrics(printer).columns;
     const formattedText = parseHtmlToEscPos(html, width);
 
     await printReceipt(printer, {
@@ -1678,7 +1742,7 @@ app.post("/api/print/pdf", upload.single("pdf"), authRequired, async (req, res) 
 
     // Parse PDF
     const pdfData = await pdfParse(pdfBuffer);
-    const width = printer.paperWidth === 58 ? 32 : 42;
+    const width = getPrinterPaperMetrics(printer).columns;
 
     const rawLines = (pdfData.text || "").split("\n");
     const cleanedLines = [];
@@ -1742,25 +1806,34 @@ function getDefaultTemplates() {
       description: "Itemized restaurant bill with UPI QR & cash drawer kick",
       paperWidth: 80,
       elements: [
-        { type: "header", text: "SPICE GARDEN RESTAURANT", subtitle: "Authentic Kerala Cuisine\nMG Road, Kochi • Ph: 0484-2345678\nGSTIN: 32ABCDE1234F1Z5", align: "center", bold: true },
+        { type: "header", text: "SPICE GARDEN RESTAURANT", subtitle: "Authentic Kerala Cuisine\nMG Road, Kochi • Ph: 0484-2345678\nGSTIN: 32ABCDE1234F1Z5", align: "center", bold: true, size: "double-height" },
         { type: "divider", style: "double" },
         { type: "meta", rows: [{ key: "Invoice No", val: "#INV-9281" }, { key: "Date & Time", val: "{DATE_TIME}" }, { key: "Table / Server", val: "Table 6 • Waiter Anoop" }] },
         { type: "divider", style: "single" },
-        { type: "items", headers: ["ITEM", "QTY", "RATE", "TOTAL"], rows: [
-          { name: "Malabar Biryani", qty: "2", rate: "240", total: "480.00" },
-          { name: "Kerala Parotta", qty: "4", rate: "25", total: "100.00" },
-          { name: "Chicken Roast", qty: "1", rate: "280", total: "280.00" },
-          { name: "Fresh Lime Soda", qty: "2", rate: "40", total: "80.00" }
-        ]},
+        { type: "items",
+          headers: ["ITEM", "QTY", "RATE", "TOTAL"],
+          columns: [
+            { key: "name", title: "ITEM", width: 24, align: "left" },
+            { key: "qty", title: "QTY", width: 6, align: "center" },
+            { key: "rate", title: "RATE", width: 8, align: "right" },
+            { key: "total", title: "TOTAL", width: 10, align: "right" }
+          ],
+          rows: [
+            { name: "Malabar Biryani", qty: "2", rate: "240.00", total: "480.00" },
+            { name: "Kerala Parotta", qty: "4", rate: "25.00", total: "100.00" },
+            { name: "Chicken Roast", qty: "1", rate: "280.00", total: "280.00" },
+            { name: "Fresh Lime Soda", qty: "2", rate: "40.00", total: "80.00" }
+          ]
+        },
         { type: "divider", style: "single" },
         { type: "totals", rows: [
           { label: "Subtotal", val: "Rs. 940.00" },
           { label: "CGST (2.5%)", val: "Rs. 23.50" },
           { label: "SGST (2.5%)", val: "Rs. 23.50" },
-          { label: "*** NET AMOUNT ***", val: "Rs. 987.00", bold: true }
+          { label: "*** NET AMOUNT ***", val: "Rs. 987.00", bold: true, double: true }
         ]},
         { type: "divider", style: "double" },
-        { type: "qr", pa: "msamods@okaxis", pn: "Spice Garden", am: "987.00", label: "SCAN TO PAY WITH ANY UPI APP" },
+        { type: "qr", pa: "msamods@okaxis", pn: "Spice Garden", am: "987.00", label: "SCAN TO PAY WITH ANY UPI APP", caption: "GPay • PhonePe • Paytm • BHIM", align: "center" },
         { type: "footer", text: "Thank you for dining with us!\nVisit again soon • Follow us @spicegarden", align: "center" }
       ],
       actions: { cut: true, drawerKick: true, buzzer: false }
@@ -1771,17 +1844,25 @@ function getDefaultTemplates() {
       description: "High-contrast chef ticket with buzzer alert",
       paperWidth: 80,
       elements: [
-        { type: "header", text: "*** KITCHEN ORDER TICKET (KOT) ***", subtitle: "Order #804 • Table: 12", align: "center", bold: true },
+        { type: "header", text: "*** KITCHEN ORDER TICKET (KOT) ***", subtitle: "Order #804 • Table: 12", align: "center", bold: true, size: "double-height" },
         { type: "divider", style: "double" },
         { type: "meta", rows: [{ key: "Server", val: "Captain Rahul" }, { key: "Placed At", val: "{TIME}" }] },
         { type: "divider", style: "single" },
-        { type: "items", headers: ["QTY", "ITEM", "SPECIAL INSTRUCTIONS"], rows: [
-          { qty: "2", name: "Butter Chicken", note: "EXTRA SPICY, NO CORIANDER" },
-          { qty: "3", name: "Butter Naan", note: "CRISPY WELL DONE" },
-          { qty: "1", name: "Veg Fried Rice", note: "LESS OIL" }
-        ]},
+        { type: "items",
+          headers: ["QTY", "ITEM", "SPECIAL INSTRUCTIONS"],
+          columns: [
+            { key: "qty", title: "QTY", width: 6, align: "center" },
+            { key: "name", title: "ITEM", width: 24, align: "left" },
+            { key: "note", title: "SPECIAL INSTRUCTIONS", width: 18, align: "left" }
+          ],
+          rows: [
+            { qty: "2", name: "Butter Chicken", note: "EXTRA SPICY, NO CORIANDER" },
+            { qty: "3", name: "Butter Naan", note: "CRISPY WELL DONE" },
+            { qty: "1", name: "Veg Fried Rice", note: "LESS OIL" }
+          ]
+        },
         { type: "divider", style: "double" },
-        { type: "footer", text: "TOTAL ITEMS: 6 • PRIORITY: HIGH", align: "center" }
+        { type: "footer", text: "TOTAL ITEMS: 6 • PRIORITY: HIGH", align: "center", bold: true }
       ],
       actions: { cut: true, drawerKick: false, buzzer: true }
     },
@@ -1791,23 +1872,32 @@ function getDefaultTemplates() {
       description: "Supermarket cash bill with barcode & savings summary",
       paperWidth: 80,
       elements: [
-        { type: "header", text: "ANDROPRINT SUPERMARKET", subtitle: "Smart Hypermarket Solutions\nOpen 8 AM - 10 PM Everyday", align: "center", bold: true },
+        { type: "header", text: "ANDROPRINT SUPERMARKET", subtitle: "Smart Hypermarket Solutions\nOpen 8 AM - 10 PM Everyday", align: "center", bold: true, size: "double-height" },
         { type: "divider", style: "double" },
         { type: "meta", rows: [{ key: "Bill No", val: "POS-1049" }, { key: "Cashier", val: "Counter 2" }, { key: "Date", val: "{DATE}" }] },
         { type: "divider", style: "single" },
-        { type: "items", headers: ["ITEM", "QTY", "RATE", "AMOUNT"], rows: [
-          { name: "Almond Milk 1L", qty: "1", rate: "290", total: "290.00" },
-          { name: "Organic Oats 1kg", qty: "2", rate: "180", total: "360.00" },
-          { name: "Dark Chocolate 100g", qty: "3", rate: "150", total: "450.00" }
-        ]},
+        { type: "items",
+          headers: ["ITEM", "QTY", "RATE", "AMOUNT"],
+          columns: [
+            { key: "name", title: "ITEM", width: 24, align: "left" },
+            { key: "qty", title: "QTY", width: 6, align: "center" },
+            { key: "rate", title: "RATE", width: 8, align: "right" },
+            { key: "total", title: "AMOUNT", width: 10, align: "right" }
+          ],
+          rows: [
+            { name: "Almond Milk 1L", qty: "1", rate: "290.00", total: "290.00" },
+            { name: "Organic Oats 1kg", qty: "2", rate: "180.00", total: "360.00" },
+            { name: "Dark Chocolate 100g", qty: "3", rate: "150.00", total: "450.00" }
+          ]
+        },
         { type: "divider", style: "single" },
         { type: "totals", rows: [
           { label: "Items Total", val: "Rs. 1,100.00" },
           { label: "Membership Discount", val: "-Rs. 110.00" },
-          { label: "*** TOTAL PAYABLE ***", val: "Rs. 990.00", bold: true }
+          { label: "*** TOTAL PAYABLE ***", val: "Rs. 990.00", bold: true, double: true }
         ]},
         { type: "divider", style: "double" },
-        { type: "barcode", value: "POS1049990", type: "CODE128" },
+        { type: "barcode", value: "POS1049990", type: "CODE128", align: "center" },
         { type: "footer", text: "Goods once sold can be exchanged within 7 days.\nSave Paper • Live Green", align: "center" }
       ],
       actions: { cut: true, drawerKick: true, buzzer: false }
@@ -1884,87 +1974,456 @@ app.delete("/api/template/:id", authRequired, (req, res) => {
   }
 });
 
+/* ============ JASPERREPORTS / iREPORT STYLE THERMAL LAYOUT ENGINE ============ */
+
+async function renderAndPrintJasperLayout(printer, layoutConfig = {}) {
+  const {
+    layout = [],
+    elements = [],
+    variables = {},
+    data = {},
+    actions = {},
+    paperWidth = null
+  } = layoutConfig;
+
+  const pIp = printer && printer.connection && printer.connection.ip;
+  const pPort = (printer && printer.connection && parseInt(printer.connection.port)) || 9100;
+  if (!pIp) {
+    throw new Error(`Printer '${printer ? (printer.name || printer.id) : "unknown"}' has no IP connection configured.`);
+  }
+
+  // Merge variables and dataset
+  const mergedVars = {
+    DATE_TIME: new Date().toLocaleString(),
+    DATE: new Date().toLocaleDateString(),
+    TIME: new Date().toLocaleTimeString(),
+    ...variables,
+    ...data
+  };
+
+  const metrics = getPrinterPaperMetrics(printer, { paperWidth: paperWidth || layoutConfig.paperWidth });
+  const { columns, dots } = metrics;
+
+  const device = new ThermalPrinter({
+    type: PrinterTypes.EPSON,
+    interface: `tcp://${pIp}:${pPort}`,
+    characterSet: "PC437_USA",
+    removeSpecialCharacters: false,
+    lineCharacter: "-",
+    options: { timeout: 5000 }
+  });
+
+  // ESC @: Hardware reset & encoding setup
+  try {
+    device.raw(Buffer.from([0x1B, 0x40])); // ESC @ (Initialize)
+    device.raw(Buffer.from([0x1C, 0x26])); // FS & (Select Kanji/Multilingual mode)
+    device.raw(Buffer.from([0x1B, 0x74, 0x00])); // ESC t 0 (Standard code page)
+  } catch (e) {}
+
+  // 1. CASH DRAWER KICK
+  if (actions.drawerKick || layoutConfig.drawerKick) {
+    try {
+      device.openCashDrawer();
+    } catch (e) {
+      device.raw(Buffer.from([0x1B, 0x70, 0x00, 0x19, 0xFA]));
+      device.raw(Buffer.from([0x1B, 0x70, 0x01, 0x19, 0xFA]));
+    }
+  }
+
+  // 2. KITCHEN BUZZER / BEEP
+  if (actions.buzzer || layoutConfig.buzzer) {
+    try {
+      device.beep();
+    } catch (e) {
+      device.raw(Buffer.from([0x1B, 0x42, 0x02, 0x02]));
+    }
+  }
+
+  // Helper to interpolate expressions like "{invoiceNo}" or "$F{invoiceNo}"
+  function interpolate(text) {
+    if (text === null || text === undefined) return "";
+    let str = String(text);
+    for (const [k, v] of Object.entries(mergedVars)) {
+      if (typeof v === "string" || typeof v === "number") {
+        str = str.replace(new RegExp(`{${k}}`, "g"), String(v));
+        str = str.replace(new RegExp(`\\$F{${k}}`, "g"), String(v));
+        str = str.replace(new RegExp(`\\$P{${k}}`, "g"), String(v));
+      }
+    }
+    return str;
+  }
+
+  const itemsList = (Array.isArray(layout) && layout.length > 0) ? layout : (Array.isArray(elements) ? elements : []);
+
+  for (const el of itemsList) {
+    if (!el || typeof el !== "object") continue;
+
+    function setAlignment(alignStr = "left") {
+      const a = (alignStr || "left").toLowerCase();
+      if (a === "center") device.alignCenter();
+      else if (a === "right") device.alignRight();
+      else device.alignLeft();
+    }
+
+    if (el.type === "header" || el.type === "title") {
+      setAlignment(el.align || "center");
+
+      const size = (el.size || "").toLowerCase();
+      if (size === "large" || el.double || size === "double") {
+        device.setTextDoubleHeight();
+        device.setTextDoubleWidth();
+      } else if (size === "double-height" || el.doubleHeight) {
+        device.setTextDoubleHeight();
+      } else if (size === "double-width" || el.doubleWidth) {
+        device.setTextDoubleWidth();
+      }
+
+      if (el.bold !== false) device.bold(true);
+      if (el.underline) device.underline(true);
+
+      const titleText = interpolate(el.text || el.title || "");
+      if (titleText) device.println(titleText);
+
+      device.setTextNormal();
+      device.bold(false);
+      device.underline(false);
+
+      if (el.subtitle) {
+        setAlignment(el.subtitleAlign || el.align || "center");
+        const subLines = interpolate(el.subtitle).split("\n");
+        for (const line of subLines) {
+          if (line.trim()) device.println(line.trim());
+        }
+      }
+    } else if (el.type === "divider" || el.type === "line") {
+      device.alignLeft();
+      device.setTextNormal();
+      device.bold(false);
+      const style = el.style || "single";
+      let char = el.char;
+      if (!char) {
+        if (style === "double") char = "=";
+        else if (style === "dots" || style === "dotted") char = ".";
+        else if (style === "stars") char = "*";
+        else if (style === "thick") char = "#";
+        else char = "-";
+      }
+      device.println(char.repeat(columns));
+    } else if (el.type === "meta" || el.type === "key_value" || el.type === "properties") {
+      device.alignLeft();
+      device.setTextNormal();
+      device.bold(false);
+      const rows = el.rows || el.fields || [];
+      for (const row of rows) {
+        if (Array.isArray(row)) {
+          // Multiple fields in single line (e.g. [Date, Time])
+          const colWidth = Math.floor(columns / row.length);
+          let combined = "";
+          row.forEach((col, idx) => {
+            const k = interpolate(col.key || col.label || "");
+            const v = interpolate(col.val || col.value || "");
+            const entry = k ? `${k}: ${v}` : v;
+            if (idx === row.length - 1) {
+              combined += entry.padStart(columns - combined.length);
+            } else {
+              combined += entry.padEnd(colWidth).substring(0, colWidth);
+            }
+          });
+          device.println(combined);
+        } else {
+          const k = interpolate(row.key || row.label || "");
+          const v = interpolate(row.val || row.value || "");
+          if (row.align === "center") {
+            device.alignCenter();
+            device.println(k ? `${k}: ${v}` : v);
+            device.alignLeft();
+          } else if (row.align === "right") {
+            device.alignRight();
+            device.println(k ? `${k}: ${v}` : v);
+            device.alignLeft();
+          } else {
+            device.println(padReceiptLine(k ? `${k}:` : "", v, columns));
+          }
+        }
+      }
+    } else if (el.type === "items" || el.type === "table" || el.type === "detail") {
+      device.alignLeft();
+      device.setTextNormal();
+      device.bold(false);
+
+      // Determine column widths and alignments
+      let cols = el.columns;
+      if (!cols && Array.isArray(el.headers)) {
+        if (el.headers.length === 4) {
+          cols = (columns === 32)
+            ? [
+                { key: "name", title: el.headers[0] || "ITEM", width: 14, align: "left" },
+                { key: "qty", title: el.headers[1] || "QTY", width: 4, align: "center" },
+                { key: "rate", title: el.headers[2] || "RATE", width: 6, align: "right" },
+                { key: "total", title: el.headers[3] || "TOTAL", width: 8, align: "right" }
+              ]
+            : [
+                { key: "name", title: el.headers[0] || "ITEM", width: 24, align: "left" },
+                { key: "qty", title: el.headers[1] || "QTY", width: 6, align: "center" },
+                { key: "rate", title: el.headers[2] || "RATE", width: 8, align: "right" },
+                { key: "total", title: el.headers[3] || "TOTAL", width: 10, align: "right" }
+              ];
+        } else if (el.headers.length === 3) {
+          cols = (columns === 32)
+            ? [
+                { key: "name", title: el.headers[0] || "ITEM", width: 16, align: "left" },
+                { key: "qty", title: el.headers[1] || "QTY", width: 6, align: "center" },
+                { key: "total", title: el.headers[2] || "TOTAL", width: 10, align: "right" }
+              ]
+            : [
+                { key: "name", title: el.headers[0] || "ITEM", width: 26, align: "left" },
+                { key: "qty", title: el.headers[1] || "QTY", width: 10, align: "center" },
+                { key: "total", title: el.headers[2] || "TOTAL", width: 12, align: "right" }
+              ];
+        } else if (el.headers.length === 2) {
+          cols = (columns === 32)
+            ? [
+                { key: "name", title: el.headers[0] || "ITEM", width: 20, align: "left" },
+                { key: "total", title: el.headers[1] || "AMOUNT", width: 12, align: "right" }
+              ]
+            : [
+                { key: "name", title: el.headers[0] || "ITEM", width: 32, align: "left" },
+                { key: "total", title: el.headers[1] || "AMOUNT", width: 16, align: "right" }
+              ];
+        }
+      }
+
+      if (!cols) {
+        cols = [
+          { key: "name", title: "ITEM", width: 24, align: "left" },
+          { key: "qty", title: "QTY", width: 6, align: "center" },
+          { key: "rate", title: "RATE", width: 8, align: "right" },
+          { key: "total", title: "TOTAL", width: 10, align: "right" }
+        ];
+      }
+
+      // Normalize column widths to sum === columns
+      const totalColWidth = cols.reduce((sum, c) => sum + (c.width || 10), 0);
+      if (totalColWidth !== columns) {
+        const factor = columns / totalColWidth;
+        let allocated = 0;
+        cols.forEach((c, i) => {
+          if (i === cols.length - 1) {
+            c.width = columns - allocated;
+          } else {
+            c.width = Math.max(3, Math.floor(c.width * factor));
+            allocated += c.width;
+          }
+        });
+      }
+
+      // Print Column Headers
+      if (el.showHeader !== false && cols.some(c => c.title)) {
+        let headerLine = "";
+        cols.forEach(c => {
+          const t = String(c.title || "");
+          const w = c.width;
+          if (c.align === "right") headerLine += t.padStart(w).substring(0, w);
+          else if (c.align === "center") {
+            const pad = Math.max(0, w - t.length);
+            const left = Math.floor(pad / 2);
+            headerLine += (" ".repeat(left) + t + " ".repeat(pad - left)).substring(0, w);
+          } else {
+            headerLine += t.padEnd(w).substring(0, w);
+          }
+        });
+        device.bold(true);
+        device.println(headerLine);
+        device.bold(false);
+        device.println("-".repeat(columns));
+      }
+
+      // Print Items
+      const rows = (Array.isArray(el.rows) && el.rows.length > 0)
+        ? el.rows
+        : (Array.isArray(mergedVars.items) ? mergedVars.items : []);
+
+      for (const row of rows) {
+        let maxLines = 1;
+        const colLines = cols.map(c => {
+          const rawVal = interpolate(row[c.key] !== undefined ? row[c.key] : (row[c.title ? c.title.toLowerCase() : ""] || ""));
+          const words = rawVal.split(" ");
+          const lines = [];
+          let cur = "";
+          for (const w of words) {
+            if (!cur) {
+              if (w.length > c.width) {
+                for (let k = 0; k < w.length; k += c.width) lines.push(w.substring(k, k + c.width));
+              } else cur = w;
+            } else if ((cur + " " + w).length <= c.width) {
+              cur += " " + w;
+            } else {
+              lines.push(cur);
+              if (w.length > c.width) {
+                for (let k = 0; k < w.length; k += c.width) lines.push(w.substring(k, k + c.width));
+                cur = "";
+              } else cur = w;
+            }
+          }
+          if (cur) lines.push(cur);
+          if (lines.length === 0) lines.push("");
+          if (lines.length > maxLines) maxLines = lines.length;
+          return { ...c, lines };
+        });
+
+        for (let lineIdx = 0; lineIdx < maxLines; lineIdx++) {
+          let lineStr = "";
+          colLines.forEach(c => {
+            const text = c.lines[lineIdx] || "";
+            const w = c.width;
+            if (c.align === "right") lineStr += text.padStart(w).substring(0, w);
+            else if (c.align === "center") {
+              const pad = Math.max(0, w - text.length);
+              const left = Math.floor(pad / 2);
+              lineStr += (" ".repeat(left) + text + " ".repeat(pad - left)).substring(0, w);
+            } else {
+              lineStr += text.padEnd(w).substring(0, w);
+            }
+          });
+          device.println(lineStr);
+        }
+
+        if (row.note || row.instructions) {
+          device.println(`   >> ${interpolate(row.note || row.instructions)}`);
+        }
+      }
+    } else if (el.type === "totals" || el.type === "summary") {
+      device.alignLeft();
+      const rows = el.rows || [];
+      for (const r of rows) {
+        const lbl = interpolate(r.label || r.key || "");
+        const val = interpolate(r.val || r.value || "");
+        const isHighlight = r.bold || r.double || lbl.includes("***") || lbl.toLowerCase().includes("net");
+        
+        if (r.double) {
+          device.setTextDoubleHeight();
+          device.bold(true);
+          device.println(padReceiptLine(lbl, val, columns));
+          device.setTextNormal();
+          device.bold(false);
+        } else {
+          if (isHighlight) device.bold(true);
+          device.println(padReceiptLine(lbl, val, columns));
+          if (isHighlight) device.bold(false);
+        }
+      }
+    } else if (el.type === "qr") {
+      let qrData = el.data || el.value || el.text;
+      if (!qrData && el.pa) {
+        const upiParams = new URLSearchParams();
+        upiParams.set("pa", interpolate(el.pa));
+        if (el.pn) upiParams.set("pn", interpolate(el.pn));
+        if (el.am) upiParams.set("am", interpolate(el.am));
+        upiParams.set("cu", el.cu || "INR");
+        if (el.tn) upiParams.set("tn", interpolate(el.tn || "Store Payment"));
+        qrData = "upi://pay?" + upiParams.toString();
+      } else if (!qrData && el.upi) {
+        const upiParams = new URLSearchParams();
+        upiParams.set("pa", interpolate(el.upi.pa));
+        if (el.upi.pn) upiParams.set("pn", interpolate(el.upi.pn));
+        if (el.upi.am) upiParams.set("am", interpolate(el.upi.am));
+        upiParams.set("cu", el.upi.cu || "INR");
+        if (el.upi.tn) upiParams.set("tn", interpolate(el.upi.tn || "Store Payment"));
+        qrData = "upi://pay?" + upiParams.toString();
+      }
+
+      if (qrData) {
+        if (el.label) {
+          device.alignCenter();
+          device.bold(true);
+          device.println(interpolate(el.label));
+          device.bold(false);
+        }
+
+        const qrAlign = el.align || "center";
+        const qrSize = parseInt(el.size, 10) || (dots === 384 ? 180 : 220);
+        try {
+          const centeredPng = await generateCenteredQrPng(qrData, dots, qrSize, qrAlign);
+          if (centeredPng) {
+            const png = PNG.sync.read(centeredPng);
+            device.alignCenter();
+            const imgCmd = device.printer.printImageBuffer(png.width, png.height, png.data);
+            device.append(imgCmd);
+            device.newLine();
+          }
+        } catch (qrErr) {
+          console.warn("QR Render Error:", qrErr.message);
+        }
+
+        if (el.caption) {
+          device.alignCenter();
+          device.println(interpolate(el.caption));
+        }
+      }
+    } else if (el.type === "barcode") {
+      device.alignCenter();
+      const codeVal = interpolate(el.value || el.data || "12345678");
+      try {
+        device.code128(codeVal, { width: 2, height: 60 });
+        device.newLine();
+      } catch (bcErr) {
+        console.warn("Barcode Error:", bcErr.message);
+      }
+    } else if (el.type === "footer") {
+      setAlignment(el.align || "center");
+      if (el.bold) device.bold(true);
+      const footerLines = interpolate(el.text || "").split("\n");
+      for (const line of footerLines) {
+        device.println(line);
+      }
+      device.bold(false);
+    } else if (el.type === "text" || el.type === "raw") {
+      setAlignment(el.align || "left");
+      if (el.bold) device.bold(true);
+      device.println(interpolate(el.text || el.value || ""));
+      device.bold(false);
+    }
+  }
+
+  // Feed & Cut
+  const cutOpt = actions.cut !== undefined ? actions.cut : (layoutConfig.cut !== false);
+  if (cutOpt !== false && cutOpt !== "none") {
+    const feed = parseInt(actions.feedLines || layoutConfig.feedLines || 2, 10);
+    for (let i = 0; i < feed; i++) device.newLine();
+    if (cutOpt === "partial" || actions.cutMode === "partial") {
+      device.partialCut();
+    } else {
+      device.cut();
+    }
+  }
+
+  const rawBuffer = device.getBuffer();
+  await sendRawEscPos(pIp, pPort, rawBuffer, 5000);
+  return { success: true, columns, dots, bytes: rawBuffer.length };
+}
+
 app.post("/api/template/render-and-print", authRequired, async (req, res) => {
   try {
-    const { template, templateId, printerId, role, variables = {} } = req.body;
+    const { template, templateId, printerId, role, variables = {}, data = {} } = req.body;
     let tpl = template;
 
     if (!tpl && templateId) {
       tpl = loadTemplates().find(t => t.id === templateId);
     }
 
-    if (!tpl || !tpl.elements) {
-      return res.status(400).json({ error: "Valid template with elements required" });
+    if (!tpl || (!tpl.elements && !tpl.layout)) {
+      return res.status(400).json({ error: "Valid template with elements or layout required" });
     }
 
     const printer = await resolvePrinterForJob(printerId, role);
     if (!printer) return res.status(404).json({ error: "No active printer found" });
 
-    const width = printer.paperWidth === 58 ? 32 : (tpl.paperWidth === 58 ? 32 : 42);
-    const lines = [];
-    let upiQrPayload = null;
-    let barcodePayload = null;
-
-    for (const el of tpl.elements) {
-      if (el.type === "header") {
-        lines.push(el.text.toUpperCase());
-        if (el.subtitle) lines.push(el.subtitle);
-      } else if (el.type === "divider") {
-        const char = el.style === "double" ? "=" : (el.style === "dots" ? "." : "-");
-        lines.push(char.repeat(width));
-      } else if (el.type === "meta" && Array.isArray(el.rows)) {
-        for (const row of el.rows) {
-          let val = row.val || "";
-          val = val.replace("{DATE_TIME}", new Date().toLocaleString())
-                   .replace("{DATE}", new Date().toLocaleDateString())
-                   .replace("{TIME}", new Date().toLocaleTimeString());
-          for (const [k, v] of Object.entries(variables)) {
-            val = val.replace(new RegExp(`{${k}}`, "g"), v);
-          }
-          lines.push(padReceiptLine(row.key + ":", val, width));
-        }
-      } else if (el.type === "items" && Array.isArray(el.rows)) {
-        for (const row of el.rows) {
-          if (row.total) {
-            lines.push(padReceiptLine(`${row.qty || 1}x ${row.name}`, row.total, width));
-          } else if (row.note) {
-            lines.push(`[${row.qty || 1}x] ${row.name}`);
-            lines.push(`     >> ${row.note}`);
-          } else {
-            lines.push(`[${row.qty || 1}x] ${row.name}`);
-          }
-        }
-      } else if (el.type === "totals" && Array.isArray(el.rows)) {
-        for (const r of el.rows) {
-          lines.push(padReceiptLine(r.label, r.val, width));
-        }
-      } else if (el.type === "qr") {
-        upiQrPayload = {
-          upi: {
-            pa: el.pa || "msamods@okaxis",
-            pn: el.pn || "AndroPrint Store",
-            am: el.am || "",
-            cu: "INR",
-            tn: "Store Payment"
-          }
-        };
-        if (el.label) lines.push(el.label);
-      } else if (el.type === "barcode") {
-        barcodePayload = { data: el.value || "12345678", type: el.type || "CODE128" };
-      } else if (el.type === "footer") {
-        lines.push("\n" + el.text + "\n");
-      }
-    }
-
-    const renderedText = lines.join("\n");
-
-    await printReceipt(printer, {
-      text: renderedText,
-      qr: upiQrPayload,
-      barcode: barcodePayload,
-      drawerKick: !!tpl.actions?.drawerKick,
-      buzzer: !!tpl.actions?.buzzer,
-      cut: tpl.actions?.cut !== false
+    const result = await renderAndPrintJasperLayout(printer, {
+      layout: tpl.layout || tpl.elements,
+      elements: tpl.elements || tpl.layout,
+      variables: { ...variables, ...data },
+      actions: tpl.actions || {},
+      paperWidth: tpl.paperWidth || (printer.paper && printer.paper.width)
     });
 
     addJob({
@@ -1972,17 +2431,71 @@ app.post("/api/template/render-and-print", authRequired, async (req, res) => {
       printerName: printer.name,
       type: "template_print",
       status: "success",
-      textPreview: `[Template: ${tpl.name}] ${renderedText.substring(0, 80)}`
+      textPreview: `[Jasper Layout: ${tpl.name || "Custom"}] Printed ${result.bytes} bytes across ${result.columns} columns`
     });
 
     res.json({
       success: true,
-      message: `Template "${tpl.name}" printed successfully on ${printer.name}`,
-      preview: renderedText
+      message: `Template "${tpl.name || "Custom"}" printed successfully on ${printer.name}`,
+      columns: result.columns,
+      dots: result.dots,
+      bytes: result.bytes
     });
 
   } catch (e) {
     console.error("Template Print Error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* ============ DEDICATED JASPERREPORTS / iREPORT JSON PRINT API ============ */
+
+app.post(["/api/print/jasper", "/api/print/layout"], authRequired, async (req, res) => {
+  try {
+    const {
+      printerId = null,
+      role = null,
+      paperWidth = null,
+      variables = {},
+      data = {},
+      layout = [],
+      elements = [],
+      actions = {}
+    } = req.body;
+
+    const targetList = (Array.isArray(layout) && layout.length > 0) ? layout : elements;
+    if (!Array.isArray(targetList) || targetList.length === 0) {
+      return res.status(400).json({ error: "layout or elements array is required" });
+    }
+
+    const printer = await resolvePrinterForJob(printerId, role);
+    if (!printer) return res.status(404).json({ error: "No active printer found" });
+
+    const result = await renderAndPrintJasperLayout(printer, {
+      layout: targetList,
+      variables: { ...variables, ...data },
+      actions,
+      paperWidth
+    });
+
+    addJob({
+      printerId: printer.id,
+      printerName: printer.name,
+      type: "jasper_print",
+      status: "success",
+      textPreview: `[Jasper Layout Print] Dispatched ${result.bytes} bytes across ${result.columns} columns`
+    });
+
+    res.json({
+      success: true,
+      message: `Jasper layout printed successfully on ${printer.name}`,
+      columns: result.columns,
+      dots: result.dots,
+      bytes: result.bytes
+    });
+
+  } catch (e) {
+    console.error("Jasper Print Error:", e);
     res.status(500).json({ error: e.message });
   }
 });

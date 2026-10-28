@@ -607,7 +607,7 @@
                     <div class="form-group">
                         <label class="form-label">Paper Width</label>
                         <select class="form-select" id="tplWidth" onchange="setPaperWidth(parseInt(this.value))">
-                            <option value="80">80mm (Standard 42c)</option>
+                            <option value="80">80mm (Standard 48c • Full Width)</option>
                             <option value="58">58mm (Compact 32c)</option>
                         </select>
                     </div>
@@ -1027,12 +1027,23 @@
                         <label class="form-label">Subtitle / Details (Multi-line)</label>
                         <textarea class="form-textarea" oninput="updateElProp('subtitle', this.value)">${escapeHtml(el.subtitle || '')}</textarea>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Alignment</label>
-                        <select class="form-select" onchange="updateElProp('align', this.value)">
-                            <option value="center" ${el.align === 'center' ? 'selected' : ''}>Center</option>
-                            <option value="left" ${el.align === 'left' ? 'selected' : ''}>Left</option>
-                        </select>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label class="form-label">Alignment</label>
+                            <select class="form-select" onchange="updateElProp('align', this.value)">
+                                <option value="center" ${el.align === 'center' ? 'selected' : ''}>Center</option>
+                                <option value="left" ${el.align === 'left' ? 'selected' : ''}>Left</option>
+                                <option value="right" ${el.align === 'right' ? 'selected' : ''}>Right</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Header Size</label>
+                            <select class="form-select" onchange="updateElProp('size', this.value)">
+                                <option value="double-height" ${el.size === 'double-height' || !el.size ? 'selected' : ''}>Double Height</option>
+                                <option value="large" ${el.size === 'large' ? 'selected' : ''}>Large (Double W & H)</option>
+                                <option value="normal" ${el.size === 'normal' ? 'selected' : ''}>Normal Size</option>
+                            </select>
+                        </div>
                     </div>
                 `;
             } else if (el.type === 'divider') {
@@ -1043,6 +1054,8 @@
                             <option value="single" ${el.style === 'single' ? 'selected' : ''}>Dashed (-----)</option>
                             <option value="double" ${el.style === 'double' ? 'selected' : ''}>Double (=====)</option>
                             <option value="dots" ${el.style === 'dots' ? 'selected' : ''}>Dotted (.....)</option>
+                            <option value="stars" ${el.style === 'stars' ? 'selected' : ''}>Stars (*****)</option>
+                            <option value="thick" ${el.style === 'thick' ? 'selected' : ''}>Thick (#####)</option>
                         </select>
                     </div>
                 `;
@@ -1059,6 +1072,38 @@
                         `).join('')}
                     </div>
                     <button class="btn btn-glass" onclick="addMetaRow()" style="padding:6px 12px; font-size:0.75rem;">＋ Add Row</button>
+                `;
+            } else if (el.type === 'items') {
+                html = `
+                    <label class="form-label">Table Items</label>
+                    <div id="itemsRowsList" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;">
+                        ${(el.rows || []).map((r, rIdx) => `
+                            <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr auto; gap:4px; align-items:center;">
+                                <input type="text" class="form-input" placeholder="Item" value="${escapeHtml(r.name || '')}" oninput="updateItemProp(${rIdx}, 'name', this.value)">
+                                <input type="text" class="form-input" placeholder="Qty" value="${escapeHtml(r.qty || '1')}" oninput="updateItemProp(${rIdx}, 'qty', this.value)">
+                                <input type="text" class="form-input" placeholder="Rate" value="${escapeHtml(r.rate || '')}" oninput="updateItemProp(${rIdx}, 'rate', this.value)">
+                                <input type="text" class="form-input" placeholder="Total" value="${escapeHtml(r.total || '')}" oninput="updateItemProp(${rIdx}, 'total', this.value)">
+                                <button class="ctrl-btn danger" onclick="removeItemRow(${rIdx})">&times;</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="btn btn-glass" onclick="addItemRow()" style="padding:6px 12px; font-size:0.75rem;">＋ Add Item Row</button>
+                `;
+            } else if (el.type === 'totals') {
+                html = `
+                    <label class="form-label">Summary / Totals Rows</label>
+                    <div id="totalsRowsList" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;">
+                        ${(el.rows || []).map((r, rIdx) => `
+                            <div style="display:grid; grid-template-columns:2fr 2fr auto auto auto; gap:6px; align-items:center;">
+                                <input type="text" class="form-input" placeholder="Label" value="${escapeHtml(r.label)}" oninput="updateTotalRow(${rIdx}, 'label', this.value)">
+                                <input type="text" class="form-input" placeholder="Amount" value="${escapeHtml(r.val)}" oninput="updateTotalRow(${rIdx}, 'val', this.value)">
+                                <label style="font-size:0.7rem; display:flex; align-items:center; gap:3px;"><input type="checkbox" ${r.bold ? 'checked' : ''} onchange="updateTotalRow(${rIdx}, 'bold', this.checked)"> B</label>
+                                <label style="font-size:0.7rem; display:flex; align-items:center; gap:3px;"><input type="checkbox" ${r.double ? 'checked' : ''} onchange="updateTotalRow(${rIdx}, 'double', this.checked)"> 2x</label>
+                                <button class="ctrl-btn danger" onclick="removeTotalRow(${rIdx})">&times;</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="btn btn-glass" onclick="addTotalRow()" style="padding:6px 12px; font-size:0.75rem;">＋ Add Total Row</button>
                 `;
             } else if (el.type === 'qr') {
                 html = `
@@ -1077,6 +1122,18 @@
                     <div class="form-group">
                         <label class="form-label">Top Banner Text</label>
                         <input type="text" class="form-input" value="${escapeHtml(el.label || '')}" oninput="updateElProp('label', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bottom Caption Text</label>
+                        <input type="text" class="form-input" value="${escapeHtml(el.caption || 'GPay • PhonePe • Paytm • BHIM')}" oninput="updateElProp('caption', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">QR Alignment</label>
+                        <select class="form-select" onchange="updateElProp('align', this.value)">
+                            <option value="center" ${el.align === 'center' || !el.align ? 'selected' : ''}>Center (Full Roll Centered)</option>
+                            <option value="left" ${el.align === 'left' ? 'selected' : ''}>Left</option>
+                            <option value="right" ${el.align === 'right' ? 'selected' : ''}>Right</option>
+                        </select>
                     </div>
                 `;
             } else if (el.type === 'barcode') {
@@ -1102,13 +1159,14 @@
                     <div class="form-group">
                         <label class="form-label">Alignment</label>
                         <select class="form-select" onchange="updateElProp('align', this.value)">
-                            <option value="center" ${el.align === 'center' ? 'selected' : ''}>Center</option>
+                            <option value="center" ${el.align === 'center' || !el.align ? 'selected' : ''}>Center</option>
                             <option value="left" ${el.align === 'left' ? 'selected' : ''}>Left</option>
+                            <option value="right" ${el.align === 'right' ? 'selected' : ''}>Right</option>
                         </select>
                     </div>
                 `;
             } else {
-                html = `<div style="font-size:0.8rem; color:var(--text-dim);">Live table controls enabled on receipt.</div>`;
+                html = `<div style="font-size:0.8rem; color:var(--text-dim);">Block configuration active.</div>`;
             }
 
             formArea.innerHTML = html;
@@ -1133,12 +1191,55 @@
 
         function addMetaRow() {
             if (selectedIndex < 0) return;
+            if (!currentTemplate.elements[selectedIndex].rows) currentTemplate.elements[selectedIndex].rows = [];
             currentTemplate.elements[selectedIndex].rows.push({ key: 'Key', val: 'Value' });
             showInspector();
             renderPaperPreview();
         }
 
         function removeMetaRow(rIdx) {
+            if (selectedIndex < 0) return;
+            currentTemplate.elements[selectedIndex].rows.splice(rIdx, 1);
+            showInspector();
+            renderPaperPreview();
+        }
+
+        function updateItemProp(rIdx, prop, val) {
+            if (selectedIndex < 0) return;
+            currentTemplate.elements[selectedIndex].rows[rIdx][prop] = val;
+            renderPaperPreview();
+        }
+
+        function addItemRow() {
+            if (selectedIndex < 0) return;
+            if (!currentTemplate.elements[selectedIndex].rows) currentTemplate.elements[selectedIndex].rows = [];
+            currentTemplate.elements[selectedIndex].rows.push({ name: 'New Item', qty: '1', rate: '50.00', total: '50.00' });
+            showInspector();
+            renderPaperPreview();
+        }
+
+        function removeItemRow(rIdx) {
+            if (selectedIndex < 0) return;
+            currentTemplate.elements[selectedIndex].rows.splice(rIdx, 1);
+            showInspector();
+            renderPaperPreview();
+        }
+
+        function updateTotalRow(rIdx, prop, val) {
+            if (selectedIndex < 0) return;
+            currentTemplate.elements[selectedIndex].rows[rIdx][prop] = val;
+            renderPaperPreview();
+        }
+
+        function addTotalRow() {
+            if (selectedIndex < 0) return;
+            if (!currentTemplate.elements[selectedIndex].rows) currentTemplate.elements[selectedIndex].rows = [];
+            currentTemplate.elements[selectedIndex].rows.push({ label: 'Net Amount', val: 'Rs. 0.00', bold: true });
+            showInspector();
+            renderPaperPreview();
+        }
+
+        function removeTotalRow(rIdx) {
             if (selectedIndex < 0) return;
             currentTemplate.elements[selectedIndex].rows.splice(rIdx, 1);
             showInspector();
@@ -1163,10 +1264,15 @@
                     selectElement(idx);
                 };
 
+                const alignClass = el.align === 'center' ? 'text-center' : (el.align === 'right' ? 'text-right' : 'text-left');
+
                 if (el.type === 'header') {
+                    const isLarge = el.size === 'large';
+                    const isDouble = el.size === 'double-height' || !el.size;
+                    const fontSize = isLarge ? '17px' : (isDouble ? '15px' : '13px');
                     block.innerHTML = `
-                        <div class="${el.align === 'center' ? 'text-center' : 'text-left'}">
-                            <div class="font-bold" style="font-size:15px; letter-spacing:0.04em;">${escapeHtml(el.text || 'HEADER')}</div>
+                        <div class="${alignClass}">
+                            <div class="font-bold" style="font-size:${fontSize}; letter-spacing:0.04em; text-transform:uppercase;">${escapeHtml(el.text || 'HEADER')}</div>
                             ${el.subtitle ? `<div style="font-size:11px; white-space:pre-wrap; margin-top:3px; color:#333;">${escapeHtml(el.subtitle)}</div>` : ''}
                         </div>
                     `;
@@ -1185,16 +1291,16 @@
                         <table class="receipt-table">
                             <thead>
                                 <tr>
-                                    ${(el.headers || ['ITEM', 'QTY', 'RATE', 'TOTAL']).map(h => `<th>${escapeHtml(h)}</th>`).join('')}
+                                    ${(el.headers || ['ITEM', 'QTY', 'RATE', 'TOTAL']).map((h, i) => `<th style="${i === 1 ? 'text-align:center;' : (i > 1 ? 'text-align:right;' : 'text-align:left;')}">${escapeHtml(h)}</th>`).join('')}
                                 </tr>
                             </thead>
                             <tbody>
                                 ${(el.rows || []).map(r => `
                                     <tr>
-                                        <td>${escapeHtml(r.name || '')}</td>
-                                        <td>${escapeHtml(r.qty || '1')}</td>
-                                        <td>${escapeHtml(r.rate || '')}</td>
-                                        <td>${escapeHtml(r.total || '')}</td>
+                                        <td style="text-align:left;">${escapeHtml(r.name || '')}</td>
+                                        <td style="text-align:center;">${escapeHtml(r.qty || '1')}</td>
+                                        <td style="text-align:right;">${escapeHtml(r.rate || '')}</td>
+                                        <td style="text-align:right;">${escapeHtml(r.total || '')}</td>
                                     </tr>
                                     ${r.note ? `<tr><td colspan="4" style="font-size:10px; color:#555; padding-left:10px;">>> ${escapeHtml(r.note)}</td></tr>` : ''}
                                 `).join('')}
@@ -1203,18 +1309,19 @@
                     `;
                 } else if (el.type === 'totals') {
                     block.innerHTML = (el.rows || []).map(r => `
-                        <div class="receipt-row ${r.bold ? 'font-bold' : ''}" style="margin:2px 0;">
+                        <div class="receipt-row ${r.bold || r.double ? 'font-bold' : ''}" style="margin:2px 0; ${r.double ? 'font-size:14px; border-top:1px dashed #333; padding-top:3px;' : ''}">
                             <span>${escapeHtml(r.label)}:</span>
                             <span>${escapeHtml(r.val)}</span>
                         </div>
                     `).join('');
                 } else if (el.type === 'qr') {
                     const upiString = `upi://pay?pa=${encodeURIComponent(el.pa || 'msamods@okaxis')}&pn=${encodeURIComponent(el.pn || 'Store')}&am=${encodeURIComponent(el.am || '100')}&cu=INR`;
+                    const qrJustify = el.align === 'left' ? 'flex-start' : (el.align === 'right' ? 'flex-end' : 'center');
                     block.innerHTML = `
-                        <div class="receipt-qr-box">
-                            ${el.label ? `<div style="font-size:10px; font-weight:700; margin-bottom:4px;">${escapeHtml(el.label)}</div>` : ''}
+                        <div class="receipt-qr-box" style="align-items:${qrJustify};">
+                            ${el.label ? `<div style="font-size:11px; font-weight:700; margin-bottom:4px; text-align:center;">${escapeHtml(el.label)}</div>` : ''}
                             <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(upiString)}" alt="UPI QR">
-                            <div style="font-size:10px; color:#444; margin-top:4px;">GPay • PhonePe • Paytm • BHIM</div>
+                            <div style="font-size:10px; color:#444; margin-top:4px; text-align:center;">${escapeHtml(el.caption || 'GPay • PhonePe • Paytm • BHIM')}</div>
                         </div>
                     `;
                 } else if (el.type === 'barcode') {
@@ -1226,7 +1333,7 @@
                     `;
                 } else if (el.type === 'footer') {
                     block.innerHTML = `
-                        <div class="${el.align === 'center' ? 'text-center' : 'text-left'}" style="font-size:11px; white-space:pre-wrap; margin-top:8px;">
+                        <div class="${alignClass}" style="font-size:11px; white-space:pre-wrap; margin-top:8px;">
                             ${escapeHtml(el.text || '')}
                         </div>
                     `;
