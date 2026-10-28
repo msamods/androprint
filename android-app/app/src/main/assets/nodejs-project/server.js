@@ -122447,25 +122447,39 @@ function safeRead(file, fallback) {
 }
 
 function safeWrite(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+  try {
+    fs.writeFileSync(file, JSON.stringify(data, null, 2));
+    return true;
+  } catch (err) {
+    console.error(`[STORAGE] Failed to write ${file}: ${err.message}`);
+    return false;
+  }
 }
 
 /* ============ LOADERS ============ */
 
 function loadPrinters() {
-  return safeRead(__nccwpck_require__.ab + "printer.json", { printers: [] }).printers;
+  const data = safeRead(__nccwpck_require__.ab + "printer.json", { printers: [] });
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.printers)) return data.printers;
+  return [];
 }
 
 function savePrinters(printers) {
-  safeWrite(__nccwpck_require__.ab + "printer.json", { printers });
+  const list = Array.isArray(printers) ? printers : [];
+  return safeWrite(__nccwpck_require__.ab + "printer.json", { printers: list });
 }
 
 function loadClients() {
-  return safeRead(__nccwpck_require__.ab + "clients.json", { clients: [] }).clients;
+  const data = safeRead(__nccwpck_require__.ab + "clients.json", { clients: [] });
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.clients)) return data.clients;
+  return [];
 }
 
 function saveClients(clients) {
-  safeWrite(__nccwpck_require__.ab + "clients.json", { clients });
+  const list = Array.isArray(clients) ? clients : [];
+  return safeWrite(__nccwpck_require__.ab + "clients.json", { clients: list });
 }
 
 /* ============ AUTH ============ */
@@ -123027,24 +123041,64 @@ app.post("/api/printers/discover", authRequired, async (req, res) => {
   }
 });
 
-app.post("/api/printer/save", authRequired, (req, res) => {
-  const printers = loadPrinters();
-  const p = req.body;
+app.post(["/api/printer/save", "/api/printers/save"], authRequired, (req, res) => {
+  try {
+    const p = req.body;
+    if (!p || typeof p !== "object") {
+      return res.status(400).json({ success: false, error: "Invalid printer data payload" });
+    }
 
-  const index = printers.findIndex(x => x.id === p.id);
-  if (index >= 0) printers[index] = p;
-  else printers.push(p);
+    if (!p.id) {
+      p.id = "ptr-" + server_crypto.randomBytes(3).toString("hex");
+    }
 
-  savePrinters(printers);
-  broadcast({ type: "printer_update" });
-  res.json({ success: true });
+    if (!p.connection || !p.connection.ip) {
+      return res.status(400).json({ success: false, error: "Printer IP address is required" });
+    }
+
+    p.connection.port = parseInt(p.connection.port) || 9100;
+    if (!p.name) {
+      p.name = `Printer (${p.connection.ip})`;
+    }
+
+    const printers = loadPrinters();
+    const index = printers.findIndex(x => x.id === p.id);
+    if (index >= 0) {
+      printers[index] = { ...printers[index], ...p };
+    } else {
+      printers.push(p);
+    }
+
+    const ok = savePrinters(printers);
+    if (!ok) {
+      return res.status(500).json({ success: false, error: "Failed to persist printer to storage" });
+    }
+
+    logger.info("PRINTER", `Saved printer '${p.name}' (${p.connection.ip}:${p.connection.port})`);
+    broadcast({ type: "printer_update", printers: loadPrinters() });
+    res.json({ success: true, printer: p });
+  } catch (err) {
+    logger.error("PRINTER", "Error saving printer: " + err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
-app.post("/api/printer/delete", authRequired, (req, res) => {
-  const printers = loadPrinters().filter(p => p.id !== req.body.id);
-  savePrinters(printers);
-  broadcast({ type: "printer_update" });
-  res.json({ success: true });
+app.post(["/api/printer/delete", "/api/printers/delete"], authRequired, (req, res) => {
+  try {
+    const targetId = req.body && (req.body.id || req.body.printerId);
+    if (!targetId) {
+      return res.status(400).json({ success: false, error: "Printer ID is required for deletion" });
+    }
+
+    const printers = loadPrinters().filter(p => p.id !== targetId);
+    savePrinters(printers);
+    logger.info("PRINTER", `Deleted printer ${targetId}`);
+    broadcast({ type: "printer_update", printers: loadPrinters() });
+    res.json({ success: true });
+  } catch (err) {
+    logger.error("PRINTER", "Error deleting printer: " + err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 /* ============ REAL TEST PRINT ============ */
@@ -125367,6 +125421,30 @@ app.post("/api/system/update", async (req, res) => {
     message: "AndroPrint is up to date (v2.0.0 release).",
     latest: "2.0.0"
   });
+});
+
+/* ============ API JSON 404 & GLOBAL ERROR HANDLER ============ */
+
+// Guarantee that ANY unmatched /api/* route returns JSON instead of Express HTML 404
+app.all("/api/*", (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: `API endpoint not found: ${req.method} ${req.path}`,
+    code: "ENDPOINT_NOT_FOUND"
+  });
+});
+
+// Guarantee that ANY unhandled exception on /api/* returns JSON instead of HTML stack trace
+app.use((err, req, res, next) => {
+  logger.error("SYSTEM", `Unhandled error on ${req.method} ${req.path}: ${err.message}`);
+  if (req.path.startsWith("/api/")) {
+    return res.status(err.status || 500).json({
+      success: false,
+      error: err.message || "Internal server error",
+      code: "INTERNAL_ERROR"
+    });
+  }
+  next(err);
 });
 
 /* ============ START ============ */

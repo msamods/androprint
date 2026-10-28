@@ -998,13 +998,23 @@
             };
 
             try {
-                showToast('Saving printer...', 'success');
+                showToast('Saving printer...', 'info');
                 const res = await fetch('/api/printer/save', {
                     method: 'POST',
                     headers: { ...AUTH, 'Content-Type': 'application/json' },
                     body: JSON.stringify(printerData)
                 });
-                const data = await res.json();
+
+                const contentType = res.headers.get("content-type") || "";
+                let data;
+                if (contentType.includes("application/json")) {
+                    data = await res.json();
+                } else {
+                    const text = await res.text();
+                    const cleanText = text.replace(/<[^>]*>/g, '').trim().substring(0, 100);
+                    throw new Error(cleanText || `Server returned HTTP ${res.status}`);
+                }
+
                 if (data.success) {
                     showToast('Printer saved successfully', 'success');
                     closePrinterModal();
@@ -1204,7 +1214,11 @@
                     headers: { ...AUTH, 'Content-Type': 'application/json' },
                     body: JSON.stringify(p)
                 });
-                const data = await res.json();
+                const contentType = res.headers.get("content-type") || "";
+                let data = {};
+                if (contentType.includes("application/json")) {
+                    data = await res.json();
+                }
                 if (data.success) {
                     showToast(`Printer ${p.enabled ? 'enabled' : 'disabled'}`, 'success');
                     loadPrinters(true);
@@ -1212,7 +1226,7 @@
                     showToast(data.error || 'Failed to toggle status', 'error');
                 }
             } catch (err) {
-                showToast('Error updating printer status', 'error');
+                showToast('Error updating printer status: ' + err.message, 'error');
             }
         }
 
@@ -1232,22 +1246,26 @@
         async function executeDelete() {
             if (!printerToDelete) return;
             try {
-                showToast('Deleting printer...', 'success');
+                showToast('Deleting printer...', 'info');
                 const res = await fetch('/api/printer/delete', {
                     method: 'POST',
                     headers: { ...AUTH, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: printerToDelete })
                 });
-                const data = await res.json();
+                const contentType = res.headers.get("content-type") || "";
+                let data = {};
+                if (contentType.includes("application/json")) {
+                    data = await res.json();
+                }
                 if (data.success) {
-                    showToast('Printer removed', 'success');
+                    showToast('Printer removed successfully', 'success');
                     closeConfirmModal();
                     loadPrinters();
                 } else {
                     showToast(data.error || 'Failed to delete printer', 'error');
                 }
             } catch (err) {
-                showToast('Failed to delete printer', 'error');
+                showToast('Failed to delete printer: ' + err.message, 'error');
             }
         }
 
