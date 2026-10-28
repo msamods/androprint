@@ -569,6 +569,79 @@
             from { opacity: 0; transform: translate(-50%, 15px); }
             to { opacity: 1; transform: translate(-50%, 0); }
         }
+        .tab-btn-pill {
+            padding: 7px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            background: #ffffff;
+            color: #475569;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .tab-btn-pill.active {
+            background: #eef2ff;
+            color: var(--primary);
+            border-color: #c7d2fe;
+            box-shadow: 0 1px 3px rgba(79, 70, 229, 0.12);
+        }
+        .snippet-tab-btn {
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--glass-border);
+            background: #ffffff;
+            color: #475569;
+            font-size: 0.74rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .snippet-tab-btn.active {
+            background: #0f172a;
+            color: #ffffff;
+            border-color: #0f172a;
+        }
+        .param-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: #4338ca;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            transition: all 0.15s;
+        }
+        .param-chip:hover {
+            background: #eef2ff;
+            border-color: #a5b4fc;
+            transform: translateY(-1px);
+        }
+        .token-helper-pill {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            color: var(--primary);
+            padding: 2px 7px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 2px;
+            font-weight: 600;
+        }
+        .token-helper-pill:hover {
+            background: #e0e7ff;
+            border-color: #818cf8;
+        }
     </style>
 </head>
 <body>
@@ -591,16 +664,23 @@
             <button class="btn btn-glass" onclick="createNewTemplate()">
                 <span>＋</span> New
             </button>
-            <button class="btn btn-glass" onclick="openPayloadModal()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> API JSON
+            <button class="btn btn-glass" onclick="triggerImportFileInput()" title="Import Template from JSON File">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Import JSON
+            </button>
+            <button class="btn btn-glass" onclick="exportCurrentTemplate()" title="Export Template as JSON File">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Export JSON
+            </button>
+            <button class="btn btn-glass" onclick="openPayloadModal()" title="Dynamic Parameters & JSON Payload Hub" style="background:#eef2ff; border-color:#c7d2fe; color:var(--primary); font-weight:700;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Dynamic Payload &amp; Keys
             </button>
             <button class="btn btn-primary" onclick="saveCurrentTemplate()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Save Template
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Save
             </button>
             <button class="btn btn-success" onclick="openTestPrintModal()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Test Print
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Print
             </button>
         </div>
+        <input type="file" id="importTemplateFileInput" accept=".json,application/json" style="display:none" onchange="handleTemplateFileImport(event)">
     </div>
 
     <!-- MAIN WORKSPACE -->
@@ -762,24 +842,118 @@
         </div>
     </div>
 
-    <!-- API PAYLOAD EXPORT MODAL -->
+    <!-- DYNAMIC PARAMETERS & PAYLOAD HUB MODAL -->
     <div class="modal-overlay" id="payloadModal" style="display:none;">
-        <div class="modal-card" style="max-width: 620px;">
+        <div class="modal-card" style="max-width: 860px; width: 92%; max-height: 90vh; display: flex; flex-direction: column;">
             <div class="modal-header">
-                <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> API Integration Payload</h3>
+                <div>
+                    <h3 style="display:flex; align-items:center; gap:8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                        <span>Dynamic Parameters &amp; JSON Payload Studio</span>
+                    </h3>
+                    <p style="font-size:0.75rem; color:var(--text-dim); margin-top:2px;">
+                        Pass custom fields, arbitrary key-values, and dynamic items arrays from any POS/ERP/App to this template.
+                    </p>
+                </div>
                 <button class="modal-close" onclick="closePayloadModal()">&times;</button>
             </div>
-            <div class="modal-body">
-                <p style="font-size:0.82rem; color:var(--text-dim); margin-bottom:12px;">
-                    Use this JSON payload with <code>POST /api/template/render-and-print</code> in your POS or web app.
-                </p>
-                <pre id="payloadCodeArea" style="background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); border-radius:10px; padding:14px; font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:#a5b4fc; max-height:300px; overflow-y:auto; white-space:pre-wrap;"></pre>
+
+            <!-- Modal Nav Tabs -->
+            <div style="display:flex; gap:8px; padding:12px 22px; border-bottom:1px solid var(--glass-border); background:#f8fafc;">
+                <button class="tab-btn-pill active" id="tabBtnPayload" onclick="switchPayloadTab('payload')">Interactive Payload &amp; Print</button>
+                <button class="tab-btn-pill" id="tabBtnSnippets" onclick="switchPayloadTab('snippets')">Client Code Snippets (cURL/JS/Python)</button>
+                <button class="tab-btn-pill" id="tabBtnSchema" onclick="switchPayloadTab('schema')">Template JSON Schema</button>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-glass" onclick="closePayloadModal()">Close</button>
-                <button class="btn btn-primary" onclick="copyPayloadToClipboard()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy JSON
-                </button>
+
+            <div class="modal-body" style="flex:1; overflow-y:auto; padding:20px 22px;">
+                <!-- TAB 1: INTERACTIVE PAYLOAD & PRINT -->
+                <div id="tabContentPayload">
+                    <div style="margin-bottom:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <label class="form-label" style="margin-bottom:0; font-weight:700;">Discovered Template Placeholders (Click to copy token)</label>
+                            <span style="font-size:0.72rem; color:var(--text-dim);">Auto-detected from receipt blocks</span>
+                        </div>
+                        <div id="discoveredParamsContainer" style="display:flex; flex-wrap:wrap; gap:6px; min-height:28px; padding:8px 10px; background:#f1f5f9; border-radius:8px; border:1px dashed #cbd5e1;">
+                            <!-- Param chips injected dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Quick Add Custom Key Helper -->
+                    <div style="display:flex; gap:8px; align-items:flex-end; margin-bottom:16px; background:#f8fafc; padding:12px; border-radius:10px; border:1px solid var(--glass-border);">
+                        <div style="flex:1;">
+                            <label class="form-label" style="font-size:0.74rem;">Custom Key Name</label>
+                            <input type="text" class="form-input" id="newCustomKeyInput" placeholder="e.g. customer_name, table_no, gstin" style="padding:7px 10px; font-size:0.8rem;">
+                        </div>
+                        <div style="flex:1;">
+                            <label class="form-label" style="font-size:0.74rem;">Sample Value</label>
+                            <input type="text" class="form-input" id="newCustomValInput" placeholder="e.g. John Doe, Table 4" style="padding:7px 10px; font-size:0.8rem;">
+                        </div>
+                        <button class="btn btn-glass" onclick="addCustomFieldToPayload()" style="height:36px; padding:0 14px; font-size:0.78rem;">
+                            ＋ Add to JSON
+                        </button>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <label class="form-label" style="margin-bottom:0; font-weight:700;">Test JSON Payload (Editable)</label>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-glass" onclick="resetPayloadToDiscovered()" style="padding:3px 8px; font-size:0.72rem;">↺ Reset</button>
+                                <button class="btn btn-glass" onclick="formatPayloadJsonArea()" style="padding:3px 8px; font-size:0.72rem;">Beautify JSON</button>
+                            </div>
+                        </div>
+                        <textarea id="payloadJsonEditor" class="form-textarea" style="height:210px; font-family:'JetBrains Mono',monospace; font-size:0.76rem; background:#0f172a; color:#f1f5f9; border-radius:10px; padding:12px; line-height:1.45; tab-size:2;"></textarea>
+                    </div>
+                </div>
+
+                <!-- TAB 2: CODE SNIPPETS -->
+                <div id="tabContentSnippets" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <div style="display:flex; gap:6px;" id="snippetLangTabs">
+                            <button class="snippet-tab-btn active" onclick="switchSnippetLang('curl', this)">cURL</button>
+                            <button class="snippet-tab-btn" onclick="switchSnippetLang('js', this)">JavaScript / Fetch</button>
+                            <button class="snippet-tab-btn" onclick="switchSnippetLang('python', this)">Python</button>
+                            <button class="snippet-tab-btn" onclick="switchSnippetLang('php', this)">PHP</button>
+                            <button class="snippet-tab-btn" onclick="switchSnippetLang('android', this)">Android (Java)</button>
+                        </div>
+                        <button class="btn btn-glass" onclick="copySnippetToClipboard()" style="padding:4px 10px; font-size:0.75rem;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy Snippet
+                        </button>
+                    </div>
+                    <pre id="snippetCodeArea" style="background:#0f172a; color:#38bdf8; border:1px solid #1e293b; border-radius:10px; padding:14px; font-family:'JetBrains Mono',monospace; font-size:0.76rem; max-height:300px; overflow-y:auto; white-space:pre-wrap;"></pre>
+                </div>
+
+                <!-- TAB 3: SCHEMA EXPORT / IMPORT -->
+                <div id="tabContentSchema" style="display:none;">
+                    <p style="font-size:0.8rem; color:var(--text-dim); margin-bottom:8px;">
+                        Complete JSON definition for <strong><span id="schemaTemplateName"></span></strong>. Export to store as a backup or distribute to multiple terminal installations.
+                    </p>
+                    <pre id="schemaCodeArea" style="background:#f8fafc; color:#0f172a; border:1px solid var(--glass-border); border-radius:10px; padding:14px; font-family:'JetBrains Mono',monospace; font-size:0.75rem; max-height:270px; overflow-y:auto; white-space:pre-wrap;"></pre>
+                    <div style="display:flex; gap:10px; margin-top:12px;">
+                        <button class="btn btn-glass" onclick="exportCurrentTemplate()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Download Template .JSON
+                        </button>
+                        <button class="btn btn-glass" onclick="triggerImportFileInput()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Upload &amp; Replace
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size:0.75rem; color:var(--text-dim);">
+                    Endpoint: <code style="background:#e2e8f0; padding:2px 6px; border-radius:4px; font-weight:600; color:#0f172a;">POST /api/print/template</code>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-glass" onclick="applyPayloadToPreview()" title="Preview these values on the thermal roll">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg> Apply to Preview
+                    </button>
+                    <button class="btn btn-glass" onclick="copyPayloadToClipboard()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Copy JSON
+                    </button>
+                    <button class="btn btn-primary" onclick="executePayloadDirectPrint()" style="background:#059669; border-color:#059669;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Print with this Payload
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1190,7 +1364,26 @@
                 html = `<div style="font-size:0.8rem; color:var(--text-dim);">Block configuration active.</div>`;
             }
 
+            html += `
+                <div style="margin-top:14px; padding-top:10px; border-top:1px dashed #cbd5e1;">
+                    <div style="font-size:0.72rem; color:var(--text-dim); margin-bottom:5px; font-weight:700;">Click Token to Copy &amp; Paste:</div>
+                    <span class="token-helper-pill" onclick="copyToken('{{ORDER_ID}}')">{{ORDER_ID}}</span>
+                    <span class="token-helper-pill" onclick="copyToken('{{CUSTOMER_NAME}}')">{{CUSTOMER_NAME}}</span>
+                    <span class="token-helper-pill" onclick="copyToken('{{PHONE}}')">{{PHONE}}</span>
+                    <span class="token-helper-pill" onclick="copyToken('{{TABLE}}')">{{TABLE}}</span>
+                    <span class="token-helper-pill" onclick="copyToken('{{DATE}}')">{{DATE}}</span>
+                    <span class="token-helper-pill" onclick="copyToken('{{TIME}}')">{{TIME}}</span>
+                    <span class="token-helper-pill" onclick="copyToken('{{TOTAL}}')">{{TOTAL}}</span>
+                    <span class="token-helper-pill" onclick="copyToken('{{GSTIN}}')">{{GSTIN}}</span>
+                </div>
+            `;
+
             formArea.innerHTML = html;
+        }
+
+        function copyToken(tok) {
+            navigator.clipboard.writeText(tok);
+            showToast(`Copied ${tok} to clipboard!`, 'info');
         }
 
         function hideInspector() {
@@ -1267,7 +1460,122 @@
             renderPaperPreview();
         }
 
-        // Live Paper Rendering
+        // Dynamic Sample Data State for Live Preview Simulation
+        let liveSampleData = {
+            ORDER_ID: "ORD-8821",
+            DATE: new Date().toLocaleDateString(),
+            TIME: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            DATE_TIME: new Date().toLocaleString(),
+            TOTAL: "240.00",
+            SUBTOTAL: "214.28",
+            TAX: "25.72",
+            CUSTOMER: "Rahul Nair",
+            CUSTOMER_NAME: "Rahul Nair",
+            PHONE: "+91 98765 43210",
+            TABLE: "Table 04",
+            CASHIER: "Arjun K."
+        };
+        let activeSnippetLang = 'curl';
+
+        // Deep property path resolver (e.g. order.customer.name)
+        function resolvePropertyPath(obj, path) {
+            if (!obj || !path) return undefined;
+            if (obj[path] !== undefined) return obj[path];
+            const parts = path.split('.');
+            let curr = obj;
+            for (const p of parts) {
+                if (curr === null || curr === undefined) return undefined;
+                curr = curr[p];
+            }
+            return curr;
+        }
+
+        // Live Preview Template Interpolation Engine
+        function interpolatePreview(text, data) {
+            if (typeof text !== 'string') return text;
+            const ctx = {
+                DATE: new Date().toLocaleDateString(),
+                TIME: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                DATE_TIME: new Date().toLocaleString(),
+                YEAR: String(new Date().getFullYear()),
+                ...(liveSampleData || {}),
+                ...(data || {})
+            };
+
+            // Support {{variable|default}}, {variable}, $F{variable}, $P{variable}
+            return text.replace(/\{\{([^}]+)\}\}|\{([A-Za-z0-9_.]+)\}|\$(?:[FPV])\{([^}]+)\}/g, (match, p1, p2, p3) => {
+                const expr = (p1 || p2 || p3 || '').trim();
+                if (!expr) return match;
+
+                let key = expr;
+                let fallback = '';
+                if (expr.includes('|')) {
+                    const idx = expr.indexOf('|');
+                    key = expr.substring(0, idx).trim();
+                    fallback = expr.substring(idx + 1).trim();
+                }
+
+                const resolved = resolvePropertyPath(ctx, key);
+                if (resolved !== undefined && resolved !== null) {
+                    return String(resolved);
+                }
+
+                // Check case-insensitive
+                const lowerKey = key.toLowerCase();
+                for (const k of Object.keys(ctx)) {
+                    if (k.toLowerCase() === lowerKey && ctx[k] !== undefined) {
+                        return String(ctx[k]);
+                    }
+                }
+
+                return fallback || match;
+            });
+        }
+
+        // Variable Extraction Scanner
+        function extractTemplateVariables(tpl) {
+            if (!tpl || !tpl.elements) return [];
+            const vars = new Set();
+            const regex = /\{\{([^}|]+)(?:\|[^}]+)?\}\}|\{([A-Za-z0-9_.]+)\}|\$(?:[FPV])\{([^}]+)\}/g;
+
+            function scan(str) {
+                if (typeof str !== 'string') return;
+                let m;
+                while ((m = regex.exec(str)) !== null) {
+                    const v = (m[1] || m[2] || m[3] || '').trim();
+                    if (v && !['DATE', 'TIME', 'DATE_TIME', 'YEAR'].includes(v.toUpperCase())) {
+                        vars.add(v);
+                    }
+                }
+            }
+
+            tpl.elements.forEach(el => {
+                if (el.text) scan(el.text);
+                if (el.subtitle) scan(el.subtitle);
+                if (el.label) scan(el.label);
+                if (el.caption) scan(el.caption);
+                if (el.pa) scan(el.pa);
+                if (el.pn) scan(el.pn);
+                if (el.am) scan(el.am);
+                if (el.value) scan(el.value);
+                if (Array.isArray(el.rows)) {
+                    el.rows.forEach(r => {
+                        if (r.key) scan(r.key);
+                        if (r.val) scan(r.val);
+                        if (r.name) scan(r.name);
+                        if (r.qty) scan(r.qty);
+                        if (r.rate) scan(r.rate);
+                        if (r.total) scan(r.total);
+                        if (r.label) scan(r.label);
+                        if (r.note) scan(r.note);
+                    });
+                }
+            });
+
+            return Array.from(vars);
+        }
+
+        // Live Paper Rendering with Dynamic Interpolation
         function renderPaperPreview() {
             const paper = document.getElementById('receiptPaper');
             if (!currentTemplate || !currentTemplate.elements) {
@@ -1291,10 +1599,12 @@
                     const isLarge = el.size === 'large';
                     const isDouble = el.size === 'double-height' || !el.size;
                     const fontSize = isLarge ? '17px' : (isDouble ? '15px' : '13px');
+                    const renderedText = interpolatePreview(el.text || 'HEADER');
+                    const renderedSubtitle = interpolatePreview(el.subtitle || '');
                     block.innerHTML = `
                         <div class="${alignClass}">
-                            <div class="font-bold" style="font-size:${fontSize}; letter-spacing:0.04em; text-transform:uppercase;">${escapeHtml(el.text || 'HEADER')}</div>
-                            ${el.subtitle ? `<div style="font-size:11px; white-space:pre-wrap; margin-top:3px; color:#333;">${escapeHtml(el.subtitle)}</div>` : ''}
+                            <div class="font-bold" style="font-size:${fontSize}; letter-spacing:0.04em; text-transform:uppercase;">${escapeHtml(renderedText)}</div>
+                            ${renderedSubtitle ? `<div style="font-size:11px; white-space:pre-wrap; margin-top:3px; color:#333;">${escapeHtml(renderedSubtitle)}</div>` : ''}
                         </div>
                     `;
                 } else if (el.type === 'divider') {
@@ -1303,11 +1613,16 @@
                 } else if (el.type === 'meta') {
                     block.innerHTML = (el.rows || []).map(r => `
                         <div class="receipt-row" style="font-size:12px;">
-                            <span style="color:#555;">${escapeHtml(r.key)}:</span>
-                            <span class="font-bold">${escapeHtml(r.val)}</span>
+                            <span style="color:#555;">${escapeHtml(interpolatePreview(r.key))}:</span>
+                            <span class="font-bold">${escapeHtml(interpolatePreview(r.val))}</span>
                         </div>
                     `).join('');
                 } else if (el.type === 'items') {
+                    // Check if dynamic items array was provided in liveSampleData
+                    const dynamicItems = Array.isArray(liveSampleData.items) && liveSampleData.items.length > 0 
+                        ? liveSampleData.items 
+                        : (Array.isArray(liveSampleData.cart) && liveSampleData.cart.length > 0 ? liveSampleData.cart : (el.rows || []));
+
                     block.innerHTML = `
                         <table class="receipt-table">
                             <thead>
@@ -1316,46 +1631,61 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                ${(el.rows || []).map(r => `
-                                    <tr>
-                                        <td style="text-align:left;">${escapeHtml(r.name || '')}</td>
-                                        <td style="text-align:center;">${escapeHtml(r.qty || '1')}</td>
-                                        <td style="text-align:right;">${escapeHtml(r.rate || '')}</td>
-                                        <td style="text-align:right;">${escapeHtml(r.total || '')}</td>
-                                    </tr>
-                                    ${r.note ? `<tr><td colspan="4" style="font-size:10px; color:#555; padding-left:10px;">>> ${escapeHtml(r.note)}</td></tr>` : ''}
-                                `).join('')}
+                                ${dynamicItems.map(r => {
+                                    const name = interpolatePreview(r.name || r.item || r.title || '');
+                                    const qty = interpolatePreview(String(r.qty || r.quantity || '1'));
+                                    const rate = interpolatePreview(String(r.rate || r.price || ''));
+                                    const total = interpolatePreview(String(r.total || r.amount || ''));
+                                    const note = r.note ? interpolatePreview(String(r.note)) : '';
+                                    return `
+                                        <tr>
+                                            <td style="text-align:left;">${escapeHtml(name)}</td>
+                                            <td style="text-align:center;">${escapeHtml(qty)}</td>
+                                            <td style="text-align:right;">${escapeHtml(rate)}</td>
+                                            <td style="text-align:right;">${escapeHtml(total)}</td>
+                                        </tr>
+                                        ${note ? `<tr><td colspan="4" style="font-size:10px; color:#555; padding-left:10px;">>> ${escapeHtml(note)}</td></tr>` : ''}
+                                    `;
+                                }).join('')}
                             </tbody>
                         </table>
                     `;
                 } else if (el.type === 'totals') {
                     block.innerHTML = (el.rows || []).map(r => `
                         <div class="receipt-row ${r.bold || r.double ? 'font-bold' : ''}" style="margin:2px 0; ${r.double ? 'font-size:14px; border-top:1px dashed #333; padding-top:3px;' : ''}">
-                            <span>${escapeHtml(r.label)}:</span>
-                            <span>${escapeHtml(r.val)}</span>
+                            <span>${escapeHtml(interpolatePreview(r.label))}:</span>
+                            <span>${escapeHtml(interpolatePreview(r.val))}</span>
                         </div>
                     `).join('');
                 } else if (el.type === 'qr') {
-                    const upiString = `upi://pay?pa=${encodeURIComponent(el.pa || 'msamods@okaxis')}&pn=${encodeURIComponent(el.pn || 'Store')}&am=${encodeURIComponent(el.am || '100')}&cu=INR`;
+                    const pa = interpolatePreview(el.pa || 'msamods@okaxis');
+                    const pn = interpolatePreview(el.pn || 'Store');
+                    const am = interpolatePreview(el.am || '100');
+                    const label = el.label ? interpolatePreview(el.label) : '';
+                    const caption = el.caption ? interpolatePreview(el.caption) : 'GPay • PhonePe • Paytm • BHIM';
+
+                    const upiString = `upi://pay?pa=${encodeURIComponent(pa)}&pn=${encodeURIComponent(pn)}&am=${encodeURIComponent(am)}&cu=INR`;
                     const qrJustify = el.align === 'left' ? 'flex-start' : (el.align === 'right' ? 'flex-end' : 'center');
                     block.innerHTML = `
                         <div class="receipt-qr-box" style="align-items:${qrJustify};">
-                            ${el.label ? `<div style="font-size:11px; font-weight:700; margin-bottom:4px; text-align:center;">${escapeHtml(el.label)}</div>` : ''}
+                            ${label ? `<div style="font-size:11px; font-weight:700; margin-bottom:4px; text-align:center;">${escapeHtml(label)}</div>` : ''}
                             <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(upiString)}" alt="UPI QR">
-                            <div style="font-size:10px; color:#444; margin-top:4px; text-align:center;">${escapeHtml(el.caption || 'GPay • PhonePe • Paytm • BHIM')}</div>
+                            <div style="font-size:10px; color:#444; margin-top:4px; text-align:center;">${escapeHtml(caption)}</div>
                         </div>
                     `;
                 } else if (el.type === 'barcode') {
+                    const barcodeVal = interpolatePreview(el.value || '12345678');
                     block.innerHTML = `
                         <div class="receipt-barcode-box">
                             <div class="barcode-bars"></div>
-                            <div style="font-size:10px; letter-spacing:0.1em; margin-top:3px;">${escapeHtml(el.value || '12345678')}</div>
+                            <div style="font-size:10px; letter-spacing:0.1em; margin-top:3px;">${escapeHtml(barcodeVal)}</div>
                         </div>
                     `;
                 } else if (el.type === 'footer') {
+                    const footerText = interpolatePreview(el.text || '');
                     block.innerHTML = `
                         <div class="${alignClass}" style="font-size:11px; white-space:pre-wrap; margin-top:8px;">
-                            ${escapeHtml(el.text || '')}
+                            ${escapeHtml(footerText)}
                         </div>
                     `;
                 }
@@ -1407,6 +1737,8 @@
                     headers: { ...AUTH, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         template: currentTemplate,
+                        data: liveSampleData,
+                        items: liveSampleData.items,
                         printerId,
                         role
                     })
@@ -1422,20 +1754,79 @@
             }
         }
 
-        // Payload Export Modal
+        // ==========================================
+        // DYNAMIC PAYLOAD STUDIO & IMPORT / EXPORT
+        // ==========================================
+
         function openPayloadModal() {
+            if (!currentTemplate) return;
             const modal = document.getElementById('payloadModal');
-            const codeArea = document.getElementById('payloadCodeArea');
-            const payload = {
+            const discoveredVars = extractTemplateVariables(currentTemplate);
+
+            // Render discovered placeholder chips
+            const container = document.getElementById('discoveredParamsContainer');
+            container.innerHTML = '';
+
+            const systemVars = ['DATE', 'TIME', 'DATE_TIME', 'TOTAL'];
+            const allBadges = Array.from(new Set([...discoveredVars, ...systemVars]));
+
+            if (allBadges.length === 0) {
+                container.innerHTML = '<span style="font-size:0.75rem; color:#94a3b8; font-style:italic;">No custom placeholder tags found in template. Add {{your_field}} in headers, notes, or rows!</span>';
+            } else {
+                allBadges.forEach(k => {
+                    const chip = document.createElement('div');
+                    chip.className = 'param-chip';
+                    chip.title = `Click to copy {{${k}}} token`;
+                    chip.innerHTML = `<span>{{${escapeHtml(k)}}}</span><span style="font-size:0.65rem; color:#94a3b8;">📋</span>`;
+                    chip.onclick = () => {
+                        navigator.clipboard.writeText(`{{${k}}}`);
+                        showToast(`Copied {{${k}}} to clipboard!`, 'info');
+                    };
+                    container.appendChild(chip);
+                });
+            }
+
+            // Build realistic sample data object
+            const sampleData = {};
+            discoveredVars.forEach(k => {
+                if (k.toLowerCase().includes('order') || k.toLowerCase().includes('inv')) sampleData[k] = "ORD-9941";
+                else if (k.toLowerCase().includes('cust') || k.toLowerCase().includes('name')) sampleData[k] = "Anand Sharma";
+                else if (k.toLowerCase().includes('phone') || k.toLowerCase().includes('mob')) sampleData[k] = "+91 94470 12345";
+                else if (k.toLowerCase().includes('table')) sampleData[k] = "Table 12 (AC)";
+                else if (k.toLowerCase().includes('gst')) sampleData[k] = "32AABCS1429B1Z8";
+                else if (k.toLowerCase().includes('token') || k.toLowerCase().includes('kots')) sampleData[k] = "KOT-54";
+                else if (k.toLowerCase().includes('total') || k.toLowerCase().includes('amt')) sampleData[k] = "385.00";
+                else sampleData[k] = `Sample ${k}`;
+            });
+
+            // Ensure essential defaults
+            if (!sampleData.ORDER_ID) sampleData.ORDER_ID = "ORD-9941";
+            if (!sampleData.TOTAL) sampleData.TOTAL = "385.00";
+            if (!sampleData.CUSTOMER_NAME) sampleData.CUSTOMER_NAME = "Anand Sharma";
+
+            const defaultPayload = {
                 templateId: currentTemplate.id,
                 role: "CASHIER",
-                variables: {
-                    ORDER_ID: "ORD-9921",
-                    TOTAL: "987.00",
-                    CUSTOMER: "Rahul"
-                }
+                data: sampleData,
+                items: [
+                    { name: "Kerala Porotta (2 pcs)", qty: "2", rate: "40.00", total: "80.00" },
+                    { name: "Chicken Roast (Quarter)", qty: "1", rate: "180.00", total: "180.00" },
+                    { name: "Fresh Lime Juice (Soda)", qty: "2", rate: "40.00", total: "80.00" },
+                    { name: "Mineral Water (1L)", qty: "1", rate: "20.00", total: "20.00" }
+                ]
             };
-            codeArea.textContent = JSON.stringify(payload, null, 2);
+
+            const editor = document.getElementById('payloadJsonEditor');
+            editor.value = JSON.stringify(defaultPayload, null, 2);
+
+            // Populate Schema tab
+            document.getElementById('schemaTemplateName').textContent = currentTemplate.name || currentTemplate.id;
+            document.getElementById('schemaCodeArea').textContent = JSON.stringify(currentTemplate, null, 2);
+
+            // Generate active snippet
+            updateCodeSnippetDisplay();
+
+            switchPayloadTab('payload');
             modal.style.display = 'flex';
         }
 
@@ -1443,11 +1834,313 @@
             document.getElementById('payloadModal').style.display = 'none';
         }
 
+        function switchPayloadTab(tab) {
+            document.getElementById('tabContentPayload').style.display = tab === 'payload' ? 'block' : 'none';
+            document.getElementById('tabContentSnippets').style.display = tab === 'snippets' ? 'block' : 'none';
+            document.getElementById('tabContentSchema').style.display = tab === 'schema' ? 'block' : 'none';
+
+            document.getElementById('tabBtnPayload').className = `tab-btn-pill ${tab === 'payload' ? 'active' : ''}`;
+            document.getElementById('tabBtnSnippets').className = `tab-btn-pill ${tab === 'snippets' ? 'active' : ''}`;
+            document.getElementById('tabBtnSchema').className = `tab-btn-pill ${tab === 'schema' ? 'active' : ''}`;
+
+            if (tab === 'snippets') {
+                updateCodeSnippetDisplay();
+            }
+        }
+
+        function switchSnippetLang(lang, btn) {
+            activeSnippetLang = lang;
+            document.querySelectorAll('#snippetLangTabs .snippet-tab-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            updateCodeSnippetDisplay();
+        }
+
+        function updateCodeSnippetDisplay() {
+            const raw = document.getElementById('payloadJsonEditor').value;
+            let payloadObj;
+            try {
+                payloadObj = JSON.parse(raw);
+            } catch (e) {
+                payloadObj = { templateId: currentTemplate?.id || 'tpl-id', data: {} };
+            }
+
+            const jsonStr = JSON.stringify(payloadObj, null, 2);
+            const host = window.location.host || '127.0.0.1:3005';
+            const protocol = window.location.protocol || 'http:';
+            const apiUrl = `${protocol}//${host}/api/print/template`;
+
+            let code = '';
+            if (activeSnippetLang === 'curl') {
+                code = `curl -X POST "${apiUrl}" \\
+  -H "Content-Type: application/json" \\
+  -H "x-client-id: ${AUTH['x-client-id']}" \\
+  -H "x-client-secret: ${AUTH['x-client-secret']}" \\
+  -d '${JSON.stringify(payloadObj)}'`;
+            } else if (activeSnippetLang === 'js') {
+                code = `// JavaScript / Node.js / Browser Fetch
+const response = await fetch('${apiUrl}', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-client-id': '${AUTH['x-client-id']}',
+    'x-client-secret': '${AUTH['x-client-secret']}'
+  },
+  body: JSON.stringify(${jsonStr})
+});
+const result = await response.json();
+console.log('Print status:', result);`;
+            } else if (activeSnippetLang === 'python') {
+                code = `# Python (requests)
+import requests
+
+url = "${apiUrl}"
+headers = {
+    "Content-Type": "application/json",
+    "x-client-id": "${AUTH['x-client-id']}",
+    "x-client-secret": "${AUTH['x-client-secret']}"
+}
+payload = ${JSON.stringify(payloadObj, null, 4)}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())`;
+            } else if (activeSnippetLang === 'php') {
+                code = `<?php
+// PHP cURL
+$curl = curl_init();
+$payload = '${jsonStr.replace(/'/g, "\\'")}';
+
+curl_setopt_array($curl, [
+    CURLOPT_URL => "${apiUrl}",
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CUSTOMREQUEST => "POST",
+    CURLOPT_POSTFIELDS => $payload,
+    CURLOPT_HTTPHEADER => [
+        "Content-Type: application/json",
+        "x-client-id: ${AUTH['x-client-id']}",
+        "x-client-secret: ${AUTH['x-client-secret']}"
+    ],
+]);
+
+$response = curl_exec($curl);
+curl_close($curl);
+echo $response;
+?>`;
+            } else if (activeSnippetLang === 'android') {
+                code = `// Android Java (OkHttp)
+OkHttpClient client = new OkHttpClient();
+MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+String jsonPayload = "${JSON.stringify(payloadObj).replace(/"/g, '\\"')}";
+
+RequestBody body = RequestBody.create(jsonPayload, mediaType);
+Request request = new Request.Builder()
+    .url("${apiUrl}")
+    .post(body)
+    .addHeader("Content-Type", "application/json")
+    .addHeader("x-client-id", "${AUTH['x-client-id']}")
+    .addHeader("x-client-secret", "${AUTH['x-client-secret']}")
+    .build();
+
+client.newCall(request).enqueue(new Callback() {
+    @Override
+    public void onFailure(Call call, IOException e) { e.printStackTrace(); }
+
+    @Override
+    public void onResponse(Call call, Response response) throws IOException {
+        System.out.println("Receipt Print Result: " + response.body().string());
+    }
+});`;
+            }
+
+            document.getElementById('snippetCodeArea').textContent = code;
+        }
+
+        function copySnippetToClipboard() {
+            const code = document.getElementById('snippetCodeArea').textContent;
+            navigator.clipboard.writeText(code);
+            showToast("Client integration snippet copied!", "success");
+        }
+
         function copyPayloadToClipboard() {
-            const text = document.getElementById('payloadCodeArea').textContent;
-            navigator.clipboard.writeText(text);
+            const raw = document.getElementById('payloadJsonEditor').value;
+            navigator.clipboard.writeText(raw);
             showToast("Payload JSON copied to clipboard!", "success");
+        }
+
+        function formatPayloadJsonArea() {
+            const editor = document.getElementById('payloadJsonEditor');
+            try {
+                const parsed = JSON.parse(editor.value);
+                editor.value = JSON.stringify(parsed, null, 2);
+                showToast("JSON formatted cleanly", "info");
+            } catch (err) {
+                showToast("Invalid JSON: " + err.message, "error");
+            }
+        }
+
+        function resetPayloadToDiscovered() {
+            openPayloadModal();
+            showToast("Reset to template default keys", "info");
+        }
+
+        function addCustomFieldToPayload() {
+            const keyInput = document.getElementById('newCustomKeyInput');
+            const valInput = document.getElementById('newCustomValInput');
+            const key = keyInput.value.trim();
+            const val = valInput.value.trim();
+
+            if (!key) {
+                showToast("Enter a key name (e.g. table_number)", "error");
+                return;
+            }
+
+            const editor = document.getElementById('payloadJsonEditor');
+            try {
+                const payload = JSON.parse(editor.value);
+                if (!payload.data) payload.data = {};
+                payload.data[key] = val || "Sample";
+                editor.value = JSON.stringify(payload, null, 2);
+
+                keyInput.value = '';
+                valInput.value = '';
+                showToast(`Key "${key}" added to payload!`, "success");
+                updateCodeSnippetDisplay();
+            } catch (err) {
+                showToast("Error updating JSON: " + err.message, "error");
+            }
+        }
+
+        function applyPayloadToPreview() {
+            const editor = document.getElementById('payloadJsonEditor');
+            try {
+                const payload = JSON.parse(editor.value);
+                const data = payload.data || payload.variables || payload.fields || payload;
+                const items = payload.items || payload.cart;
+
+                liveSampleData = {
+                    ...liveSampleData,
+                    ...data
+                };
+                if (items && Array.isArray(items)) {
+                    liveSampleData.items = items;
+                }
+
+                renderPaperPreview();
+                showToast("Applied payload data to live thermal preview!", "success");
+                closePayloadModal();
+            } catch (err) {
+                showToast("Invalid JSON payload: " + err.message, "error");
+            }
+        }
+
+        async function executePayloadDirectPrint() {
+            const editor = document.getElementById('payloadJsonEditor');
+            let payload;
+            try {
+                payload = JSON.parse(editor.value);
+            } catch (err) {
+                showToast("Cannot print: Invalid JSON payload", "error");
+                return;
+            }
+
             closePayloadModal();
+            showToast("Dispatching print job with dynamic payload...", "info");
+
+            try {
+                // Attach currentTemplate full object if not specified
+                if (!payload.template) {
+                    payload.template = currentTemplate;
+                }
+                const res = await fetch('/api/print/template', {
+                    method: 'POST',
+                    headers: { ...AUTH, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || "Printed successfully with template!", "success");
+                } else {
+                    showToast(data.error || "Print failed", "error");
+                }
+            } catch (err) {
+                showToast("Print error: " + err.message, "error");
+            }
+        }
+
+        // ==========================================
+        // TEMPLATE IMPORT & EXPORT
+        // ==========================================
+
+        function triggerImportFileInput() {
+            const input = document.getElementById('importTemplateFileInput');
+            if (input) {
+                input.value = '';
+                input.click();
+            }
+        }
+
+        function handleTemplateFileImport(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (!imported || !Array.isArray(imported.elements)) {
+                        throw new Error("Invalid template format: 'elements' array missing.");
+                    }
+
+                    // Assign new ID or keep existing
+                    if (!imported.id) {
+                        imported.id = 'tpl-' + Math.random().toString(36).substring(2, 8);
+                    }
+                    if (!imported.name) {
+                        imported.name = file.name.replace(/\.[^/.]+$/, "") || "Imported Template";
+                    }
+
+                    currentTemplate = imported;
+
+                    // Add or replace in templates list
+                    const existingIdx = templatesList.findIndex(t => t.id === currentTemplate.id);
+                    if (existingIdx >= 0) {
+                        templatesList[existingIdx] = currentTemplate;
+                    } else {
+                        templatesList.push(currentTemplate);
+                    }
+
+                    renderTemplateSelector();
+                    populateForm();
+                    renderStructureList();
+                    renderPaperPreview();
+
+                    showToast(`Loaded "${currentTemplate.name}"! Saving...`, "info");
+                    await saveCurrentTemplate();
+                } catch (err) {
+                    console.error("Import error:", err);
+                    showToast("Import failed: " + err.message, "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function exportCurrentTemplate() {
+            if (!currentTemplate) {
+                showToast("No template loaded to export", "error");
+                return;
+            }
+
+            const jsonStr = JSON.stringify(currentTemplate, null, 2);
+            const blob = new Blob([jsonStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const safeName = (currentTemplate.name || 'template').toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+            a.href = url;
+            a.download = `${safeName}-${currentTemplate.id || 'export'}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Exported "${a.download}" successfully!`, "success");
         }
 
         // Helpers
@@ -1462,7 +2155,7 @@
             document.querySelectorAll('.toast').forEach(t => t.remove());
             const t = document.createElement('div');
             t.className = `toast ${type}`;
-            const icon = type === 'success' ? 'SUCCESS' : (type === 'error' ? 'ERROR' : 'INFO');
+            const icon = type === 'success' ? '✓' : (type === 'error' ? '✕' : 'ℹ');
             t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
             document.body.appendChild(t);
             setTimeout(() => {
@@ -1470,7 +2163,6 @@
                 t.style.transition = 'opacity 0.3s ease';
                 setTimeout(() => t.remove(), 300);
             }, 3000);
-        }
     </script>
 </body>
 </html>

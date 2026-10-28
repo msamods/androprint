@@ -128814,17 +128814,35 @@ async function renderAndPrintJasperLayout(printer, layoutConfig = {}) {
     }
   }
 
-  // Helper to interpolate expressions like "{invoiceNo}" or "$F{invoiceNo}"
+  // Helper to resolve nested property path, e.g. "customer.address.city" or "payment.upi_ref"
+  function resolvePropertyPath(obj, pathStr) {
+    if (!obj || !pathStr) return undefined;
+    const parts = pathStr.split(".");
+    let cur = obj;
+    for (const p of parts) {
+      if (cur === null || cur === undefined) return undefined;
+      cur = cur[p];
+    }
+    return cur;
+  }
+
+  // Enhanced interpolate supporting {{key}}, {key}, $F{key}, $P{key}, nested paths, and {{key|default}}
   function interpolate(text) {
     if (text === null || text === undefined) return "";
     let str = String(text);
-    for (const [k, v] of Object.entries(mergedVars)) {
-      if (typeof v === "string" || typeof v === "number") {
-        str = str.replace(new RegExp(`{${k}}`, "g"), String(v));
-        str = str.replace(new RegExp(`\\$F{${k}}`, "g"), String(v));
-        str = str.replace(new RegExp(`\\$P{${k}}`, "g"), String(v));
+
+    // Replace {{path|fallback}} or {path|fallback} or $F{path} or $P{path} or $V{path}
+    str = str.replace(/(?:\{\{|\{|\$F\{|\$P\{|\$V\{)\s*([a-zA-Z0-9_.]+)(?:\s*\|\s*([^}]+))?\s*(?:\}\}|\})/g, (match, pathKey, fallback) => {
+      let val = mergedVars[pathKey];
+      if (val === undefined) {
+        val = resolvePropertyPath(mergedVars, pathKey);
       }
-    }
+      if (val !== undefined && val !== null) {
+        return String(val);
+      }
+      return fallback !== undefined ? fallback.trim() : match;
+    });
+
     return str;
   }
 
@@ -129013,10 +129031,13 @@ async function renderAndPrintJasperLayout(printer, layoutConfig = {}) {
         device.println("-".repeat(columns));
       }
 
-      // Print Items
-      const rows = (Array.isArray(el.rows) && el.rows.length > 0)
-        ? el.rows
-        : (Array.isArray(mergedVars.items) ? mergedVars.items : []);
+      // Print Items - prioritize customer payload dynamic items if present
+      const dynamicItems = Array.isArray(mergedVars.items) && mergedVars.items.length > 0
+        ? mergedVars.items
+        : (Array.isArray(mergedVars.data && mergedVars.data.items) && mergedVars.data.items.length > 0
+            ? mergedVars.data.items
+            : (Array.isArray(mergedVars.cart) && mergedVars.cart.length > 0 ? mergedVars.cart : null));
+      const rows = dynamicItems || (Array.isArray(el.rows) ? el.rows : []);
 
       for (const row of rows) {
         let maxLines = 1;
@@ -129177,9 +129198,9 @@ async function renderAndPrintJasperLayout(printer, layoutConfig = {}) {
   return { success: true, columns, dots, bytes: rawBuffer.length };
 }
 
-app.post("/api/template/render-and-print", authRequired, async (req, res) => {
+app.post(["/api/template/render-and-print", "/api/print/template", "/print/template"], authRequired, async (req, res) => {
   try {
-    const { template, templateId, printerId, role, variables = {}, data = {} } = req.body;
+    const { template, templateId, printerId, role, variables = {}, data = {}, payload = {}, fields = {} } = req.body;
     let tpl = template;
 
     if (!tpl && templateId) {
@@ -129193,10 +129214,20 @@ app.post("/api/template/render-and-print", authRequired, async (req, res) => {
     const printer = await resolvePrinterForJob(printerId, role);
     if (!printer) return res.status(404).json({ error: "No active printer found" });
 
+    const mergedData = {
+      ...variables,
+      ...data,
+      ...payload,
+      ...fields
+    };
+    if (req.body.items && !mergedData.items) mergedData.items = req.body.items;
+    if (req.body.cart && !mergedData.cart) mergedData.cart = req.body.cart;
+
     const result = await renderAndPrintJasperLayout(printer, {
       layout: tpl.layout || tpl.elements,
       elements: tpl.elements || tpl.layout,
-      variables: { ...variables, ...data },
+      variables: mergedData,
+      data: mergedData,
       actions: tpl.actions || {},
       paperWidth: tpl.paperWidth || (printer.paper && printer.paper.width)
     });
@@ -129206,7 +129237,7 @@ app.post("/api/template/render-and-print", authRequired, async (req, res) => {
       printerName: printer.name,
       type: "template_print",
       status: "success",
-      textPreview: `[Jasper Layout: ${tpl.name || "Custom"}] Printed ${result.bytes} bytes across ${result.columns} columns`
+      textPreview: `[Template: ${tpl.name || "Custom"}] Printed ${result.bytes} bytes across ${result.columns} columns`
     });
 
     res.json({
@@ -129219,6 +129250,92 @@ app.post("/api/template/render-and-print", authRequired, async (req, res) => {
 
   } catch (e) {
     console.error("Template Print Error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Helper to extract all variable keys from a template
+function extractTemplateVariables(tpl) {
+  const vars = new Set();
+  const elements = (tpl && (tpl.elements || tpl.layout)) || [];
+
+  function scanText(txt) {
+    if (!txt || typeof txt !== "string") return;
+    const matches = txt.matchAll(/(?:\{\{|\{|\$F\{|\$P\{|\$V\{)\s*([a-zA-Z0-9_.]+)(?:\s*\|\s*([^}]+))?\s*(?:\}\}|\})/g);
+    for (const m of matches) {
+      if (m[1]) vars.add(m[1]);
+    }
+  }
+
+  for (const el of elements) {
+    if (!el) continue;
+    scanText(el.text);
+    scanText(el.subtitle);
+    scanText(el.value);
+    scanText(el.data);
+    scanText(el.label);
+    scanText(el.caption);
+    scanText(el.pa);
+    scanText(el.pn);
+    scanText(el.am);
+    scanText(el.tn);
+
+    if (Array.isArray(el.rows)) {
+      for (const r of el.rows) {
+        if (Array.isArray(r)) {
+          for (const c of r) { scanText(c.key); scanText(c.val); scanText(c.value); }
+        } else if (r && typeof r === "object") {
+          scanText(r.key); scanText(r.val); scanText(r.value); scanText(r.label);
+          scanText(r.name); scanText(r.rate); scanText(r.total); scanText(r.note);
+        }
+      }
+    }
+  }
+
+  return Array.from(vars);
+}
+
+app.post("/api/template/extract-variables", (req, res) => {
+  try {
+    const { template, templateId } = req.body;
+    let tpl = template;
+    if (!tpl && templateId) {
+      tpl = loadTemplates().find(t => t.id === templateId);
+    }
+    if (!tpl) return res.status(404).json({ error: "Template not found" });
+
+    const variables = extractTemplateVariables(tpl);
+    const sampleData = {};
+    variables.forEach(k => {
+      if (k.toLowerCase().includes("date")) sampleData[k] = new Date().toLocaleDateString();
+      else if (k.toLowerCase().includes("time")) sampleData[k] = new Date().toLocaleTimeString();
+      else if (k.toLowerCase().includes("phone")) sampleData[k] = "+91 9876543210";
+      else if (k.toLowerCase().includes("gst")) sampleData[k] = "32ABCDE1234F1Z5";
+      else if (k.toLowerCase().includes("name") || k.toLowerCase().includes("customer")) sampleData[k] = "Alex Johnson";
+      else if (k.toLowerCase().includes("table")) sampleData[k] = "Table 4";
+      else if (k.toLowerCase().includes("waiter")) sampleData[k] = "Sanjay";
+      else if (k.toLowerCase().includes("total") || k.toLowerCase().includes("amount") || k.toLowerCase().includes("price")) sampleData[k] = "450.00";
+      else sampleData[k] = `Sample ${k}`;
+    });
+
+    res.json({
+      success: true,
+      templateId: tpl.id,
+      templateName: tpl.name,
+      variables,
+      samplePayload: {
+        templateId: tpl.id,
+        printerId: "auto",
+        data: {
+          ...sampleData,
+          items: [
+            { name: "Sample Item 1", qty: "2", rate: "120.00", total: "240.00" },
+            { name: "Sample Item 2", qty: "1", rate: "210.00", total: "210.00" }
+          ]
+        }
+      }
+    });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
