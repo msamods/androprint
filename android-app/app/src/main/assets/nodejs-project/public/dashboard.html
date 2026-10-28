@@ -1393,6 +1393,11 @@
                     percent.textContent = '75%';
                     step.textContent = 'Rebinding server listener...';
 
+                    // Notify native Android HUD immediately
+                    if (window.AndroidApp && typeof window.AndroidApp.onPortChanged === 'function') {
+                        try { window.AndroidApp.onPortChanged(newPort); } catch {}
+                    }
+
                     setTimeout(() => {
                         fill.style.width = '100%';
                         percent.textContent = '100%';
@@ -1400,8 +1405,8 @@
                         setTimeout(() => {
                             const target = data.redirectUrl || `${window.location.protocol}//${window.location.hostname}:${newPort}/dashboard.html`;
                             window.location.replace(target);
-                        }, 1000);
-                    }, 600);
+                        }, 1200);
+                    }, 800);
                 } else {
                     showToast(data.error || 'Port change failed', 'error');
                     container.style.display = 'none';

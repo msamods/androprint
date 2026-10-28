@@ -88,9 +88,11 @@ public class PrintServerService extends Service {
 
             Notification notification = builder.build();
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE | ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC | ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE;
                 startForeground(NOTIFICATION_ID, notification, type);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
             } else {
                 startForeground(NOTIFICATION_ID, notification);
             }

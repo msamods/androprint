@@ -83,6 +83,14 @@ public class NodeProjectManager {
 
     private static boolean copyAssetFile(AssetManager assetManager, String assetPath, File destFile) {
         try {
+            // Preserve existing user state & configuration
+            if (destFile.exists()) {
+                String name = destFile.getName();
+                if (name.equals(".env") || name.equals("printer.json") || name.equals("jobs.json") || name.equals("webhooks.json") || name.equals("server.id")) {
+                    return true;
+                }
+            }
+
             File parent = destFile.getParentFile();
             if (parent != null && !parent.exists()) {
                 parent.mkdirs();

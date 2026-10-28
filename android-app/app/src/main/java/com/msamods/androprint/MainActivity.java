@@ -57,7 +57,8 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
 
     private boolean isServerRunning = false;
-    private String localDashboardUrl = "https://localhost:3000/dashboard.html";
+    private int currentPort = 3000;
+    private String localDashboardUrl = "http://localhost:3000/dashboard.html";
     private String currentAppVersion = "2.0.1";
 
     @Override
@@ -91,6 +92,9 @@ public class MainActivity extends AppCompatActivity {
         btnTabDashboard = findViewById(R.id.btnTabDashboard);
         layoutHud = findViewById(R.id.layoutHud);
         webView = findViewById(R.id.webView);
+
+        currentPort = readConfiguredPort();
+        localDashboardUrl = "http://localhost:" + currentPort + "/dashboard.html";
 
         detectWifiIp();
         setupWebView();
@@ -151,8 +155,9 @@ public class MainActivity extends AppCompatActivity {
             btnTabHud.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF1F2937));
             btnTabHud.setTextColor(0xFF94A3B8);
 
-            // Load dashboard if needed
-            if (webView.getUrl() == null || webView.getUrl().isEmpty()) {
+            // Load dashboard if needed or if port changed
+            String currentUrl = webView.getUrl();
+            if (currentUrl == null || currentUrl.isEmpty() || !currentUrl.contains(":" + currentPort + "/")) {
                 webView.loadUrl(localDashboardUrl);
             }
         }
@@ -241,7 +246,54 @@ public class MainActivity extends AppCompatActivity {
             public String getAppVersion() {
                 return currentAppVersion;
             }
+
+            @android.webkit.JavascriptInterface
+            public void onPortChanged(final int newPort) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateActivePort(newPort);
+                    }
+                });
+            }
+
+            @android.webkit.JavascriptInterface
+            public int getActivePort() {
+                return currentPort;
+            }
         }, "AndroidApp");
+    }
+
+    public int readConfiguredPort() {
+        try {
+            File projectDir = NodeProjectManager.getProjectDir(this);
+            File envFile = new File(projectDir, ".env");
+            if (envFile.exists()) {
+                java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(envFile));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.trim().startsWith("PORT=")) {
+                        String portStr = line.trim().substring(5).trim();
+                        int p = Integer.parseInt(portStr);
+                        if (p >= 1024 && p <= 65535) {
+                            reader.close();
+                            return p;
+                        }
+                    }
+                }
+                reader.close();
+            }
+        } catch (Exception ignored) {}
+        return 3000;
+    }
+
+    public void updateActivePort(int newPort) {
+        if (newPort < 1024 || newPort > 65535) return;
+        this.currentPort = newPort;
+        this.localDashboardUrl = "http://localhost:" + newPort + "/dashboard.html";
+        updateServerUiState(isServerRunning);
+        detectWifiIp();
+        appendLog("[INFO] Active port switched to " + newPort);
     }
 
     private void detectWifiIp() {
@@ -251,9 +303,10 @@ public class MainActivity extends AppCompatActivity {
                 String ip = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
                 if (!ip.equals("0.0.0.0")) {
                     tvDeviceIp.setText("Wi-Fi IP: " + ip);
-                    tvServerUrl.setText("LAN URL: https://" + ip + ":3000");
+                    tvServerUrl.setText("LAN URL: http://" + ip + ":" + currentPort);
                 } else {
                     tvDeviceIp.setText("Wi-Fi IP: Not Connected (Hotspot/Localhost only)");
+                    tvServerUrl.setText("LAN URL: http://localhost:" + currentPort);
                 }
             }
         } catch (Exception e) {
@@ -273,8 +326,8 @@ public class MainActivity extends AppCompatActivity {
                 }
                 isServerRunning = true;
                 updateServerUiState(true);
-                appendLog("[INFO] Node.js Native Print Gateway starting on port 3000...");
-                appendLog("[INFO] Auto-SSL (https://localhost:3000) active with WakeLock");
+                appendLog("[INFO] Node.js Native Print Gateway starting on port " + currentPort + "...");
+                appendLog("[INFO] Web Gateway: " + localDashboardUrl);
                 Toast.makeText(this, "Print Server Started!", Toast.LENGTH_SHORT).show();
 
                 // Refresh webview after delay to allow server listen
@@ -301,7 +354,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateServerUiState(boolean running) {
         if (running) {
-            tvServerStatus.setText("Server Status: RUNNING (Port 3000)");
+            tvServerStatus.setText("Server Status: RUNNING (Port " + currentPort + ")");
             tvServerStatus.setTextColor(0xFF10B981); // Emerald Green
             btnToggleServer.setText("STOP PRINT SERVICE");
             btnToggleServer.setBackgroundColor(0xFFEF4444); // Red
@@ -333,7 +386,7 @@ public class MainActivity extends AppCompatActivity {
                 boolean running = false;
                 try {
                     java.net.Socket socket = new java.net.Socket();
-                    socket.connect(new java.net.InetSocketAddress("127.0.0.1", 3000), 400);
+                    socket.connect(new java.net.InetSocketAddress("127.0.0.1", currentPort), 400);
                     socket.close();
                     running = true;
                 } catch (Exception ignored) {
@@ -355,6 +408,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        int savedPort = readConfiguredPort();
+        if (savedPort != currentPort) {
+            updateActivePort(savedPort);
+        }
         checkLivePortStatus();
         statusCheckHandler.postDelayed(statusCheckRunnable, 3000);
     }

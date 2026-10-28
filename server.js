@@ -81,7 +81,7 @@ try {
 // SSL / HTTPS Setup
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || path.join(__dirname, "server.key");
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || path.join(__dirname, "server.cert");
-const USE_SSL = (process.env.USE_SSL !== "false" && fs.existsSync(SSL_KEY_PATH) && fs.existsSync(SSL_CERT_PATH));
+const USE_SSL = (process.env.USE_SSL === "true" && fs.existsSync(SSL_KEY_PATH) && fs.existsSync(SSL_CERT_PATH));
 
 let server;
 function createHttpOrHttpsServer() {
@@ -101,6 +101,13 @@ function createHttpOrHttpsServer() {
 }
 
 server = createHttpOrHttpsServer();
+
+// Track active sockets for immediate clean server close and port rebinding
+const activeSockets = new Set();
+server.on("connection", (socket) => {
+  activeSockets.add(socket);
+  socket.once("close", () => activeSockets.delete(socket));
+});
 
 const DATA_DIR = __dirname;
 const PRINTER_FILE = path.join(DATA_DIR, "printer.json");
@@ -2836,21 +2843,44 @@ app.post("/api/system/port", (req, res) => {
           });
           sseClients.clear();
 
+          // Forcefully terminate all TCP client connections
+          activeSockets.forEach(sock => {
+            try { sock.destroy(); } catch {}
+          });
+          activeSockets.clear();
+
           if (typeof server.closeAllConnections === "function") {
-            server.closeAllConnections();
+            try { server.closeAllConnections(); } catch {}
           }
 
-          server.close(() => {
+          let rebound = false;
+          const doRebind = () => {
+            if (rebound) return;
+            rebound = true;
             PORT = newPort;
-            server.listen(PORT, () => {
-              logger.success("SYSTEM", `AndroPrint re-bound to port ${PORT} (${protocol})`);
-              broadcast({ type: "port_changed", port: PORT });
-            });
+            try {
+              server.listen(PORT, "0.0.0.0", () => {
+                logger.success("SYSTEM", `AndroPrint re-bound to port ${PORT} (${protocol})`);
+                broadcast({ type: "port_changed", port: PORT });
+              });
+            } catch (e) {
+              logger.error("SYSTEM", "Failed to listen on new port: " + e.message);
+            }
+          };
+
+          const closeTimeout = setTimeout(() => {
+            logger.warn("SYSTEM", "server.close() wait expired, proceeding with rebind");
+            doRebind();
+          }, 800);
+
+          server.close(() => {
+            clearTimeout(closeTimeout);
+            doRebind();
           });
         } catch (e) {
           logger.error("SYSTEM", "Failed to rebind port: " + e.message);
         }
-      }, 400);
+      }, 300);
     });
   });
 
