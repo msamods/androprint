@@ -10,10 +10,13 @@ import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.text.format.Formatter;
+import android.util.Log;
 import android.view.View;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
@@ -106,8 +109,30 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        // Request Battery Optimization Exemption for 24/7 continuous printing
+        requestBatteryOptimizationExemption();
+
+        // Save autostart configuration as enabled by default
+        try {
+            getSharedPreferences("server_state", Context.MODE_PRIVATE).edit().putBoolean("autostart_on_boot", true).apply();
+        } catch (Throwable ignored) {}
+
         // Check if service is already running
         isServerRunning = PrintServerService.isServerRunning(this);
+        if (!isServerRunning) {
+            // Autostart daemon on app launch so printing is always online
+            Intent serviceIntent = new Intent(this, PrintServerService.class);
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent);
+                } else {
+                    startService(serviceIntent);
+                }
+                isServerRunning = true;
+            } catch (Throwable t) {
+                Log.w("AndroPrint", "Autostart daemon on launch: " + t.getMessage());
+            }
+        }
         updateServerUiState(isServerRunning);
 
         btnToggleServer.setOnClickListener(new View.OnClickListener() {
@@ -695,6 +720,21 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         } catch (Exception e) {
             Toast.makeText(this, "Failed to launch installer: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                    Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                }
+            } catch (Throwable t) {
+                Log.w("AndroPrint", "Battery optimization prompt: " + t.getMessage());
+            }
         }
     }
 

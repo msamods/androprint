@@ -85,6 +85,28 @@ public class PrintServerService extends Service {
         isRunning = true;
     }
 
+    private int readConfiguredPort() {
+        try {
+            File projectDir = NodeProjectManager.getProjectDir(this);
+            File envFile = new File(projectDir, ".env");
+            if (envFile.exists()) {
+                java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(envFile));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.trim().startsWith("PORT=")) {
+                        int p = Integer.parseInt(line.trim().substring(5).trim());
+                        if (p >= 1024 && p <= 65535) {
+                            reader.close();
+                            return p;
+                        }
+                    }
+                }
+                reader.close();
+            }
+        } catch (Throwable ignored) {}
+        return 3005;
+    }
+
     private void startForegroundNotification() {
         try {
             Intent notificationIntent = new Intent(this, MainActivity.class);
@@ -98,13 +120,14 @@ public class PrintServerService extends Service {
                 largeLogo = android.graphics.BitmapFactory.decodeResource(getResources(), R.drawable.app_logo);
             } catch (Throwable ignored) {}
 
+            int activePort = readConfiguredPort();
             NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                    .setContentTitle("AndroPrint Active")
-                    .setContentText("ESC/POS Thermal Print Gateway is running (Port 3000)")
+                    .setContentTitle("AndroPrint Active (24/7 Daemon)")
+                    .setContentText("ESC/POS Thermal Print Gateway running on Port " + activePort)
                     .setSmallIcon(R.mipmap.ic_launcher)
                     .setContentIntent(pendingIntent)
                     .setOngoing(true)
-                    .setPriority(NotificationCompat.PRIORITY_LOW);
+                    .setPriority(NotificationCompat.PRIORITY_HIGH);
 
             if (largeLogo != null) {
                 builder.setLargeIcon(largeLogo);
